@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -182,6 +183,18 @@ fun ChatsScreen(
                 onSearchQueryChange = { viewModel.searchQuery.value = it },
                 onSearchToggle = { isSearching = !isSearching },
                 searchPlaceholder = "Search conversations...",
+                leadingActions = {
+                    // LCS: manual announce trigger, left of the search icon
+                    IconButton(onClick = {
+                        settingsViewModel.triggerManualAnnounce()
+                        Toast.makeText(context, "Announcing…", Toast.LENGTH_SHORT).show()
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Campaign,
+                            contentDescription = "Announce",
+                        )
+                    }
+                },
                 additionalActions = {
                     // QR Code button
                     IconButton(onClick = { showQrBottomSheet = true }) {

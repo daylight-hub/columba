@@ -32,6 +32,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -75,6 +76,7 @@ import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
@@ -103,6 +105,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -331,6 +334,7 @@ fun MessagingScreen(
     onVoiceCall: (profileCode: Int) -> Unit = {},
     onLocateOnMap: (peerHash: String) -> Unit = {},
     viewModel: MessagingViewModel = hiltViewModel(),
+    settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
 ) {
     val pagingItems = viewModel.messages.collectAsLazyPagingItems()
     val announceInfo by viewModel.announceInfo.collectAsStateWithLifecycle()
@@ -586,6 +590,100 @@ fun MessagingScreen(
                 }
             }
         }
+
+    // Camera capture — writes to a cache file exposed through the existing
+    // FileProvider, then reuses the same compression path as gallery images.
+    var pendingCameraUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    val cameraCaptureLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.TakePicture(),
+        ) { success ->
+            val captured = pendingCameraUri
+            pendingCameraUri = null
+            if (success && captured != null) {
+                viewModel.processImageWithCompression(context, captured)
+            }
+        }
+    val launchCameraCapture: () -> Unit = {
+        try {
+            val dir = java.io.File(context.cacheDir, "camera").apply { mkdirs() }
+            val file = java.io.File(dir, "capture_${System.currentTimeMillis()}.jpg")
+            val uri =
+                androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    file,
+                )
+            pendingCameraUri = uri
+            cameraCaptureLauncher.launch(uri)
+        } catch (e: Exception) {
+            Log.w("MessagingScreen", "Could not start camera capture", e)
+            Toast.makeText(context, "Couldn't open the camera", Toast.LENGTH_SHORT).show()
+        }
+    }
+    val cameraPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                launchCameraCapture()
+            } else {
+                Toast
+                    .makeText(context, "Camera permission is needed to take a photo", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+
+    // LCS: push-to-talk voice messages (hold the mic button to record, release to send)
+    val pttEnabled by settingsViewModel.pttEnabled.collectAsStateWithLifecycle()
+    val pttHighBandwidth by settingsViewModel.pttHighBandwidth.collectAsStateWithLifecycle()
+    var pttSession by remember { mutableStateOf<network.columba.app.util.PttRecorder.Session?>(null) }
+    val isRecordingPtt = pttSession != null
+
+    val beginPttRecording: () -> Unit = {
+        if (pttSession == null) {
+            val session =
+                network.columba.app.util.PttRecorder.start(
+                    context,
+                    network.columba.app.util.PttRecorder.profileFor(pttHighBandwidth),
+                )
+            if (session == null) {
+                Toast.makeText(context, "Couldn't start recording", Toast.LENGTH_SHORT).show()
+            } else {
+                pttSession = session
+            }
+        }
+    }
+    val finishPttRecording: () -> Unit = {
+        val session = pttSession
+        pttSession = null
+        if (session != null) {
+            val clip = network.columba.app.util.PttRecorder.stopAndBuildClip(session)
+            if (clip == null) {
+                Toast.makeText(context, "Too short — hold to record", Toast.LENGTH_SHORT).show()
+            } else {
+                // Attach + send atomically on release, matching Sideband's PTT behaviour.
+                viewModel.sendVoiceMessage(destinationHash, clip.attachment, clip.lxmfAudioMode)
+            }
+        }
+    }
+    val pttPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (!granted) {
+                Toast
+                    .makeText(context, "Microphone permission is needed for push-to-talk", Toast.LENGTH_SHORT)
+                    .show()
+            }
+        }
+
+    // Make sure a recording never outlives the screen.
+    DisposableEffect(Unit) {
+        onDispose {
+            pttSession?.let { network.columba.app.util.PttRecorder.cancel(it) }
+        }
+    }
 
     // State for file attachment options bottom sheet
     var showFileOptionsSheet by remember { mutableStateOf(false) }
@@ -1332,6 +1430,21 @@ fun MessagingScreen(
                         }
                     },
                     isSending = isSending,
+                    pttEnabled = pttEnabled,
+                    isRecordingPtt = isRecordingPtt,
+                    onPttPress = {
+                        val granted =
+                            androidx.core.content.ContextCompat.checkSelfPermission(
+                                context,
+                                android.Manifest.permission.RECORD_AUDIO,
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        if (granted) {
+                            beginPttRecording()
+                        } else {
+                            pttPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    onPttRelease = { finishPttRecording() },
                     onAttachmentPanelToggle = {
                         if (inputPanelMode == InputPanelMode.PANEL) {
                             inputPanelMode = InputPanelMode.NONE
@@ -1365,6 +1478,19 @@ fun MessagingScreen(
                             onGalleryClick = {
                                 imageLauncher.launch("image/*")
                                 inputPanelMode = InputPanelMode.NONE
+                            },
+                            onCameraClick = {
+                                inputPanelMode = InputPanelMode.NONE
+                                val granted =
+                                    androidx.core.content.ContextCompat.checkSelfPermission(
+                                        context,
+                                        android.Manifest.permission.CAMERA,
+                                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                if (granted) {
+                                    launchCameraCapture()
+                                } else {
+                                    cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                                }
                             },
                             onFileClick = {
                                 try {
@@ -2314,6 +2440,10 @@ fun MessageInputBar(
     isSending: Boolean = false,
     onAttachmentPanelToggle: () -> Unit = {},
     isAttachmentPanelActive: Boolean = false,
+    pttEnabled: Boolean = false,
+    isRecordingPtt: Boolean = false,
+    onPttPress: () -> Unit = {},
+    onPttRelease: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -2566,6 +2696,44 @@ fun MessageInputBar(
                         contentDescription = if (isAttachmentPanelActive) "Close attachments" else "Attach",
                         modifier = Modifier.size(24.dp),
                     )
+                }
+
+                // LCS: push-to-talk — hold to record, release to send.
+                if (pttEnabled) {
+                    val pttShape = CircleShape
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(48.dp)
+                                .clip(pttShape)
+                                .background(
+                                    if (isRecordingPtt) {
+                                        network.columba.app.ui.theme.LcsRed
+                                    } else {
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    },
+                                ).pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onPress = {
+                                            onPttPress()
+                                            tryAwaitRelease()
+                                            onPttRelease()
+                                        },
+                                    )
+                                },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mic,
+                            contentDescription = if (isRecordingPtt) "Recording — release to send" else "Hold to talk",
+                            tint =
+                                if (isRecordingPtt) {
+                                    androidx.compose.ui.graphics.Color.White
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
                 }
 
                 FilledIconButton(

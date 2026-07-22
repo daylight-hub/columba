@@ -45,6 +45,30 @@ object LxmfFields {
     /** Audio payload `[mode, bytes]`. */
     const val FIELD_AUDIO = 0x07
 
+    // Audio modes for the data structure in [FIELD_AUDIO]. Values are taken
+    // verbatim from upstream LXMF (`LXMF/LXMF.py`, the `AM_*` constants) so
+    // clips interoperate with Sideband and any other LXMF client.
+    /** Codec2 3200 bps — lowest-bandwidth mode practical for LoRa links. */
+    const val AM_CODEC2_3200 = 0x09
+
+    /** Opus in an Ogg container — the general-purpose interoperable mode. */
+    const val AM_OPUS_OGG = 0x10
+
+    /** Opus, low bandwidth. */
+    const val AM_OPUS_LBW = 0x11
+
+    /** Opus, medium bandwidth. */
+    const val AM_OPUS_MBW = 0x12
+
+    /** Opus tuned for push-to-talk. */
+    const val AM_OPUS_PTT = 0x13
+
+    /** Opus, standard quality. */
+    const val AM_OPUS_STANDARD = 0x16
+
+    /** Non-standard payload; the receiver must sniff the container itself. */
+    const val AM_CUSTOM = 0xFF
+
     /** Command structures (Sideband telemetry-request RPCs). */
     const val FIELD_COMMANDS = 0x09
 

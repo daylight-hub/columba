@@ -182,7 +182,7 @@ class NordicDFUFlasher(
                 //
                 // After a 1200-baud touch, the device re-enumerates with a new USB
                 // device ID. Android revokes permission for the old ID and shows a
-                // "Open with Columba?" system dialog. Until the user taps it (or
+                // "Open with Liberty Chat?" system dialog. Until the user taps it (or
                 // the system auto-grants via device_filter.xml), connect() will fail
                 // with "No permission". Retry to give time for permission grant.
                 if (!connectWithRetry(bootloaderDeviceId, DFU_FLASH_BAUD)) {

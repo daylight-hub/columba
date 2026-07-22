@@ -26,10 +26,10 @@ fun CrashReportingOptInDialog(
                 contentDescription = null,
             )
         },
-        title = { Text("Help improve Columba?") },
+        title = { Text("Help improve Liberty Chat?") },
         text = {
             Text(
-                "Columba can send anonymous crash and error reports so the developer can " +
+                "Liberty Chat can send anonymous crash and error reports so the developer can " +
                     "find and fix bugs. No message content, contacts, or identity " +
                     "information is ever included. You can change this anytime in " +
                     "Settings → Advanced.",

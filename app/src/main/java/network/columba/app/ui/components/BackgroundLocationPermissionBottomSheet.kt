@@ -80,8 +80,8 @@ fun BackgroundLocationPermissionBottomSheet(
             Text(
                 text =
                     "To share your location with contacts while the app is in the background, " +
-                        "Columba needs the \"Allow all the time\" permission.\n\n" +
-                        "This lets Columba continue sending your encrypted location to chosen " +
+                        "Liberty Chat needs the \"Allow all the time\" permission.\n\n" +
+                        "This lets Liberty Chat continue sending your encrypted location to chosen " +
                         "contacts even when you switch to another app or lock your screen.\n\n" +
                         "On the next screen, please select \"Allow all the time\".",
                 style = MaterialTheme.typography.bodyMedium,

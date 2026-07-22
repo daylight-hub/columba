@@ -64,7 +64,7 @@ object DeviceInfoUtil {
 
     fun formatForClipboard(info: SystemInfo): String =
         buildString {
-            appendLine("Columba ${info.appVersion} (${info.appBuildCode})")
+            appendLine("Liberty Chat ${info.appVersion} (${info.appBuildCode})")
             appendLine("Build: ${info.gitCommitHash} (${info.buildDate})")
             appendLine("Android ${info.androidVersion} (API ${info.apiLevel})")
             appendLine("Device: ${info.deviceModel} by ${info.manufacturer}")
@@ -90,7 +90,7 @@ object DeviceInfoUtil {
     fun formatForBugReport(info: SystemInfo): String =
         buildString {
             appendLine("### System Information")
-            appendLine("- **Columba**: ${info.appVersion} (${info.appBuildCode})")
+            appendLine("- **Liberty Chat**: ${info.appVersion} (${info.appBuildCode})")
             appendLine("- **Build**: ${info.gitCommitHash} (${info.buildDate})")
             appendLine("- **Build Type**: ${info.buildType}")
             appendLine("- **Android**: ${info.androidVersion} (API ${info.apiLevel})")

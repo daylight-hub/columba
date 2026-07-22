@@ -6,6 +6,8 @@
     <cache-path name="attachments_cache" path="attachments/" />
     <!-- Cache directory for APK sharing -->
     <cache-path name="apk_share" path="apk_share/" />
+    <!-- Cache directory for camera captures taken from the chat attachment panel -->
+    <cache-path name="camera_captures" path="camera/" />
     <!-- Files directory for sharing received attachments (legacy, kept for compatibility) -->
     <files-path name="attachments" path="attachments/" />
 </paths>

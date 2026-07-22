@@ -1,3 +1,42 @@
+# Liberty Chat
+
+*Powered by Torlando-Tech's Columba.*
+
+**A Liberty Communication Systems, Inc. (LCS) distribution of Columba** — native
+Android messaging & voice over LXMF / Reticulum (Bluetooth LE, TCP, or RNode LoRa).
+
+Built on [Columba](https://github.com/torlando-tech/columba) by torlando-tech
+(MPL 2.0). Original design and code are theirs; LCS branding and the changes
+below are Liberty Communication Systems, Inc.
+
+**First release: v1.0.0** (based on Columba 2.0.9). Tag the release commit `v1.0.0`
+to build it — the in-app version and APK filenames read `1.0.0`.
+
+## LCS changes in this branch (`liberty-chat`)
+
+1. App renamed to **Liberty Chat** (launcher label + About + offline banner).
+2. LCS logo across launcher densities + About screen (run `scripts/lcs-branding/apply-lcs-logo.py`).
+3. Announce button added left of the search icon on the Chats screen (manual announce).
+4. RNode default frequency set to US **slot 51 = 914.875 MHz** (LCS standard).
+5. TX-power hint under the RNode power field: *Heltec V4 max 28 dBm; RAK / LILYGO max 22 dBm*.
+6. "Long Fast" preset badge now reads **LCS Recommended**.
+7. Removed the *Display Logo on RNode* option in the RNode wizard.
+8. TCP client server list reduced to a single option: **public.lcs.network:4245** (+ Custom).
+9. Share-APK feature rebranded and serves `liberty-chat-<version>.apk` (the installed LCS build).
+10. Built-in RNode flasher entry removed from Settings.
+11. "Check for Updates" now targets the LCS GitHub repo (`daylight-hub/columba`).
+12. Removed the *Report Bug* button.
+13. About license section credits torlando-tech (original) and LCS (fork); MPL 2.0 retained.
+14. Removed the GitHub Repository / Report an Issue / About Reticulum links.
+15. New **Build Liberty Chat APKs** Actions workflow — one-click build of the four
+    no-Sentry `official-rns-py` APKs.
+
+See `APPLY.md` for how this branch was produced and the items that need your input.
+
+---
+
+<sub>Original Columba README follows.</sub>
+
 <p align="center">
   <img src="./columba-icon.svg" width="200" height="200" alt="alt text" />
 </p>

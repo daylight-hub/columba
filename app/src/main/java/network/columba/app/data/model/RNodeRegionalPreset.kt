@@ -576,7 +576,7 @@ object FrequencySlotCalculator {
 
         return when (region.id) {
             // US/Americas: Avoid Meshtastic slots 9 (NoVa) and 20 (default)
-            "us_915" -> minOf(50, numSlots - 1)
+            "us_915" -> minOf(51, numSlots - 1) // LCS default: slot 51 = 914.875 MHz
             "br_902" -> minOf(10, numSlots - 1) // Smaller band
 
             // EU 868 sub-bands: Use middle of available slots

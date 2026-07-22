@@ -82,7 +82,7 @@ fun WelcomeScreen(
                 // App branding
                 Icon(
                     imageVector = Icons.Default.Sensors,
-                    contentDescription = "Columba",
+                    contentDescription = "Liberty Chat",
                     modifier = Modifier.size(80.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
@@ -90,7 +90,7 @@ fun WelcomeScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Welcome to Columba",
+                    text = "Welcome to Liberty Chat",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,

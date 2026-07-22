@@ -129,7 +129,7 @@ fun FirmwareSelectionStep(
                     Text(
                         text =
                             "microReticulum runs an embedded Reticulum transport stack on the device itself. " +
-                                "It operates as a standalone transport node and will not pair with Columba as a radio interface.\n\n" +
+                                "It operates as a standalone transport node and will not pair with Liberty Chat as a radio interface.\n\n" +
                                 "After flashing, you will be prompted to configure the radio parameters for transport mode.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,

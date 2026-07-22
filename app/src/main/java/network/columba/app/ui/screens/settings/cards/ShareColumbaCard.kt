@@ -22,13 +22,13 @@ fun ShareColumbaCard(
     onNavigateToApkSharing: () -> Unit,
 ) {
     CollapsibleSettingsCard(
-        title = "Share Columba",
+        title = "Share Liberty Chat",
         icon = Icons.Default.Share,
         isExpanded = isExpanded,
         onExpandedChange = onExpandedChange,
     ) {
         Text(
-            text = "Share the Columba app with someone nearby. " +
+            text = "Share the Liberty Chat app with someone nearby. " +
                 "The other person scans a QR code to download and install the app directly from your phone.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -44,7 +44,7 @@ fun ShareColumbaCard(
                 modifier = Modifier.size(18.dp),
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Share Columba APK")
+            Text("Share Liberty Chat APK")
         }
     }
 }
