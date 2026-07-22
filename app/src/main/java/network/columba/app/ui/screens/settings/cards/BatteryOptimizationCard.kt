@@ -171,7 +171,7 @@ fun BatteryOptimizationCard(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (batteryProfileTuningSupported) {
                         Text(
-                            text = "Choose how aggressively Columba should run native Reticulum in the background. Changes apply immediately.",
+                            text = "Choose how aggressively Liberty Chat should run native Reticulum in the background. Changes apply immediately.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
                         )
@@ -229,7 +229,7 @@ fun BatteryOptimizationCard(
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else if (isExempted) {
                         Text(
-                            text = "Battery optimization exemption granted. Columba can run more reliably in the background during deep idle.",
+                            text = "Battery optimization exemption granted. Liberty Chat can run more reliably in the background during deep idle.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
                         )
@@ -250,7 +250,7 @@ fun BatteryOptimizationCard(
                             text =
                                 "Android battery optimization is still enabled. The battery profile above reduces " +
                                     "background work, but Android may still delay or kill background networking " +
-                                    "unless Columba is exempted.",
+                                    "unless Liberty Chat is exempted.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
                         )

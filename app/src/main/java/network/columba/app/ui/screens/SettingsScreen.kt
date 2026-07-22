@@ -68,7 +68,6 @@ import network.columba.app.ui.screens.settings.cards.MessageDeliveryRetrievalCar
 import network.columba.app.ui.screens.settings.cards.NetworkCard
 import network.columba.app.ui.screens.settings.cards.NotificationSettingsCard
 import network.columba.app.ui.screens.settings.cards.PrivacyCard
-import network.columba.app.ui.screens.settings.cards.RNodeFlasherCard
 import network.columba.app.ui.screens.settings.cards.ShareColumbaCard
 import network.columba.app.ui.screens.settings.cards.SharedInstanceBannerCard
 import network.columba.app.ui.screens.settings.cards.ThemeSelectionCard
@@ -107,6 +106,9 @@ fun SettingsScreen(
 ) {
     val blockedUsersViewModel: BlockedUsersViewModel = hiltViewModel()
     val state by viewModel.state.collectAsState()
+    // LCS: push-to-talk prefs are separate StateFlows, not part of the main state combine
+    val pttEnabled by viewModel.pttEnabled.collectAsState()
+    val pttHighBandwidth by viewModel.pttHighBandwidth.collectAsState()
     val blockedPeerCount by blockedUsersViewModel.blockedPeerCount.collectAsState()
     val qrCodeData by debugViewModel.qrCodeData.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -520,11 +522,6 @@ fun SettingsScreen(
                     onNavigateToApkSharing = onNavigateToApkSharing,
                 )
 
-                RNodeFlasherCard(
-                    isExpanded = state.cardExpansionStates[SettingsCardId.RNODE_FLASHER.name] ?: false,
-                    onExpandedChange = { viewModel.toggleCardExpanded(SettingsCardId.RNODE_FLASHER, it) },
-                    onOpenFlasher = onNavigateToFlasher,
-                )
 
                 AdvancedCard(
                     isExpanded = state.cardExpansionStates[SettingsCardId.ADVANCED.name] ?: false,
@@ -539,6 +536,10 @@ fun SettingsScreen(
                     isRestarting = state.isRestarting,
                     crashReportingEnabled = state.crashReportingEnabled,
                     onCrashReportingToggle = { viewModel.setCrashReportingEnabled(it) },
+                    pttEnabled = pttEnabled,
+                    onPttToggle = { viewModel.setPttEnabled(it) },
+                    pttHighBandwidth = pttHighBandwidth,
+                    onPttHighBandwidthToggle = { viewModel.setPttHighBandwidth(it) },
                 )
 
                 // About section

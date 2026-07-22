@@ -17,7 +17,7 @@ import androidx.core.view.WindowCompat
 @Composable
 fun ColumbaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    selectedTheme: AppTheme = PresetTheme.VIBRANT,
+    selectedTheme: AppTheme = PresetTheme.LIBERTY,
     content: @Composable () -> Unit,
 ) {
     val colorScheme =

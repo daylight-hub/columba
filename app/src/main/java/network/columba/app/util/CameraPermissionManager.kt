@@ -76,7 +76,7 @@ object CameraPermissionManager {
      */
     fun getPermissionRationale(): String {
         return buildString {
-            appendLine("Columba needs camera access to:")
+            appendLine("Liberty Chat needs camera access to:")
             appendLine("• Scan QR codes to add contacts")
             appendLine("• Read identity information from QR codes")
             appendLine()

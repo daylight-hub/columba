@@ -1436,6 +1436,28 @@ class MessagingViewModel
          *
          * @param attachment The file attachment to add
          */
+        /**
+         * LCS: attach a push-to-talk clip and send it in one step.
+         *
+         * The attachment is written to [_selectedFileAttachments] synchronously
+         * (not inside a coroutine like [addFileAttachment]) so that the send below
+         * is guaranteed to observe it — otherwise a released PTT button could send
+         * an empty message.
+         */
+        fun sendVoiceMessage(
+            destinationHash: String,
+            attachment: FileAttachment,
+            lxmfAudioMode: Int?,
+        ) {
+            _selectedFileAttachments.value = _selectedFileAttachments.value + attachment
+            Log.d(
+                TAG,
+                "Sending PTT clip: ${attachment.filename} (${attachment.sizeBytes} bytes, " +
+                    "lxmfAudioMode=$lxmfAudioMode)",
+            )
+            sendMessage(destinationHash, "")
+        }
+
         fun addFileAttachment(attachment: FileAttachment) {
             viewModelScope.launch {
                 val currentFiles = _selectedFileAttachments.value

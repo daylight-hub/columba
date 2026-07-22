@@ -80,7 +80,7 @@ fun PermissionsPage(
 
         // Subtitle
         Text(
-            text = "Columba can notify you when:",
+            text = "Liberty Chat can notify you when:",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -116,7 +116,7 @@ fun PermissionsPage(
             icon = Icons.Default.BatteryChargingFull,
             title = "Unrestricted Battery",
             description = "Receive messages even when phone is idle",
-            secondaryDescription = "Prevents Android from pausing Columba",
+            secondaryDescription = "Prevents Android from pausing Liberty Chat",
             isGranted = batteryOptimizationExempt,
             onEnable = onEnableBatteryOptimization,
         )

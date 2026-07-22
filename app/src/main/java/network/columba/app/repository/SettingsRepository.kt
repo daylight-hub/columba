@@ -172,6 +172,12 @@ class SettingsRepository
             // Anonymous crash reporting (sentry flavor only). Opt-in: defaults to false.
             val CRASH_REPORTING_CONSENT = booleanPreferencesKey("crash_reporting_consent")
 
+            // LCS: push-to-talk voice messages in conversations
+            val PTT_ENABLED = booleanPreferencesKey("ptt_enabled")
+
+            // LCS: false = low-bandwidth codec (LoRa), true = high-bandwidth codec (WiFi)
+            val PTT_HIGH_BANDWIDTH = booleanPreferencesKey("ptt_high_bandwidth")
+
             // Whether the one-time crash-reporting opt-in prompt has been shown to an
             // existing user (who completed onboarding before the feature existed).
             val HAS_SEEN_CRASH_REPORTING_PROMPT = booleanPreferencesKey("has_seen_crash_reporting_prompt")
@@ -483,6 +489,38 @@ class SettingsRepository
         }
 
         /**
+         * LCS: whether the push-to-talk (voice message) button is shown in conversations.
+         * On by default; users can turn it off in Advanced settings.
+         */
+        val pttEnabledFlow: Flow<Boolean> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[PreferencesKeys.PTT_ENABLED] ?: true
+                }.distinctUntilChanged()
+
+        suspend fun setPttEnabled(enabled: Boolean) {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.PTT_ENABLED] = enabled
+            }
+        }
+
+        /**
+         * LCS: push-to-talk codec selection. false (default) = low-bandwidth codec
+         * suited to LoRa links; true = high-bandwidth codec for WiFi/TCP links.
+         */
+        val pttHighBandwidthFlow: Flow<Boolean> =
+            context.dataStore.data
+                .map { preferences ->
+                    preferences[PreferencesKeys.PTT_HIGH_BANDWIDTH] ?: false
+                }.distinctUntilChanged()
+
+        suspend fun setPttHighBandwidth(enabled: Boolean) {
+            context.dataStore.edit { preferences ->
+                preferences[PreferencesKeys.PTT_HIGH_BANDWIDTH] = enabled
+            }
+        }
+
+        /**
          * Flow tracking whether the one-time crash-reporting opt-in prompt has been shown.
          * Defaults to false.
          */
@@ -690,7 +728,7 @@ class SettingsRepository
                     preferences[PreferencesKeys.THEME_PREFERENCE]
                 }.flatMapLatest { themeIdentifier ->
                     if (themeIdentifier == null) {
-                        flowOf(PresetTheme.VIBRANT)
+                        flowOf(PresetTheme.LIBERTY)
                     } else {
                         parseThemeIdentifierFlow(themeIdentifier)
                     }

@@ -70,7 +70,7 @@ fun WelcomePage(
             )
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Columba",
+                contentDescription = "Liberty Chat",
                 modifier =
                     Modifier
                         .fillMaxSize()
@@ -82,7 +82,7 @@ fun WelcomePage(
 
         // Title
         Text(
-            text = "Welcome to Columba",
+            text = "Welcome to Liberty Chat",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,

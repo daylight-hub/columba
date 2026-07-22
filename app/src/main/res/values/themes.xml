@@ -3,9 +3,12 @@
     <!-- Main app theme (used after splash) -->
     <style name="Theme.Columba" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <!-- Splash screen theme -->
+    <!-- Splash screen theme: white field, LCS badge, navy wordmark branding strip.
+         The navy wordmark uses the platform-only android:windowSplashScreenBrandingImage
+         attribute, which exists from API 31 — see values-v31/themes.xml. It is NOT a
+         compat attribute, so it must not appear here or resource linking fails. -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#C471ED</item>
+        <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>

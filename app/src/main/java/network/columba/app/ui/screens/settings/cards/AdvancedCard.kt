@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.RestartAlt
@@ -64,6 +66,10 @@ fun AdvancedCard(
     isRestarting: Boolean = false,
     crashReportingEnabled: Boolean = false,
     onCrashReportingToggle: (Boolean) -> Unit = {},
+    pttEnabled: Boolean = true,
+    onPttToggle: (Boolean) -> Unit = {},
+    pttHighBandwidth: Boolean = false,
+    onPttHighBandwidthToggle: (Boolean) -> Unit = {},
 ) {
     val canHostShareInstance = LocalCapabilities.current.performance.shareInstanceHosting
     CollapsibleSettingsCard(
@@ -141,11 +147,11 @@ fun AdvancedCard(
             }
             Text(
                 text =
-                    "Make Columba available as a shared RNS instance so other apps on this device " +
-                        "(Sideband, rnsd, …) can route through Columba's transport. " +
+                    "Make Liberty Chat available as a shared RNS instance so other apps on this device " +
+                        "(Sideband, rnsd, …) can route through Liberty Chat's transport. " +
                         "Requires a service restart to take effect. " +
                         "If another app is already hosting a shared instance on this device, " +
-                        "Columba will join it as a client instead — see the Shared Instance banner.",
+                        "Liberty Chat will join it as a client instead — see the Shared Instance banner.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -227,6 +233,80 @@ fun AdvancedCard(
                     "Send anonymous crash and error reports to help the developer fix bugs. " +
                         "No message content, contacts, or identity information is ever included. " +
                         "Off by default; you can change this at any time.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+        }
+
+        // LCS: Push-to-talk voice messages
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Push-to-Talk Voice Messages",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            Switch(
+                checked = pttEnabled,
+                onCheckedChange = onPttToggle,
+            )
+        }
+        Text(
+            text =
+                "Show a hold-to-talk microphone button in every conversation. Hold to record, " +
+                    "release to send. Received voice messages play automatically.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        if (pttEnabled) {
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = if (pttHighBandwidth) "High Bandwidth Codec" else "Low Bandwidth Codec",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                Switch(
+                    checked = pttHighBandwidth,
+                    onCheckedChange = onPttHighBandwidthToggle,
+                )
+            }
+            Text(
+                text =
+                    "Off (default): AMR-NB at 4.75 kbps, 8 kHz mono — roughly 0.6 KB per second, " +
+                        "small enough to be practical over LoRa/RNode links. " +
+                        "On: AAC at 24 kbps, 16 kHz mono — about 3 KB per second, much better " +
+                        "audio, best over WiFi or TCP.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
