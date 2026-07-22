@@ -45,7 +45,7 @@ fun MainScreen(viewModel: MainViewModel = hiltViewModel()) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Columba LXMF Messenger") },
+                title = { Text("Liberty Chat LXMF Messenger") },
                 actions = {
                     Icon(
                         imageVector = Icons.Default.Info,

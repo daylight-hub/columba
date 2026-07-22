@@ -68,7 +68,6 @@ import network.columba.app.ui.screens.settings.cards.MessageDeliveryRetrievalCar
 import network.columba.app.ui.screens.settings.cards.NetworkCard
 import network.columba.app.ui.screens.settings.cards.NotificationSettingsCard
 import network.columba.app.ui.screens.settings.cards.PrivacyCard
-import network.columba.app.ui.screens.settings.cards.RNodeFlasherCard
 import network.columba.app.ui.screens.settings.cards.ShareColumbaCard
 import network.columba.app.ui.screens.settings.cards.SharedInstanceBannerCard
 import network.columba.app.ui.screens.settings.cards.ThemeSelectionCard
@@ -520,11 +519,6 @@ fun SettingsScreen(
                     onNavigateToApkSharing = onNavigateToApkSharing,
                 )
 
-                RNodeFlasherCard(
-                    isExpanded = state.cardExpansionStates[SettingsCardId.RNODE_FLASHER.name] ?: false,
-                    onExpandedChange = { viewModel.toggleCardExpanded(SettingsCardId.RNODE_FLASHER, it) },
-                    onOpenFlasher = onNavigateToFlasher,
-                )
 
                 AdvancedCard(
                     isExpanded = state.cardExpansionStates[SettingsCardId.ADVANCED.name] ?: false,

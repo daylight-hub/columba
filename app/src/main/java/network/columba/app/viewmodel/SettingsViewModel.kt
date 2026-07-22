@@ -644,7 +644,7 @@ class SettingsViewModel
                     Log.i(
                         TAG,
                         "Detected shared instance went offline - " +
-                            "Columba auto-switched to own instance",
+                            "Liberty Chat auto-switched to own instance",
                     )
                     true
                 } else {
@@ -1100,7 +1100,7 @@ class SettingsViewModel
                         .applyInterfaceChanges(
                             onServiceReady = { _state.value = _state.value.copy(isRestarting = false) },
                         ).onSuccess {
-                            Log.i(TAG, "Service restart completed - now using Columba's own instance")
+                            Log.i(TAG, "Service restart completed - now using Liberty Chat's own instance")
                         }.onFailure { error ->
                             Log.e(TAG, "Service restart failed: ${error.message}", error)
                         }.getOrThrow()
@@ -1355,7 +1355,7 @@ class SettingsViewModel
                     Log.i(
                         TAG,
                         "Shared instance went offline while we were using it - " +
-                            "restarting with Columba's own instance",
+                            "restarting with Liberty Chat's own instance",
                     )
                     // Copy from _state.value, NOT currentState: the
                     // updateHostingShareInstanceState() call earlier

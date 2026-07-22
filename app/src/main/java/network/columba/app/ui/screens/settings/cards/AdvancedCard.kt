@@ -141,11 +141,11 @@ fun AdvancedCard(
             }
             Text(
                 text =
-                    "Make Columba available as a shared RNS instance so other apps on this device " +
-                        "(Sideband, rnsd, …) can route through Columba's transport. " +
+                    "Make Liberty Chat available as a shared RNS instance so other apps on this device " +
+                        "(Sideband, rnsd, …) can route through Liberty Chat's transport. " +
                         "Requires a service restart to take effect. " +
                         "If another app is already hosting a shared instance on this device, " +
-                        "Columba will join it as a client instead — see the Shared Instance banner.",
+                        "Liberty Chat will join it as a client instead — see the Shared Instance banner.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -148,7 +148,7 @@ private fun ModemPresetCard(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = "Recommended",
+                                    text = "LCS Recommended",
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             },

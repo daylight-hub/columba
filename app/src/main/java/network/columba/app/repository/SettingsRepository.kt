@@ -690,7 +690,7 @@ class SettingsRepository
                     preferences[PreferencesKeys.THEME_PREFERENCE]
                 }.flatMapLatest { themeIdentifier ->
                     if (themeIdentifier == null) {
-                        flowOf(PresetTheme.VIBRANT)
+                        flowOf(PresetTheme.LIBERTY)
                     } else {
                         parseThemeIdentifierFlow(themeIdentifier)
                     }

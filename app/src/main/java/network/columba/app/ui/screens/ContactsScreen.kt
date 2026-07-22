@@ -439,7 +439,9 @@ fun ContactsScreen(
             if (selectedTab == ContactsTab.MY_CONTACTS) {
                 FloatingActionButton(
                     onClick = { showAddContactSheet = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    // LCS shiny red accent
+                    containerColor = network.columba.app.ui.theme.LcsRed,
+                    contentColor = androidx.compose.ui.graphics.Color.White,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add contact")
                 }
@@ -1669,11 +1671,11 @@ fun PendingContactBottomSheet(
                     Text(
                         text =
                             if (isPending) {
-                                "This contact was added with only their address. Columba is " +
+                                "This contact was added with only their address. Liberty Chat is " +
                                     "searching the network for their full identity. Once found, " +
                                     "you'll be able to send messages."
                             } else {
-                                "Columba couldn't find this contact's identity on the network " +
+                                "Liberty Chat couldn't find this contact's identity on the network " +
                                     "after 24 hours. They may be offline or using a different " +
                                     "address. You can retry the search or remove this contact."
                             },

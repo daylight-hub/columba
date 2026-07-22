@@ -37,7 +37,7 @@ class UpdateChecker
     constructor() {
         companion object {
             private const val TAG = "UpdateChecker"
-            private const val OWNER = "torlando-tech"
+            private const val OWNER = "daylight-hub"
             private const val REPO = "columba"
             private const val TIMEOUT_MS = 10_000
         }

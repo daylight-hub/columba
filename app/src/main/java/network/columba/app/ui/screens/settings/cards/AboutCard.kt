@@ -1,6 +1,5 @@
 package network.columba.app.ui.screens.settings.cards
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
@@ -13,9 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import network.columba.app.R
 import network.columba.app.service.AppUpdateResult
 import network.columba.app.ui.components.CollapsibleSettingsCard
+import network.columba.app.ui.theme.ShinyRedButton
 import network.columba.app.util.SystemInfo
 import java.util.Locale
 import androidx.core.net.toUri
@@ -67,22 +67,48 @@ fun AboutCard(
             // Logo and Header
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "Columba Logo",
+                contentDescription = "Liberty Chat Logo",
                 modifier = Modifier.size(108.dp),
             )
 
             Text(
-                text = "Columba",
+                text = "Liberty Chat",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
 
             Text(
-                text = "Native Android messaging app using Bluetooth LE, TCP, or RNode (LoRa) over LXMF and Reticulum",
+                text = "Powered by Torlando-Tech's Columba",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text(
+                text = "Liberty Chat — messaging over Bluetooth LE, TCP, or RNode (LoRa) using LXMF and Reticulum",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+
+            // Buy RNode Radios — LCS shiny red CTA linking visibly to the LCS store
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                ShinyRedButton(
+                    text = "Buy RNode Radios",
+                    leadingIcon = Icons.Default.ShoppingCart,
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, "https://www.lcs.network".toUri())
+                        context.startActivity(intent)
+                    },
+                )
+                Text(
+                    text = "www.lcs.network",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
             HorizontalDivider()
 
@@ -133,15 +159,6 @@ fun AboutCard(
                 HorizontalDivider()
             }
 
-            // Links
-            InfoSection(title = "Links & Resources") {
-                LinkButton("GitHub Repository", "https://github.com/torlando-tech/columba", context)
-                LinkButton("Report an Issue", "https://github.com/torlando-tech/columba/issues", context)
-                LinkButton("About Reticulum", "https://reticulum.network/", context)
-            }
-
-            HorizontalDivider()
-
             // Legal
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -153,13 +170,29 @@ fun AboutCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "© 2025–${network.columba.app.BuildConfig.COPYRIGHT_YEAR} Columba Contributors",
+                    text = "Liberty Chat — powered by Torlando-Tech's Columba — " +
+                        "a Liberty Communication Systems, Inc. distribution",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "Based on Columba © 2025–${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                        "Columba Contributors (torlando-tech) — original design & code",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+                Text(
+                    text = "LCS branding & modifications © ${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                        "Liberty Communication Systems, Inc.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
                 )
                 TextButton(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/torlando-tech/columba/blob/main/LICENSE.md".toUri())
+                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/daylight-hub/columba/blob/liberty-chat/LICENSE.md".toUri())
                         context.startActivity(intent)
                     },
                 ) {
@@ -271,19 +304,6 @@ fun AboutCard(
                 Text("Copy System Info")
             }
 
-            // Report Bug Button
-            OutlinedButton(
-                onClick = onReportBug,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.BugReport,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Report Bug")
-            }
         }
     }
 }
@@ -333,22 +353,5 @@ private fun InfoRow(
             textAlign = TextAlign.End,
             modifier = Modifier.weight(1f),
         )
-    }
-}
-
-@Composable
-private fun LinkButton(
-    label: String,
-    url: String,
-    context: Context,
-) {
-    TextButton(
-        onClick = {
-            val intent = Intent(Intent.ACTION_VIEW, url.toUri())
-            context.startActivity(intent)
-        },
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(label)
     }
 }

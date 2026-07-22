@@ -78,7 +78,7 @@ class ApkSharingViewModel
         companion object {
             private const val TAG = "ApkSharingViewModel"
             private const val APK_CACHE_DIR = "apk_share"
-            private val APK_FILE_NAME = "columba-${network.columba.app.BuildConfig.VERSION_NAME}.apk"
+            private val APK_FILE_NAME = "liberty-chat-${network.columba.app.BuildConfig.VERSION_NAME}.apk"
         }
 
         private val _state = MutableStateFlow(ApkSharingState())

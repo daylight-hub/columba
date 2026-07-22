@@ -40,6 +40,10 @@ enum class PresetTheme(
     override val displayName: String,
     override val description: String,
 ) : AppTheme {
+    LIBERTY(
+        displayName = "Liberty",
+        description = "LCS navy, gold, and silver with shiny red accents",
+    ),
     VIBRANT(
         displayName = "Vibrant",
         description = "Purple-pink gradient matching the app icon",
@@ -76,6 +80,7 @@ enum class PresetTheme(
 
     override fun getColorScheme(isDarkTheme: Boolean): ColorScheme {
         return when (this) {
+            LIBERTY -> if (isDarkTheme) libertyDarkScheme else libertyLightScheme
             VIBRANT -> if (isDarkTheme) vibrantDarkScheme else vibrantLightScheme
             OCEAN -> if (isDarkTheme) oceanDarkScheme else oceanLightScheme
             FOREST -> if (isDarkTheme) forestDarkScheme else forestLightScheme
@@ -89,6 +94,12 @@ enum class PresetTheme(
 
     override fun getPreviewColors(isDarkTheme: Boolean): Triple<Color, Color, Color> {
         return when (this) {
+            LIBERTY ->
+                if (isDarkTheme) {
+                    Triple(LibertyNavy80, LibertyGold80, LibertySilver80)
+                } else {
+                    Triple(LibertyNavy40, LibertyGold40, LibertySilver40)
+                }
             VIBRANT ->
                 if (isDarkTheme) {
                     Triple(Purple80, PurpleGrey80, Pink80)
@@ -170,6 +181,41 @@ data class CustomTheme(
 
     override fun getIdentifier(): String = "custom:$id"
 }
+
+// Liberty theme (LCS) - navy primary, gold secondary, silver tertiary, red error/CTA
+private val libertyDarkScheme =
+    darkColorScheme(
+        primary = LibertyNavy80,
+        onPrimary = LibertyOnPrimary80,
+        primaryContainer = LibertyContainer80,
+        onPrimaryContainer = LibertyOnContainer80,
+        secondary = LibertyGold80,
+        onSecondary = LibertyOnSecondary80,
+        tertiary = LibertySilver80,
+        onTertiary = LibertyOnTertiary80,
+        surfaceVariant = LibertySurface80,
+        outline = LibertyOutline80,
+        outlineVariant = LibertyOutline80,
+        error = LcsRedDark,
+        onError = Color.Black,
+    )
+
+private val libertyLightScheme =
+    lightColorScheme(
+        primary = LibertyNavy40,
+        onPrimary = Color.White,
+        primaryContainer = LibertyContainer40,
+        onPrimaryContainer = LibertyOnContainer40,
+        secondary = LibertyGold40,
+        onSecondary = Color.White,
+        tertiary = LibertySilver40,
+        onTertiary = Color.White,
+        surfaceVariant = LibertySurface40,
+        outline = LibertyOutline40,
+        outlineVariant = LibertyOutline40,
+        error = LcsRed,
+        onError = Color.White,
+    )
 
 // Vibrant theme (current/default)
 private val vibrantDarkScheme =

@@ -77,7 +77,7 @@ fun CrashReportingPage(
 
         Text(
             text =
-                "Columba can send anonymous crash and error reports to help the " +
+                "Liberty Chat can send anonymous crash and error reports to help the " +
                     "developer find and fix bugs. No message content, contacts, or " +
                     "identity information is ever included.",
             style = MaterialTheme.typography.bodyLarge,
