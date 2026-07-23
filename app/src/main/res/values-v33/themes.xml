@@ -14,12 +14,12 @@
         purple splash with no Liberty Chat wordmark at all.
 
         Keep this in sync with values-v31/themes.xml. The only intentional
-        difference is windowSplashScreenBehavior.
+        difference is windowSplashScreenBehavior. Note there is deliberately no
+        branding image here either — see the v31 theme for why.
     -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
         <item name="android:windowSplashScreenBehavior">icon_preferred</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>

@@ -7,6 +7,7 @@ import network.columba.app.data.repository.AnnounceRepository
 import network.columba.app.data.repository.ContactRepository
 import network.columba.app.rns.api.RnsTelephony
 import network.columba.app.rns.api.model.CallState
+import network.columba.app.ui.model.CodecProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,6 +68,29 @@ class CallViewModel
         // Loading state for call initiation
         private val _isConnecting = MutableStateFlow(false)
         val isConnecting: StateFlow<Boolean> = _isConnecting.asStateFlow()
+
+        // ---------------------------------------------------------------
+        // LCS: mid-call codec state
+        // ---------------------------------------------------------------
+
+        /** Codec the call is currently running on. */
+        private val _activeProfile = MutableStateFlow(CodecProfile.DEFAULT)
+        val activeProfile: StateFlow<CodecProfile> = _activeProfile.asStateFlow()
+
+        /**
+         * Codec that fits the measured link, or null when the link was never
+         * measured or is comfortably fast enough for [activeProfile].
+         */
+        private val _recommendedProfile = MutableStateFlow<CodecProfile?>(null)
+        val recommendedProfile: StateFlow<CodecProfile?> = _recommendedProfile.asStateFlow()
+
+        /** Measured link rate in bits per second, or null if unknown. */
+        private val _measuredBps = MutableStateFlow<Int?>(null)
+        val measuredBps: StateFlow<Int?> = _measuredBps.asStateFlow()
+
+        /** Set once the user dismisses the advisory; cleared on the next call. */
+        private val _advisoryDismissed = MutableStateFlow(false)
+        val advisoryDismissed: StateFlow<Boolean> = _advisoryDismissed.asStateFlow()
 
         // Track duration timer job to prevent multiple concurrent timers
         private var durationTimerJob: kotlinx.coroutines.Job? = null
@@ -264,6 +288,70 @@ class CallViewModel
         /**
          * Toggle microphone mute.
          */
+        /**
+         * LCS: record what the link measured before dialling.
+         *
+         * Called from the call screen with the probe the caller already ran to
+         * choose a codec. Nothing probes again during the call: LXST exposes no
+         * mid-call quality telemetry, so a live measurement would mean sending
+         * probe traffic over the same link the audio is struggling on — which
+         * on a ~1 kbps LoRa link would cause the problem it was measuring.
+         *
+         * @param bandwidthBps conservative link estimate, or null if unmeasured.
+         * @param profile codec the call actually opened with.
+         */
+        fun recordLinkMeasurement(
+            bandwidthBps: Long?,
+            profile: CodecProfile,
+        ) {
+            _activeProfile.value = profile
+            _advisoryDismissed.value = false
+
+            if (bandwidthBps == null) {
+                _measuredBps.value = null
+                _recommendedProfile.value = null
+                return
+            }
+
+            _measuredBps.value = bandwidthBps.toInt()
+            _recommendedProfile.value =
+                if (CodecProfile.isTooHeavyFor(profile, bandwidthBps)) {
+                    CodecProfile.recommendFromBandwidth(bandwidthBps)
+                } else {
+                    null
+                }
+        }
+
+        /**
+         * LCS: change codec on the live call.
+         *
+         * LXST reconfigures the local pipeline and signals the peer, whose own
+         * LXST follows — so this moves both ends, including Sideband and
+         * MeshChat peers, since the signalling is upstream protocol.
+         *
+         * Works in both directions: this is also how a call goes back up to
+         * Opus after a downgrade, or after moving onto a faster interface.
+         */
+        fun switchCodec(profile: CodecProfile) {
+            viewModelScope.launch {
+                val result = telephony.switchCallProfile(profile.code)
+                result
+                    .onSuccess {
+                        Log.i(TAG, "Switched call codec to ${profile.displayName}")
+                        _activeProfile.value = profile
+                        // The advisory has served its purpose once acted on.
+                        _recommendedProfile.value = null
+                    }.onFailure {
+                        Log.e(TAG, "Failed to switch codec to ${profile.displayName}", it)
+                    }
+            }
+        }
+
+        /** LCS: hide the advisory for the remainder of this call. */
+        fun dismissAdvisory() {
+            _advisoryDismissed.value = true
+        }
+
         fun toggleMute() {
             val newMuted = !telephony.isMuted.value
             viewModelScope.launch {

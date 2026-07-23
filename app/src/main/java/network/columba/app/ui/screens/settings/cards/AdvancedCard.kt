@@ -3,6 +3,7 @@ package network.columba.app.ui.screens.settings.cards
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -246,7 +247,13 @@ fun AdvancedCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // weight(1f) is load-bearing. Without it this Row is measured
+            // against the full incoming width, consumes all of it, and pushes
+            // the Switch past the right edge of the card — which is exactly
+            // what both PTT rows did before 1.2.1. The weight makes the label
+            // yield whatever the Switch needs.
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -261,6 +268,7 @@ fun AdvancedCard(
                     fontWeight = FontWeight.Medium,
                 )
             }
+            Spacer(Modifier.width(12.dp))
             Switch(
                 checked = pttEnabled,
                 onCheckedChange = onPttToggle,
@@ -282,6 +290,7 @@ fun AdvancedCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
@@ -290,17 +299,16 @@ fun AdvancedCard(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                     )
+                    // The qualifier that used to live here ("for LoRa") moved
+                    // into the description below: at bodyLarge it made this
+                    // label wider than the row could hold on a 360 dp screen.
                     Text(
-                        text =
-                            if (pttHighBandwidth) {
-                                "High Bandwidth (Opus)"
-                            } else {
-                                "Low Bandwidth (Codec2, for LoRa)"
-                            },
+                        text = if (pttHighBandwidth) "High Bandwidth" else "Low Bandwidth",
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                     )
                 }
+                Spacer(Modifier.width(12.dp))
                 Switch(
                     checked = pttHighBandwidth,
                     onCheckedChange = onPttHighBandwidthToggle,
@@ -308,12 +316,22 @@ fun AdvancedCard(
             }
             Text(
                 text =
-                    "Selects the codec, not just the bitrate — the same choice Sideband makes. " +
-                        "Off (default): Codec2 1200, 8 kHz mono — about 150 bytes per second, " +
-                        "roughly 15 seconds of air time per 10-second clip on a standard LoRa " +
-                        "preset. On: Opus at 24 kbps — about 3 KB per second, much better audio, " +
-                        "best over WiFi or TCP. Both are decoded by Sideband; a stock Sideband " +
-                        "install sends Codec2 unless its own high-quality PTT option is enabled.",
+                    if (pttHighBandwidth) {
+                        "Opus at 24 kbps — about 3 KB per second. Much better audio, best " +
+                            "over WiFi or TCP. Too heavy for most LoRa links."
+                    } else {
+                        "Codec2 1200, 8 kHz mono — about 150 bytes per second. Roughly 15 " +
+                            "seconds of air time per 10-second clip on a standard LoRa preset."
+                    },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text =
+                    "This selects the codec, not just the bitrate — the same choice Sideband " +
+                        "makes. Sideband decodes both, and sends Codec2 unless its own " +
+                        "high-quality PTT option is switched on.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

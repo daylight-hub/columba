@@ -146,6 +146,26 @@ interface RnsTelephony {
      */
     suspend fun setSpeakerLocally(enabled: Boolean)
 
+    /**
+     * LCS: change the audio codec on an already-established call.
+     *
+     * Wraps LXST's `Telephone.switchProfile`, which does two things: it
+     * reconfigures the local transmit pipeline, and it signals the peer with
+     * `Signalling.PREFERRED_PROFILE + profile.id`. The peer's LXST handles that
+     * signal in `switchProfileFromRemote` and follows — rebuilding both its
+     * encoder and its decoder — so one side switching moves the whole call.
+     *
+     * That signalling is upstream LXST protocol, not a Columba extension, so
+     * Sideband and MeshChat peers follow a switch and this side follows theirs.
+     *
+     * There is no per-direction codec: last switch wins for both parties. A
+     * no-op if the call is not established or the profile is already active —
+     * LXST guards both cases and logs rather than throwing.
+     *
+     * @param profileCode LXST profile id, i.e. [CodecProfile.code].
+     */
+    suspend fun switchCallProfile(profileCode: Int): Result<Unit>
+
     /** Update host-side `isPttMode`. */
     suspend fun setPttModeLocally(enabled: Boolean)
 

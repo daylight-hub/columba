@@ -151,6 +151,11 @@ internal class ClientRnsTelephony(
         awaitResult { cb -> remote.setCallSpeaker(speakerOn, cb) }
     }
 
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.switchCallProfile(profileCode, cb) }
+        Unit
+    }
+
     override suspend fun getCallState(): Result<VoiceCallState> = runCatching {
         val bundle = awaitResult { cb -> remote.getCallState(cb) }
         bundle.classLoader = VoiceCallState::class.java.classLoader

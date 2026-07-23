@@ -9,9 +9,9 @@ Built on [Columba](https://github.com/torlando-tech/columba) by torlando-tech
 (MPL 2.0). Original design and code are theirs; LCS branding and the changes
 below are Liberty Communication Systems, Inc.
 
-**Current release: v1.2.0** (forked from Columba 2.0.9). The release workflow
-derives the version from the tag, so tagging the build commit `v1.2.0` is what
-makes the in-app version and APK filenames read `1.2.0`.
+**Current release: v1.2.1** (forked from Columba 2.0.9). The release workflow
+derives the version from the tag, so tagging the build commit `v1.2.1` is what
+makes the in-app version and APK filenames read `1.2.1`.
 
 Full history is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -40,9 +40,13 @@ Full history is in [CHANGELOG.md](CHANGELOG.md).
 - TX-power hint under the RNode power field: *Heltec V4 max 28 dBm; RAK /
   LILYGO max 22 dBm*.
 - **Long Fast** badged *LCS Recommended* for general use; **Short Fast** badged
-  *Best for LoRa voice/PTT* — at ~10.9 kbps it is the slowest preset that can
+  *Best for voice over LoRa* — at ~10.9 kbps it is the slowest preset that can
   actually carry a live call, against Long Fast's ~1.07 kbps.
-- **Codec2 3200** badged *Best for LoRa voice/PTT* in the call quality picker.
+- **Codec2 3200** badged *Voice/PTT* in the call quality picker.
+- **Mid-call codec switching.** When the pre-dial link probe says the link is
+  too slow for the codec in use, the call screen offers a picker covering both
+  Codec2 and Opus, plus a push-to-talk suggestion. Switching signals the peer,
+  so both ends move — including Sideband and MeshChat peers.
 - *Display Logo on RNode* option removed from the wizard.
 - Built-in RNode flasher entry removed from Settings — LCS ships pre-flashed
   hardware.

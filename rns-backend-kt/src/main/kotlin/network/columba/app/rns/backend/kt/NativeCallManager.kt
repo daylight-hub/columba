@@ -340,6 +340,23 @@ class NativeCallManager(
         }
     }
 
+    /**
+     * LCS: change codec on an established call.
+     *
+     * Not an override — [CallController] has no such member, so this is reached
+     * from NativeRnsBackendImpl directly rather than through the interface.
+     * LXST reconfigures the transmit pipeline and signals the peer, whose own
+     * LXST follows in `switchProfileFromRemote`. It already no-ops when the call
+     * is not established or the profile is unchanged.
+     */
+    fun switchProfile(profileCode: Int) {
+        val profile =
+            Profile.fromId(profileCode)
+                ?: error("Unknown codec profile 0x${profileCode.toString(16)}")
+        Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
+        telephone.switchProfile(profile)
+    }
+
     override fun answer() {
         telephone.answer()
     }

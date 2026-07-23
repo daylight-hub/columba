@@ -1,6 +1,5 @@
 package network.columba.app.ui.components
 
-import android.os.Build
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -27,6 +26,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,60 +38,68 @@ import network.columba.app.ui.theme.LibertyNavy40
 import network.columba.app.ui.theme.LibertySilver40
 
 /**
- * LCS: branded splash overlay for devices the platform branding slot cannot reach.
+ * LCS: the "Liberty Chat — powered by Columba" splash wordmark.
  *
- * ## Why this exists
+ * ## Why the app draws this instead of the system
  *
- * The "Liberty Chat — powered by Columba" wordmark is normally drawn by the
- * system via `android:windowSplashScreenBrandingImage` (see
- * `values-v31/themes.xml`). That attribute is **API 31+ and platform-only** —
- * androidx `core-splashscreen` deliberately does not emulate the branding slot
- * on older releases, so there is no theme-level way to get the wordmark onto
- * Android 10 or 11. The system splash on those devices shows the launcher icon
- * on white and nothing else.
+ * Android's own branding slot, `android:windowSplashScreenBrandingImage`, is
+ * API 31+ and platform-only — androidx `core-splashscreen` deliberately does not
+ * emulate it, so there is no theme-level way to put the wordmark on Android 10
+ * or 11. Relying on it would mean the splash said one thing on a new phone and
+ * another on an old one.
  *
- * So on API < 31 the app draws both marks itself, immediately after the compat
- * splash hands over: the launcher logo, and beneath it the wordmark as live
- * text rather than the `splash_branding` PNG, so it stays crisp at any density
- * and matches the Liberty palette exactly.
+ * Embedding the wordmark in the splash *icon* is not a workaround either: on
+ * API 31+ the platform masks that icon to a circle and clips the outer third, so
+ * a wide logo-plus-text image comes out mangled on exactly the devices where the
+ * branding slot would have worked.
  *
- * On API 31+ this renders nothing — the system already drew both, and drawing
- * them again would flash.
+ * So the app draws it, on every API level, and the platform branding attribute
+ * has been removed from the v31/v33 themes. Every device now shows the same
+ * thing: system splash with the logo on white, then this — logo above the
+ * wordmark — then the app.
  *
- * ## Layout
+ * ## Why [show] exists
  *
- * Both marks must survive the small screens that ship with the Android versions
- * this targets (360x640 dp is common, and 320 dp wide still exists). So:
+ * `setContent` composes the entire tree during `onCreate`, while the system
+ * splash is still covering the window. A dwell timer started on composition
+ * therefore runs and expires *behind* the splash — which is what happened in
+ * 1.2.0, where the wordmark was drawn and removed before the splash ever
+ * lifted, leaving users with a logo and no words.
  *
- * - The logo is sized as a fraction of the viewport rather than a fixed dp, and
- *   capped, so it cannot crowd out the text on a short screen.
- * - The wordmark is stacked, not laid out in a row. Side by side, "Liberty Chat"
- *   plus "powered by Columba" needs roughly 300 dp and would clip at 320.
- * - Text is centred and given horizontal padding so descenders and the longer
- *   attribution line never touch the edges.
+ * [show] is flipped from `SplashScreen.setOnExitAnimationListener` in
+ * `MainActivity`, so the dwell starts when the screen is genuinely visible.
+ *
+ * @param show true once the system splash has left the window.
+ * @param visibleDurationMs how long the wordmark stays up before fading.
  */
 @Composable
-fun LcsBrandedSplashOverlay(visibleDurationMs: Long = 900L) {
-    // API 31+ gets both marks from the platform splash. Nothing to do.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return
-
-    var visible by remember { mutableStateOf(true) }
-    if (!visible) return
-
-    // Fade rather than cut, so the handover to the app does not blink.
+fun LcsBrandedSplashOverlay(
+    show: Boolean,
+    visibleDurationMs: Long = 1100L,
+) {
+    // Latches on the first `show`, so a recomposition cannot replay the splash
+    // mid-session.
+    var hasRun by remember { mutableStateOf(false) }
+    var visible by remember { mutableStateOf(false) }
     var fading by remember { mutableStateOf(false) }
-    val alpha by animateFloatAsState(
-        targetValue = if (fading) 0f else 1f,
-        animationSpec = tween(durationMillis = 220),
-        label = "lcs_splash_fade",
-    )
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(show) {
+        if (!show || hasRun) return@LaunchedEffect
+        hasRun = true
+        visible = true
         delay(visibleDurationMs)
         fading = true
-        delay(240)
+        delay(FADE_MS.toLong())
         visible = false
     }
+
+    if (!visible) return
+
+    val alpha by animateFloatAsState(
+        targetValue = if (fading) 0f else 1f,
+        animationSpec = tween(durationMillis = FADE_MS),
+        label = "lcs_splash_fade",
+    )
 
     Dialog(
         onDismissRequest = { },
@@ -112,9 +120,8 @@ fun LcsBrandedSplashOverlay(visibleDurationMs: Long = 900L) {
                     .alpha(alpha),
             contentAlignment = Alignment.Center,
         ) {
-            // Scale the logo to the viewport, but never let it exceed 180 dp or
-            // fall below 96 dp — the first keeps it from dominating a tablet,
-            // the second keeps it recognisable on a small phone.
+            // Scale the logo to the viewport but keep it within bounds: big
+            // enough to read on a small phone, not dominant on a tablet.
             val logoSize = (minOf(maxWidth, maxHeight) * 0.34f).coerceIn(96.dp, 180.dp)
 
             Column(
@@ -134,12 +141,14 @@ fun LcsBrandedSplashOverlay(visibleDurationMs: Long = 900L) {
 
                 Spacer(Modifier.height(12.dp))
 
-                // Wordmark, stacked. Mirrors splash_branding.png: navy product
-                // name over silver attribution.
+                // Stacked, not side by side: together these need roughly 300 dp
+                // on one line, which clips on the 320 dp-wide screens still in
+                // use on the Android versions this has to cover.
                 Text(
                     text = "Liberty Chat",
                     color = LibertyNavy40,
                     fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                 )
@@ -148,6 +157,7 @@ fun LcsBrandedSplashOverlay(visibleDurationMs: Long = 900L) {
                     text = "powered by Columba",
                     color = LibertySilver40,
                     fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                 )
@@ -155,3 +165,5 @@ fun LcsBrandedSplashOverlay(visibleDurationMs: Long = 900L) {
         }
     }
 }
+
+private const val FADE_MS = 260

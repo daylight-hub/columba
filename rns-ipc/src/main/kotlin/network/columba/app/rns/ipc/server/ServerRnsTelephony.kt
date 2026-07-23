@@ -99,6 +99,11 @@ internal class ServerRnsTelephony(
         Bundle.EMPTY
     }
 
+    override fun switchCallProfile(profileCode: Int, cb: IRnsResultCallback) = dispatch(cb, scope) {
+        impl.switchCallProfile(profileCode).getOrThrow()
+        Bundle.EMPTY
+    }
+
     override fun getCallState(cb: IRnsResultCallback) = dispatch(cb, scope) {
         val state = impl.getCallState().getOrThrow()
         Bundle().apply { putParcelable(BundleKeys.CALL_STATE, state) }

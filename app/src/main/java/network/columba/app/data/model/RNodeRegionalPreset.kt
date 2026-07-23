@@ -125,7 +125,7 @@ enum class ModemPreset(
         bandwidth = 250000,
         codingRate = 5,
         description = "Fast speed, short range",
-        lcsBadge = "Best for LoRa voice/PTT",
+        lcsBadge = "Best for voice over LoRa",
     ),
     SHORT_SLOW(
         displayName = "Short Slow",

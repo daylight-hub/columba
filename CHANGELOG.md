@@ -9,6 +9,59 @@ upstream; upstream's own history is not repeated here.
 
 ---
 
+## 1.2.1 — 2026-07-23
+
+### Added
+
+- **Change the call codec without hanging up.** An advisory on the call screen
+  now appears when the link measured before dialling is too slow for the codec
+  in use. It names what the link measured, what would fit, and offers a codec
+  picker and a push-to-talk suggestion.
+  - The picker lists **both families** — Codec2 (700C / 1600 / 3200) for LoRa
+    links and Opus (Medium / High / Maximum) for WiFi and TCP — so the switch
+    works in both directions. A call downgraded earlier, or one that has moved
+    onto a faster interface, can go back up to Opus without redialling.
+  - Switching moves **both ends**. LXST signals the peer with
+    `Signalling.PREFERRED_PROFILE`, and the peer's LXST rebuilds its encoder and
+    decoder to match. That is upstream protocol, so Sideband and MeshChat peers
+    follow a switch, and this side follows theirs.
+  - Half-duplex is offered alongside, since it roughly halves what the link has
+    to carry.
+
+### Fixed
+
+- **The splash wordmark never appeared.** `setContent` composes the whole tree
+  during `onCreate`, while the system splash is still covering the window — so
+  the 1.2.0 overlay ran its dwell timer and removed itself *behind* the splash,
+  leaving a logo and no words. The overlay now waits for
+  `SplashScreen.setOnExitAnimationListener` before starting.
+- **The splash now reads identically on every Android version.** The platform
+  branding attribute has been dropped from the v31 and v33 themes; the app draws
+  the wordmark itself on all API levels rather than relying on a slot that only
+  exists on Android 12+.
+- **Push-to-talk settings ran off the right edge of the card.** Both PTT rows
+  put an unweighted `Row` next to a `Switch`, so the label consumed the full
+  width and pushed the switch off screen. Both now use `weight(1f)`, and the
+  bandwidth label has been shortened with the detail moved into the description
+  below it.
+
+### Changed
+
+- Codec badge shortened to **"Voice/PTT"**; modem preset badge shortened to
+  **"Best for voice over LoRa"**.
+
+### Not included
+
+Automatic codec reduction during a call. LXST exposes no mid-call quality
+telemetry — no jitter, packet-loss or decoder-underrun counters — so the only
+available measurement is an active probe, which would send traffic over the very
+link that is already struggling. On a ~1 kbps Long Fast link that probe would
+cause the degradation it was meant to detect. The measurement is therefore taken
+once before dialling and the decision left with the user. A starvation counter
+exposed upstream would be enough to revisit this.
+
+---
+
 ## 1.2.0 — 2026-07-22
 
 Second feature release. Voice messaging matures, the default radio

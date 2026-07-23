@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Android 12+ (API 31) adds a branding-image slot at the bottom of the splash
-         screen. This is a platform attribute, so it can only be referenced here. -->
+    <!-- Android 12+ (API 31).
+
+         LCS deliberately does NOT set android:windowSplashScreenBrandingImage
+         here. It exists only on API 31+, and androidx core-splashscreen does not
+         emulate it, so using it would give a different splash on Android 10/11
+         than on Android 12+. The wordmark is drawn by the app instead
+         (LcsBrandedSplashOverlay) so every device shows the same thing. -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
-        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>
 </resources>

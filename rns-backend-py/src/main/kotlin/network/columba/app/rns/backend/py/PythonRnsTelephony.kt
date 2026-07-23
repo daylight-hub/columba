@@ -110,6 +110,14 @@ class PythonRnsTelephony(
     @Volatile
     var profileAwareCallHook: ((String, Int?) -> Unit)? = null
 
+    /**
+     * LCS: set by PythonCallManager. Same reason as [profileAwareCallHook] —
+     * CallCoordinator holds no Telephone reference, so mid-call codec changes
+     * have to reach the call manager that owns it.
+     */
+    @Volatile
+    var profileSwitchHook: ((Int) -> Unit)? = null
+
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
@@ -155,6 +163,14 @@ class PythonRnsTelephony(
             Log.w(TAG, "Ignored error setting speaker=$speakerOn: $e")
         }
     }
+
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        runCatching {
+            val hook =
+                profileSwitchHook
+                    ?: error("Call manager not attached; cannot switch codec")
+            hook(profileCode)
+        }
 
     // ==================== Host-side local-state mutators ====================
     //

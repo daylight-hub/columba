@@ -54,8 +54,10 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import network.columba.app.call.PttMediaSessionManager
-import network.columba.app.viewmodel.CallViewModel
 import network.columba.app.rns.api.model.CallState
+import network.columba.app.ui.components.CallQualityAdvisory
+import network.columba.app.ui.model.CodecProfile
+import network.columba.app.viewmodel.CallViewModel
 
 /**
  * Voice call screen for active/outgoing calls.
@@ -73,6 +75,12 @@ fun VoiceCallScreen(
     onEndCall: () -> Unit,
     autoAnswer: Boolean = false,
     profileCode: Int? = null,
+    /**
+     * LCS: conservative link estimate in bits per second taken before dialling,
+     * or null if the link was never probed. Used only to decide whether to show
+     * the codec advisory; nothing re-measures during the call.
+     */
+    linkSpeedBps: Long? = null,
     viewModel: CallViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -83,6 +91,12 @@ fun VoiceCallScreen(
     val isPttActive by viewModel.isPttActive.collectAsStateWithLifecycle()
     val callDuration by viewModel.callDuration.collectAsStateWithLifecycle()
     val peerName by viewModel.peerName.collectAsStateWithLifecycle()
+
+    // LCS: mid-call codec advisory state.
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val recommendedProfile by viewModel.recommendedProfile.collectAsStateWithLifecycle()
+    val measuredBps by viewModel.measuredBps.collectAsStateWithLifecycle()
+    val advisoryDismissed by viewModel.advisoryDismissed.collectAsStateWithLifecycle()
 
     // PTT MediaSession for Bluetooth headset button capture
     val pttManager =
@@ -115,6 +129,16 @@ fun VoiceCallScreen(
     }
     var permissionRequested by remember { mutableStateOf(false) }
 
+    // LCS: the codec this call actually opened with, and what the link measured
+    // beforehand. profileCode is null when the caller did not pick explicitly,
+    // in which case the call runs on CodecProfile.DEFAULT.
+    val resolvedProfile =
+        remember(profileCode) {
+            profileCode?.let { code -> CodecProfile.entries.firstOrNull { it.code == code } }
+                ?: CodecProfile.DEFAULT
+        }
+    val linkBandwidthBps: Long? = remember(linkSpeedBps) { linkSpeedBps }
+
     // Permission launcher
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -144,6 +168,13 @@ fun VoiceCallScreen(
         if (callState is CallState.Idle) {
             if (hasAudioPermission) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission already granted, calling initiateCall()...")
+                // LCS: hand the pre-dial link measurement to the ViewModel so the
+                // advisory can compare it against the codec actually used. No
+                // probe runs during the call — see recordLinkMeasurement.
+                viewModel.recordLinkMeasurement(
+                    bandwidthBps = linkBandwidthBps,
+                    profile = resolvedProfile,
+                )
                 viewModel.initiateCall(destinationHash, profileCode)
             } else if (!permissionRequested) {
                 android.util.Log.w("VoiceCallScreen", "📞 Requesting microphone permission...")
@@ -258,6 +289,21 @@ fun VoiceCallScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            // LCS: codec advisory. Only while the call is up, and only until the
+            // user acts on it or dismisses it.
+            if (callState is CallState.Active && !advisoryDismissed) {
+                CallQualityAdvisory(
+                    currentProfile = activeProfile,
+                    recommendedProfile = recommendedProfile,
+                    measuredBps = measuredBps,
+                    isPttMode = isPttMode,
+                    onSelectProfile = { viewModel.switchCodec(it) },
+                    onEnablePtt = { viewModel.togglePttMode() },
+                    onDismiss = { viewModel.dismissAdvisory() },
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
             }
 
             // Center: PTT hold-to-talk button (only in PTT mode during active call)

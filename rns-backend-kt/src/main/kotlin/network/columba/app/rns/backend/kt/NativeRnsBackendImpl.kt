@@ -2120,6 +2120,12 @@ class NativeRnsBackendImpl(
         callCoordinator.setSpeakerLocally(enabled)
     }
 
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot switch codec")
+            mgr.switchProfile(profileCode)
+        }
+
     override suspend fun setPttModeLocally(enabled: Boolean) {
         callCoordinator.setPttModeLocally(enabled)
     }

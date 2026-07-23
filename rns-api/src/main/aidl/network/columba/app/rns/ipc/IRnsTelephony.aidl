@@ -32,6 +32,10 @@ oneway interface IRnsTelephony {
     void setCallMuted(boolean muted, in IRnsResultCallback cb);
     void setCallSpeaker(boolean speakerOn, in IRnsResultCallback cb);
 
+    // LCS: mid-call codec change. Reconfigures the local pipeline and signals
+    // the peer, which follows. See RnsTelephony.switchCallProfile.
+    void switchCallProfile(int profileCode, in IRnsResultCallback cb);
+
     // One-shot snapshot of the legacy VoiceCallState shape (Result<VoiceCallState>).
     void getCallState(in IRnsResultCallback cb);
 

@@ -94,6 +94,7 @@ class PythonCallManager(
             backend.telephonyImpl.profileAwareCallHook = { destHex, profileCode ->
                 call(destHex, profileCode)
             }
+            backend.telephonyImpl.profileSwitchHook = ::switchProfile
             backend.telephonyImpl.setIncomingEnabledHook = ::setIncomingEnabled
         }
     }
@@ -342,6 +343,26 @@ class PythonCallManager(
 
     override fun call(destinationHash: String) {
         call(destinationHash, null)
+    }
+
+    /**
+     * LCS: change codec on an established call.
+     *
+     * Goes straight to [Telephone.switchProfile] rather than through
+     * CallCoordinator, which holds no Telephone reference — the same reason
+     * [profileAwareCallHook] exists for placing profile-aware calls.
+     *
+     * LXST reconfigures the transmit pipeline and signals the peer, whose own
+     * LXST follows in `switchProfileFromRemote`. It already no-ops if the call
+     * is not established or the profile is unchanged, so no guard is needed
+     * here; an unknown code is the only real error and is worth surfacing.
+     */
+    fun switchProfile(profileCode: Int) {
+        val profile =
+            Profile.fromId(profileCode)
+                ?: error("Unknown codec profile 0x${profileCode.toString(16)}")
+        Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
+        telephone.switchProfile(profile)
     }
 
     /** Profile-aware overload — invoked from PythonRnsTelephony via the hook. */

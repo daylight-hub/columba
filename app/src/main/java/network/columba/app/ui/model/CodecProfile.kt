@@ -39,7 +39,7 @@ enum class CodecProfile(
         // mode that still fits a Short Fast RNode link (~10.9 kbps raw) with
         // room for RNS framing and retries. 700C and 1600 are for links slower
         // than that; Opus needs far more than any LoRa preset provides.
-        lcsRecommendation = "Best for LoRa voice/PTT",
+        lcsRecommendation = "Voice/PTT",
     ),
     QUALITY_MEDIUM(
         code = 0x40,
@@ -116,8 +116,43 @@ enum class CodecProfile(
          * @param probe The link speed probe result
          * @return Recommended codec profile based on available bandwidth
          */
-        fun recommendFromProbe(probe: LinkSpeedProbeResult): CodecProfile {
-            val bandwidthBps = getConservativeBandwidthBps(probe) ?: return DEFAULT
+        /** LCS: the Codec2 profiles, cheapest first. */
+        fun codec2Profiles(): List<CodecProfile> =
+            listOf(BANDWIDTH_ULTRA_LOW, BANDWIDTH_VERY_LOW, BANDWIDTH_LOW)
+
+        /** LCS: the non-experimental Opus profiles, cheapest first. */
+        fun opusProfiles(): List<CodecProfile> =
+            listOf(QUALITY_MEDIUM, QUALITY_HIGH, QUALITY_MAX)
+
+        /**
+         * LCS: every codec offerable mid-call, cheapest first.
+         *
+         * Both families are present. Codec2 is what rescues a struggling LoRa
+         * link, but the switch has to be reversible: a call that moved onto a
+         * faster interface, or was downgraded pre-emptively, should be able to
+         * go back to Opus without hanging up. LXST's `switchProfile` is
+         * symmetric, so upgrading costs no more than downgrading.
+         *
+         * The experimental low-latency Opus profiles are excluded — mid-call is
+         * the wrong place to discover an experimental codec.
+         */
+        fun switchableProfiles(): List<CodecProfile> = codec2Profiles() + opusProfiles()
+
+        /**
+         * LCS: true when [this] cannot be carried by a link measuring
+         * [bandwidthBps], i.e. the recommendation ladder would place the link
+         * below the profile currently in use.
+         */
+        fun isTooHeavyFor(
+            profile: CodecProfile,
+            bandwidthBps: Long,
+        ): Boolean {
+            val fits = recommendFromBandwidth(bandwidthBps)
+            return fits.ordinal < profile.ordinal
+        }
+
+        /** Ladder shared by [recommendFromProbe] and [isTooHeavyFor]. */
+        fun recommendFromBandwidth(bandwidthBps: Long): CodecProfile {
             val kbps = bandwidthBps / 1000.0
             return when {
                 kbps < 1.5 -> BANDWIDTH_ULTRA_LOW // Codec2 700C
@@ -127,6 +162,11 @@ enum class CodecProfile(
                 kbps < 64 -> QUALITY_HIGH // Opus medium
                 else -> QUALITY_MAX // Opus high
             }
+        }
+
+        fun recommendFromProbe(probe: LinkSpeedProbeResult): CodecProfile {
+            val bandwidthBps = getConservativeBandwidthBps(probe) ?: return DEFAULT
+            return recommendFromBandwidth(bandwidthBps)
         }
     }
 }

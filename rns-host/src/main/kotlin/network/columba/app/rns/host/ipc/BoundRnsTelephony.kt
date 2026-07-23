@@ -48,6 +48,9 @@ internal class BoundRnsTelephony(
         awaitBound().telephony.setCallSpeaker(speakerOn)
     }
 
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        awaitBound().telephony.switchCallProfile(profileCode)
+
     override suspend fun getCallState(): Result<VoiceCallState> =
         awaitBound().telephony.getCallState()
 

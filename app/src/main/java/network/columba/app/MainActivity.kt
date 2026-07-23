@@ -151,6 +151,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var crashReportManager: CrashReportManager
 
+    /**
+     * LCS: true once the system splash has been removed from the window.
+     * Read by the branded wordmark overlay so it starts its dwell timer when
+     * the screen is actually visible. See [onCreate].
+     */
+    private val splashDismissed = androidx.compose.runtime.mutableStateOf(false)
+
     @Inject
     lateinit var transportAdmin: RnsTransportAdmin
 
@@ -253,6 +260,19 @@ class MainActivity : ComponentActivity() {
         var isThemeReady = false
         var isOnboardingReady = false
         splashScreen.setKeepOnScreenCondition { !isThemeReady || !isOnboardingReady }
+
+        // LCS: fire once the system splash actually leaves the screen.
+        //
+        // setContent below composes the whole tree immediately, while the splash
+        // is still covering it. Anything that starts a timer on composition —
+        // like the branded wordmark overlay — would run and expire underneath,
+        // which is exactly what happened in 1.2.0: the wordmark rendered behind
+        // the splash and removed itself before the splash lifted. Gating on this
+        // flag is the only way to know the user can actually see the screen.
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.remove()
+            splashDismissed.value = true
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -2267,10 +2287,12 @@ fun ColumbaNavigation(
                     )
                 }
 
-                // LCS: branded splash wordmark for API < 31, where the platform
-                // branding-image slot does not exist and androidx
-                // core-splashscreen does not emulate it. No-ops on API 31+.
-                network.columba.app.ui.components.LcsBrandedSplashOverlay()
+                // LCS: branded wordmark, shown on every Android version so the
+                // splash reads identically everywhere. Waits for the system
+                // splash to actually leave the screen before starting its dwell.
+                network.columba.app.ui.components.LcsBrandedSplashOverlay(
+                    show = splashDismissed.value,
+                )
 
                 // LCS: the one-time crash-reporting opt-in popup is removed.
                 // LCS ships the noSentry flavor, so the prompt could only ever

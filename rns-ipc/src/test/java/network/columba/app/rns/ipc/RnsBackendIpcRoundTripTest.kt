@@ -392,6 +392,7 @@ private class FakeRnsTelephony : RnsTelephony {
     override suspend fun declineCall() { declineCount++ }
     override suspend fun setCallMuted(muted: Boolean) { _isMuted.value = muted }
     override suspend fun setCallSpeaker(speakerOn: Boolean) { _isSpeakerOn.value = speakerOn }
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = Result.success(Unit)
     override suspend fun getCallState(): Result<VoiceCallState> = nextCallState
 
     override suspend fun setConnecting(destinationHash: String) {
