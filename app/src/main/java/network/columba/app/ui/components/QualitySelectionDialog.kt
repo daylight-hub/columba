@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +61,16 @@ data class QualityOption<T>(
     val displayName: String,
     val description: String,
     val isExperimental: Boolean = false,
+    /**
+     * LCS: optional static badge shown beside the name, independent of the
+     * dynamic "Recommended" chip.
+     *
+     * The two answer different questions. "Recommended" reflects what the live
+     * link probe measured right now; this one is a fixed editorial note that
+     * survives whatever the probe says — used to mark the codec LCS suggests
+     * for voice over a LoRa/RNode link.
+     */
+    val lcsBadge: String? = null,
 )
 
 /**
@@ -154,6 +165,7 @@ fun <T> QualitySelectionDialog(
                                 isSelected = option.value == selectedValue,
                                 isRecommended = option.value == recommendedOption,
                                 isExperimental = option.isExperimental,
+                                lcsBadge = option.lcsBadge,
                                 transferTime = transferTimeEstimates?.get(option.value),
                                 onClick = { selectedValue = option.value },
                             )
@@ -263,6 +275,7 @@ fun QualityOptionRow(
     isSelected: Boolean,
     isRecommended: Boolean,
     isExperimental: Boolean = false,
+    lcsBadge: String? = null,
     transferTime: String? = null,
     onClick: () -> Unit,
 ) {
@@ -316,6 +329,21 @@ fun QualityOptionRow(
                     if (isExperimental && !isRecommended) {
                         Spacer(modifier = Modifier.width(8.dp))
                         ExperimentalChip()
+                    }
+
+                    // LCS: static editorial badge, shown alongside whatever the
+                    // probe-driven "Recommended" chip decided.
+                    if (lcsBadge != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = lcsBadge,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                        )
                     }
                 }
 

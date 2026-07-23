@@ -101,6 +101,16 @@ enum class ModemPreset(
     val bandwidth: Int,
     val codingRate: Int,
     val description: String,
+    /**
+     * LCS: badge text shown beside the preset name, or null for no badge.
+     *
+     * Two presets carry one. [LONG_FAST] is the general-purpose LCS default.
+     * [SHORT_FAST] is the one fast enough for realtime voice: at SF7/BW250/CR5
+     * the raw link is ~10.9 kbps, against ~1.07 kbps for Long Fast. Codec2 3200
+     * needs ~3.2 kbps of payload plus RNS framing, so Long Fast cannot carry a
+     * live call at all — it is a messaging preset.
+     */
+    val lcsBadge: String? = null,
 ) {
     SHORT_TURBO(
         displayName = "Short Turbo",
@@ -115,6 +125,7 @@ enum class ModemPreset(
         bandwidth = 250000,
         codingRate = 5,
         description = "Fast speed, short range",
+        lcsBadge = "Best for LoRa voice/PTT",
     ),
     SHORT_SLOW(
         displayName = "Short Slow",
@@ -143,6 +154,7 @@ enum class ModemPreset(
         bandwidth = 250000,
         codingRate = 5,
         description = "Good balance of speed and range",
+        lcsBadge = "LCS Recommended",
     ),
     LONG_MODERATE(
         displayName = "Long Moderate",
@@ -190,7 +202,6 @@ enum class ModemPreset(
  * @property frequencyStart Start of frequency band in Hz
  * @property frequencyEnd End of frequency band in Hz
  * @property maxTxPower Maximum allowed TX power in dBm (regulatory limit)
- * @property defaultTxPower Recommended default TX power in dBm
  * @property dutyCycle Duty cycle percentage (1-100). 100 = unlimited, 10 = 10% limit, 1 = 1% limit
  * @property description Brief description including regulatory notes
  */
@@ -200,10 +211,25 @@ data class FrequencyRegion(
     val frequencyStart: Long,
     val frequencyEnd: Long,
     val maxTxPower: Int,
-    val defaultTxPower: Int,
     val dutyCycle: Int,
     val description: String,
 ) {
+    /**
+     * LCS: recommended default TX power in dBm.
+     *
+     * Was a per-region literal upstream (10-17 dBm). LCS defaults to
+     * [LCS_DEFAULT_TX_POWER] instead — 22 dBm is the ceiling on the RAK and
+     * LILYGO boards LCS ships, and the practical maximum for the SX127x family.
+     *
+     * Clamped to [maxTxPower] rather than applied flat: several bands sit below
+     * 22 dBm by regulation (EU 868 is 14, EU 433 is 12, Korea 14, Japan 16), and
+     * a default above a region's own ceiling would both break the wizard's
+     * validation and put the user outside their band limit. So this reads 22 in
+     * the US, Australia, Brazil, India and similar, and the regulatory figure
+     * everywhere else.
+     */
+    val defaultTxPower: Int get() = minOf(LCS_DEFAULT_TX_POWER, maxTxPower)
+
     /** Center frequency (for backwards compatibility and defaults) */
     val frequency: Long get() = (frequencyStart + frequencyEnd) / 2
 
@@ -212,6 +238,16 @@ data class FrequencyRegion(
 
     /** Format duty cycle for display */
     val dutyCycleDisplay: String get() = if (dutyCycle >= 100) "Unlimited" else "$dutyCycle%"
+
+    companion object {
+        /**
+         * LCS default TX power in dBm, before per-region clamping.
+         *
+         * 22 dBm: hardware maximum for RAK and LILYGO RNodes. Heltec V4 will do
+         * 28, but 22 is the figure that is safe across the boards LCS ships.
+         */
+        const val LCS_DEFAULT_TX_POWER = 22
+    }
 }
 
 /**
@@ -257,7 +293,6 @@ object FrequencyRegions {
                 frequencyStart = 902_000_000,
                 frequencyEnd = 928_000_000,
                 maxTxPower = 30,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "902-928 MHz ISM band",
             ),
@@ -267,7 +302,6 @@ object FrequencyRegions {
                 frequencyStart = 902_000_000,
                 frequencyEnd = 907_500_000,
                 maxTxPower = 30,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "902-907.5 MHz (limited band)",
             ),
@@ -281,7 +315,6 @@ object FrequencyRegions {
                 frequencyStart = 865_000_000,
                 frequencyEnd = 868_000_000,
                 maxTxPower = 14,
-                defaultTxPower = 14,
                 dutyCycle = 1,
                 description = "Sub-band L: 1% duty cycle, 25 mW (UK, IT, NL presets)",
             ),
@@ -292,7 +325,6 @@ object FrequencyRegions {
                 frequencyStart = 868_000_000,
                 frequencyEnd = 868_600_000,
                 maxTxPower = 14,
-                defaultTxPower = 14,
                 dutyCycle = 1,
                 description = "Sub-band M: 1% duty cycle, 25 mW (LoRaWAN default)",
             ),
@@ -303,7 +335,6 @@ object FrequencyRegions {
                 frequencyStart = 869_400_000,
                 frequencyEnd = 869_650_000,
                 maxTxPower = 27,
-                defaultTxPower = 14,
                 dutyCycle = 10,
                 description = "Sub-band P: 10% duty cycle, 500 mW (best for LoRa)",
             ),
@@ -314,7 +345,6 @@ object FrequencyRegions {
                 frequencyStart = 869_700_000,
                 frequencyEnd = 870_000_000,
                 maxTxPower = 14,
-                defaultTxPower = 14,
                 dutyCycle = 1,
                 description = "Sub-band Q: 1% duty cycle, 25 mW",
             ),
@@ -324,7 +354,6 @@ object FrequencyRegions {
                 frequencyStart = 433_050_000,
                 frequencyEnd = 434_790_000,
                 maxTxPower = 12,
-                defaultTxPower = 10,
                 dutyCycle = 10,
                 description = "433-434 MHz ISM, 10% duty cycle",
             ),
@@ -334,7 +363,6 @@ object FrequencyRegions {
                 frequencyStart = 868_700_000,
                 frequencyEnd = 869_200_000,
                 maxTxPower = 20,
-                defaultTxPower = 14,
                 dutyCycle = 100,
                 description = "868.7-869.2 MHz",
             ),
@@ -344,7 +372,6 @@ object FrequencyRegions {
                 frequencyStart = 868_000_000,
                 frequencyEnd = 868_600_000,
                 maxTxPower = 14,
-                defaultTxPower = 10,
                 dutyCycle = 1,
                 description = "868-868.6 MHz, 1% duty cycle (very restrictive)",
             ),
@@ -355,7 +382,6 @@ object FrequencyRegions {
                 frequencyStart = 915_000_000,
                 frequencyEnd = 928_000_000,
                 maxTxPower = 30,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "915-928 MHz ISM band",
             ),
@@ -365,7 +391,6 @@ object FrequencyRegions {
                 frequencyStart = 864_000_000,
                 frequencyEnd = 868_000_000,
                 maxTxPower = 36,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "864-868 MHz alternative band",
             ),
@@ -375,7 +400,6 @@ object FrequencyRegions {
                 frequencyStart = 920_800_000,
                 frequencyEnd = 927_800_000,
                 maxTxPower = 16,
-                defaultTxPower = 13,
                 dutyCycle = 100,
                 description = "920.8-927.8 MHz ARIB STD-T108",
             ),
@@ -385,7 +409,6 @@ object FrequencyRegions {
                 frequencyStart = 920_000_000,
                 frequencyEnd = 923_000_000,
                 maxTxPower = 14,
-                defaultTxPower = 10,
                 dutyCycle = 100,
                 description = "920-923 MHz",
             ),
@@ -395,7 +418,6 @@ object FrequencyRegions {
                 frequencyStart = 920_000_000,
                 frequencyEnd = 925_000_000,
                 maxTxPower = 27,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "920-925 MHz LP0002",
             ),
@@ -405,7 +427,6 @@ object FrequencyRegions {
                 frequencyStart = 470_000_000,
                 frequencyEnd = 510_000_000,
                 maxTxPower = 19,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "470-510 MHz",
             ),
@@ -415,7 +436,6 @@ object FrequencyRegions {
                 frequencyStart = 865_000_000,
                 frequencyEnd = 867_000_000,
                 maxTxPower = 30,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "865-867 MHz",
             ),
@@ -426,7 +446,6 @@ object FrequencyRegions {
                 frequencyStart = 920_000_000,
                 frequencyEnd = 925_000_000,
                 maxTxPower = 16,
-                defaultTxPower = 14,
                 dutyCycle = 100,
                 description = "920-925 MHz NBTC",
             ),
@@ -436,7 +455,6 @@ object FrequencyRegions {
                 frequencyStart = 917_000_000,
                 frequencyEnd = 925_000_000,
                 maxTxPower = 20,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "917-925 MHz IMDA",
             ),
@@ -446,7 +464,6 @@ object FrequencyRegions {
                 frequencyStart = 919_000_000,
                 frequencyEnd = 924_000_000,
                 maxTxPower = 27,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "919-924 MHz MCMC",
             ),
@@ -456,7 +473,6 @@ object FrequencyRegions {
                 frequencyStart = 915_000_000,
                 frequencyEnd = 918_000_000,
                 maxTxPower = 20,
-                defaultTxPower = 17,
                 dutyCycle = 100,
                 description = "915-918 MHz NTC",
             ),
@@ -467,7 +483,6 @@ object FrequencyRegions {
                 frequencyStart = 2_400_000_000,
                 frequencyEnd = 2_483_500_000,
                 maxTxPower = 10,
-                defaultTxPower = 10,
                 dutyCycle = 100,
                 description = "2.4 GHz ISM (worldwide, short range)",
             ),

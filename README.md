@@ -9,27 +9,85 @@ Built on [Columba](https://github.com/torlando-tech/columba) by torlando-tech
 (MPL 2.0). Original design and code are theirs; LCS branding and the changes
 below are Liberty Communication Systems, Inc.
 
-**First release: v1.0.0** (based on Columba 2.0.9). Tag the release commit `v1.0.0`
-to build it — the in-app version and APK filenames read `1.0.0`.
+**Current release: v1.2.0** (forked from Columba 2.0.9). The release workflow
+derives the version from the tag, so tagging the build commit `v1.2.0` is what
+makes the in-app version and APK filenames read `1.2.0`.
 
-## LCS changes in this branch (`liberty-chat`)
+Full history is in [CHANGELOG.md](CHANGELOG.md).
 
-1. App renamed to **Liberty Chat** (launcher label + About + offline banner).
-2. LCS logo across launcher densities + About screen (run `scripts/lcs-branding/apply-lcs-logo.py`).
-3. Announce button added left of the search icon on the Chats screen (manual announce).
-4. RNode default frequency set to US **slot 51 = 914.875 MHz** (LCS standard).
-5. TX-power hint under the RNode power field: *Heltec V4 max 28 dBm; RAK / LILYGO max 22 dBm*.
-6. "Long Fast" preset badge now reads **LCS Recommended**.
-7. Removed the *Display Logo on RNode* option in the RNode wizard.
-8. TCP client server list reduced to a single option: **public.lcs.network:4245** (+ Custom).
-9. Share-APK feature rebranded and serves `liberty-chat-<version>.apk` (the installed LCS build).
-10. Built-in RNode flasher entry removed from Settings.
-11. "Check for Updates" now targets the LCS GitHub repo (`daylight-hub/columba`).
-12. Removed the *Report Bug* button.
-13. About license section credits torlando-tech (original) and LCS (fork); MPL 2.0 retained.
-14. Removed the GitHub Repository / Report an Issue / About Reticulum links.
-15. New **Build Liberty Chat APKs** Actions workflow — one-click build of the four
-    no-Sentry `official-rns-py` APKs.
+## What LCS changes
+
+### Messaging
+
+- **Push-to-talk voice messages**, interoperable with
+  [Sideband](https://github.com/markqvist/Sideband) in both directions.
+  Clips are sent as LXMF `FIELD_AUDIO` (0x07) rather than as file attachments,
+  which is what makes them arrive as voice messages rather than inert files.
+  Received clips autoplay when the conversation is open, and the bubble can be
+  tapped to replay.
+  - **Low bandwidth** (default) — Codec2 1200, ~150 B/s. For LoRa/RNode links.
+  - **High bandwidth** — Opus, ~3 KB/s. For WiFi or TCP.
+  - The toggle selects the codec, not just the bitrate — the same choice
+    Sideband's own high-quality PTT option makes.
+- Announce button on the Chats screen, left of the search icon.
+
+### Radio
+
+- RNode default frequency: US **slot 51 = 914.875 MHz** (LCS standard).
+- RNode default TX power **22 dBm** (the RAK / LILYGO ceiling), default
+  interface mode **Full**. Per-region defaults are clamped to each band's
+  regulatory maximum, so EU 868 still defaults to 14 dBm and EU 433 to 12.
+- TX-power hint under the RNode power field: *Heltec V4 max 28 dBm; RAK /
+  LILYGO max 22 dBm*.
+- **Long Fast** badged *LCS Recommended* for general use; **Short Fast** badged
+  *Best for LoRa voice/PTT* — at ~10.9 kbps it is the slowest preset that can
+  actually carry a live call, against Long Fast's ~1.07 kbps.
+- **Codec2 3200** badged *Best for LoRa voice/PTT* in the call quality picker.
+- *Display Logo on RNode* option removed from the wizard.
+- Built-in RNode flasher entry removed from Settings — LCS ships pre-flashed
+  hardware.
+
+### Network
+
+- No TCP bootstrap interface is seeded. A fresh install comes up on
+  AutoInterface and Bluetooth LE only — nothing reaches the internet until the
+  user adds a server or attaches an RNode. Upstream's Beleth RNS Hub seed is
+  removed and deleted from existing installs on upgrade.
+- When adding a TCP server, the list offers LCS infrastructure:
+  **public.lcs.network:4245** and **iprnode.local:4545**, plus Custom.
+
+### Identity
+
+- Renamed to **Liberty Chat** throughout, with the LCS logo across launcher
+  densities and a "Liberty Chat — powered by Columba" splash wordmark that
+  renders correctly on every supported Android version.
+- Liberty theme: navy / gold / silver.
+- **Buy RNode Radios** call-to-action in Settings → About, linking to
+  `www.lcs.network`.
+- Share-APK serves `liberty-chat-<version>.apk`.
+- Update checks target `daylight-hub/columba`, so "Check for Updates" and
+  "View Release" track LCS builds.
+- Removed: *Report Bug*, the GitHub / Report an Issue / About Reticulum links,
+  and the crash-reporting opt-in popup.
+- About credits torlando-tech (original) and LCS (distribution); MPL 2.0
+  retained.
+
+### Build
+
+- **Build Liberty Chat APKs** Actions workflow — one-click build of the four
+  no-Sentry `official-rns-py` APKs.
+
+## Upstream stack
+
+| Component | Version |
+|---|---|
+| Columba | 2.0.9 (fork base) |
+| RNS (Python) | 1.1.9 — `torlando-tech/Reticulum`, pinned commit |
+| LXMF (Python) | 0.9.2 — `torlando-tech/LXMF`, pinned commit |
+| LXST | LXST-kt `v0.0.4` (Kotlin; no Python LXST) |
+
+The `kotlinBackend` flavor uses reticulum-kt `v0.0.21` and LXMF-kt `v0.0.13`
+instead. LCS ships the `pythonBackend` flavor.
 
 See `APPLY.md` for how this branch was produced and the items that need your input.
 

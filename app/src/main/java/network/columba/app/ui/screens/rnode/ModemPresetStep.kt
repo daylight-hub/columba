@@ -142,13 +142,16 @@ private fun ModemPresetCard(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     )
 
-                    if (preset == ModemPreset.DEFAULT) {
+                    // LCS: badge text now lives on the preset itself, so the
+                    // voice/PTT recommendation can sit on Short Fast while the
+                    // general recommendation stays on Long Fast.
+                    preset.lcsBadge?.let { badge ->
                         Spacer(Modifier.width(8.dp))
                         SuggestionChip(
                             onClick = {},
                             label = {
                                 Text(
-                                    text = "LCS Recommended",
+                                    text = badge,
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             },

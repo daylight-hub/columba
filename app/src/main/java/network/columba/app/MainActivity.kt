@@ -639,9 +639,6 @@ fun ColumbaNavigation(
     // Collect settings state (includes theme preference)
     val settingsState by settingsViewModel.state.collectAsState()
 
-    // One-time anonymous crash-reporting opt-in prompt for existing users (sentry flavor).
-    val showCrashReportingOptIn by settingsViewModel.shouldShowCrashReportingPrompt.collectAsState()
-
     // Access MapViewModel at navigation level so "Locate on Map" can set pending focus
     val mapViewModel: MapViewModel = hiltViewModel()
 
@@ -2270,15 +2267,17 @@ fun ColumbaNavigation(
                     )
                 }
 
-                // One-time anonymous crash-reporting opt-in for existing users. The
-                // ViewModel gates visibility (sentry flavor, onboarding complete, prompt
-                // not yet seen, not already opted in) and marks it seen on either choice.
-                if (showCrashReportingOptIn) {
-                    network.columba.app.ui.screens.settings.dialogs.CrashReportingOptInDialog(
-                        onEnable = { settingsViewModel.enableCrashReportingFromPrompt() },
-                        onDismiss = { settingsViewModel.dismissCrashReportingPrompt() },
-                    )
-                }
+                // LCS: branded splash wordmark for API < 31, where the platform
+                // branding-image slot does not exist and androidx
+                // core-splashscreen does not emulate it. No-ops on API 31+.
+                network.columba.app.ui.components.LcsBrandedSplashOverlay()
+
+                // LCS: the one-time crash-reporting opt-in popup is removed.
+                // LCS ships the noSentry flavor, so the prompt could only ever
+                // appear as a dead end — and an unprompted dialog asking to send
+                // data off-device is not something Liberty Chat should show. The
+                // toggle remains available in Settings -> Advanced for anyone
+                // building the sentry flavor deliberately.
             }
         }
     }

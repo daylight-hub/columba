@@ -3,10 +3,23 @@
     <!-- Main app theme (used after splash) -->
     <style name="Theme.Columba" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <!-- Splash screen theme for Android 13+ with icon_preferred behavior -->
+    <!--
+        Android 13+ (API 33) splash theme.
+
+        This file exists at all because API 33 added windowSplashScreenBehavior.
+        But because values-v33 shadows values-v31 wholesale, everything else in
+        the v31 theme has to be repeated here — and before LCS 1.2.0 it was not:
+        this theme set a purple background and omitted the branding image, so
+        every Android 13+ device (i.e. most of them) showed upstream Columba's
+        purple splash with no Liberty Chat wordmark at all.
+
+        Keep this in sync with values-v31/themes.xml. The only intentional
+        difference is windowSplashScreenBehavior.
+    -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
-        <item name="android:windowSplashScreenBackground">#C471ED</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
         <item name="android:windowSplashScreenBehavior">icon_preferred</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>

@@ -173,6 +173,7 @@ import network.columba.app.service.SyncProgress
 import network.columba.app.service.SyncResult
 import network.columba.app.ui.components.AttachmentPanel
 import network.columba.app.ui.components.CodecSelectionDialog
+import network.columba.app.ui.components.VoiceMessageBubble
 import network.columba.app.ui.components.FileAttachmentCard
 import network.columba.app.ui.components.FileAttachmentOptionsSheet
 import network.columba.app.ui.components.FileAttachmentPreviewRow
@@ -441,6 +442,10 @@ fun MessagingScreen(
 
     // Codec selection dialog state
     var showCodecSelectionDialog by remember { mutableStateOf(false) }
+
+    // LCS: which voice message is currently playing / decoding, for the bubble.
+    val playingVoiceMessageId by viewModel.playingVoiceMessageId.collectAsState()
+    val loadingVoiceMessageId by viewModel.loadingVoiceMessageId.collectAsState()
     var recommendedCodecProfile by remember { mutableStateOf(CodecProfile.DEFAULT) }
     var isProbingLinkSpeed by remember { mutableStateOf(false) }
 
@@ -1369,6 +1374,11 @@ fun MessagingScreen(
                                                 selectedFileInfo = Triple(messageId, fileIndex, filename)
                                                 showFileOptionsSheet = true
                                             },
+                                            playingMessageId = playingVoiceMessageId,
+                                            loadingAudioMessageId = loadingVoiceMessageId,
+                                            onVoiceMessageTap = { messageId ->
+                                                viewModel.toggleVoiceMessagePlayback(messageId)
+                                            },
                                             onReply = { viewModel.setReplyTo(message.id) },
                                             onReplyPreviewClick = { replyToId ->
                                                 // Jump to original message
@@ -1900,6 +1910,10 @@ fun MessageBubble(
     onViewDetails: (messageId: String) -> Unit = {},
     onRetry: () -> Unit = {},
     onFileAttachmentTap: (messageId: String, fileIndex: Int, filename: String) -> Unit = { _, _, _ -> },
+    // LCS: voice-message replay. Null playingMessageId means nothing is playing.
+    playingMessageId: String? = null,
+    loadingAudioMessageId: String? = null,
+    onVoiceMessageTap: (messageId: String) -> Unit = { },
     onReply: () -> Unit = {},
     onReplyPreviewClick: (replyToMessageId: String) -> Unit = {},
     onReact: (emoji: String) -> Unit = {},
@@ -2292,6 +2306,23 @@ fun MessageBubble(
                         }
 
                         // Display file attachments if present (LXMF field 5 = FILE_ATTACHMENTS)
+                        // LCS: voice message (LXMF FIELD_AUDIO). Rendered above
+                        // the text because a PTT message's "text" is the single
+                        // placeholder space Sideband sends for attachment-only
+                        // messages — the bubble is the actual content.
+                        if (message.hasAudio && message.audioMode != null) {
+                            VoiceMessageBubble(
+                                audioMode = message.audioMode,
+                                isPlayable =
+                                    network.columba.app.util.VoiceMessagePlayer
+                                        .canPlay(message.audioMode),
+                                isPlaying = playingMessageId == message.id,
+                                isLoading = loadingAudioMessageId == message.id,
+                                onTogglePlayback = { onVoiceMessageTap(message.id) },
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
                         if (message.hasFileAttachments) {
                             message.fileAttachments.forEach { fileAttachment ->
                                 FileAttachmentCard(

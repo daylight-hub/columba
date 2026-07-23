@@ -209,6 +209,72 @@ class MessagingViewModel
          */
         private var pendingAudio: Pair<Int, ByteArray>? = null
 
+        /** LCS: id of the voice message currently playing, or null. */
+        private val _playingVoiceMessageId = MutableStateFlow<String?>(null)
+        val playingVoiceMessageId: StateFlow<String?> = _playingVoiceMessageId.asStateFlow()
+
+        /** LCS: id of a voice message whose payload is being read off disk. */
+        private val _loadingVoiceMessageId = MutableStateFlow<String?>(null)
+        val loadingVoiceMessageId: StateFlow<String?> = _loadingVoiceMessageId.asStateFlow()
+
+        private var voicePlaybackJob: kotlinx.coroutines.Job? = null
+
+        /**
+         * LCS: play a received voice message again, or stop it if it is playing.
+         *
+         * Inbound clips autoplay once on receipt (`MessageCollector`); this is
+         * the manual replay path behind the bubble's play button. Parsing goes
+         * through `parseAudioField`, which may hit the disk for a `_file_ref`
+         * payload, so it runs off the main thread and the bubble shows a
+         * spinner in the meantime.
+         */
+        fun toggleVoiceMessagePlayback(messageId: String) {
+            if (_playingVoiceMessageId.value == messageId) {
+                voicePlaybackJob?.cancel()
+                network.columba.app.util.VoiceMessagePlayer.stop()
+                _playingVoiceMessageId.value = null
+                return
+            }
+
+            // Starting a different clip supersedes whatever was playing.
+            voicePlaybackJob?.cancel()
+            network.columba.app.util.VoiceMessagePlayer.stop()
+
+            voicePlaybackJob =
+                viewModelScope.launch {
+                    _loadingVoiceMessageId.value = messageId
+                    try {
+                        val fieldsJson =
+                            withContext(Dispatchers.IO) {
+                                conversationRepository.getMessageById(messageId)?.fieldsJson
+                            }
+                        val parsed =
+                            withContext(Dispatchers.IO) {
+                                network.columba.app.ui.model.parseAudioField(fieldsJson)
+                            }
+                        if (parsed == null) {
+                            Log.w(TAG, "No playable audio payload on message ${messageId.take(16)}")
+                            return@launch
+                        }
+                        val (mode, payload) = parsed
+                        if (!network.columba.app.util.VoiceMessagePlayer.canPlay(mode)) {
+                            Log.i(TAG, "Voice message in unplayable mode $mode")
+                            return@launch
+                        }
+                        _loadingVoiceMessageId.value = null
+                        _playingVoiceMessageId.value = messageId
+                        network.columba.app.util.VoiceMessagePlayer.play(applicationContext, mode, payload)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Voice message replay failed", e)
+                    } finally {
+                        _loadingVoiceMessageId.value = null
+                        if (_playingVoiceMessageId.value == messageId) {
+                            _playingVoiceMessageId.value = null
+                        }
+                    }
+                }
+        }
+
         private val _isProcessingFile = MutableStateFlow(false)
         val isProcessingFile: StateFlow<Boolean> = _isProcessingFile.asStateFlow()
 

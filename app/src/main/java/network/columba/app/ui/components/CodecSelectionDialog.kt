@@ -35,6 +35,7 @@ fun CodecSelectionDialog(
                 displayName = profile.displayName,
                 description = profile.description,
                 isExperimental = profile.isExperimental,
+                lcsBadge = profile.lcsRecommendation,
             )
         }
 

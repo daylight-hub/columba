@@ -15,6 +15,11 @@ enum class CodecProfile(
     val displayName: String,
     val description: String,
     val isExperimental: Boolean = false,
+    /**
+     * LCS: shown as a badge in the codec picker. Non-null on the one profile
+     * LCS recommends for voice over a LoRa/RNode link.
+     */
+    val lcsRecommendation: String? = null,
 ) {
     BANDWIDTH_ULTRA_LOW(
         code = 0x10,
@@ -30,6 +35,11 @@ enum class CodecProfile(
         code = 0x30,
         displayName = "Low Bandwidth",
         description = "Codec2 3200 - Balanced for limited bandwidth",
+        // LCS: 3200 bps of payload (~400 B/s) is the most intelligible Codec2
+        // mode that still fits a Short Fast RNode link (~10.9 kbps raw) with
+        // room for RNS framing and retries. 700C and 1600 are for links slower
+        // than that; Opus needs far more than any LoRa preset provides.
+        lcsRecommendation = "Best for LoRa voice/PTT",
     ),
     QUALITY_MEDIUM(
         code = 0x40,
