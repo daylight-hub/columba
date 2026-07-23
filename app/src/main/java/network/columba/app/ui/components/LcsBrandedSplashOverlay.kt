@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -78,8 +79,11 @@ fun LcsBrandedSplashOverlay(
     visibleDurationMs: Long = 1100L,
 ) {
     // Latches on the first `show`, so a recomposition cannot replay the splash
-    // mid-session.
-    var hasRun by remember { mutableStateOf(false) }
+    // mid-session. rememberSaveable rather than remember: the flag driving
+    // `show` is process-scoped, so on an Activity recreation (rotation, "don't
+    // keep activities") it is already true — a plain remember would reset here
+    // and replay the splash on every rotation.
+    var hasRun by rememberSaveable { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
     var fading by remember { mutableStateOf(false) }
 

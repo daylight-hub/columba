@@ -129,6 +129,20 @@ import javax.inject.Inject
  * Main activity for the Columba LXMF Messenger application.
  */
 @AndroidEntryPoint
+/**
+ * LCS: true once the system splash has been removed from the window.
+ *
+ * File-level rather than a MainActivity property because the consumer,
+ * [ColumbaNavigation], is a top-level composable rather than a method of the
+ * Activity — an Activity-private field is simply not in scope there.
+ *
+ * Process-scoped, which is the correct lifetime: the splash belongs to a cold
+ * start, and a fresh process is exactly when it should play again. The overlay
+ * keeps its own `rememberSaveable` latch so an Activity recreation (rotation,
+ * "don't keep activities") does not replay it.
+ */
+private val splashDismissed = mutableStateOf(false)
+
 class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
@@ -151,12 +165,6 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var crashReportManager: CrashReportManager
 
-    /**
-     * LCS: true once the system splash has been removed from the window.
-     * Read by the branded wordmark overlay so it starts its dwell timer when
-     * the screen is actually visible. See [onCreate].
-     */
-    private val splashDismissed = androidx.compose.runtime.mutableStateOf(false)
 
     @Inject
     lateinit var transportAdmin: RnsTransportAdmin
