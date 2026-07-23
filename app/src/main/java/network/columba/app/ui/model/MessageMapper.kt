@@ -37,6 +37,9 @@ fun Message.toMessageUi(): MessageUi {
     val hasImage = hasImageField(fieldsJson)
     val cachedImage = if (hasImage) ImageCache.get(id) else null
 
+    val audioMode = parseAudioMode(fieldsJson)
+    val hasAudio = audioMode != null
+
     val hasFiles = hasFileAttachmentsField(fieldsJson)
     // DEBUG: Log file attachment detection
     if (fieldsJson?.contains("\"5\"") == true) {
@@ -54,7 +57,11 @@ fun Message.toMessageUi(): MessageUi {
     // Determine if we need to preserve fieldsJson for UI components
     // (uncached image, file attachments, or pending file notification)
     val hasUncachedImage = hasImage && cachedImage == null
-    val needsFieldsJson = hasUncachedImage || hasFiles || hasPendingFileNotification(fieldsJson)
+    // Audio bytes are only ever read on demand (playback), never at map time,
+    // so the raw fields have to survive into the UI model the same way an
+    // undecoded image's do.
+    val needsFieldsJson =
+        hasUncachedImage || hasFiles || hasAudio || hasPendingFileNotification(fieldsJson)
 
     return MessageUi(
         id = id,
@@ -79,7 +86,105 @@ fun Message.toMessageUi(): MessageUi {
         receivedSnr = receivedSnr,
         receivedAt = receivedAt,
         sentInterface = sentInterface,
+        hasAudio = hasAudio,
+        audioMode = audioMode,
     )
+}
+
+/**
+ * Parse LXMF `FIELD_AUDIO` (0x07) out of a message's fields.
+ *
+ * On the wire the field is `[mode_int, audio_bytes]` — Sideband's `core.py`
+ * writes it, `audioproc.py` reads it, and upstream LXMF specifies nothing
+ * further. There is no container, header, or length prefix; for the Codec2
+ * modes the payload is just concatenated whole frames.
+ *
+ * By the time it reaches here it has been through one of three encodings:
+ *
+ *  1. **Inline array** — `"7": [16, "4f676753…"]`. `event_bridge.py::_jsonable`
+ *     hex-encodes the bytes on the way across the JNI boundary; the local echo
+ *     of our own sent clip is written in the same shape by `buildFieldsJson`.
+ *  2. **Disk reference** — `"7": {"_file_ref": "/path"}`, written by
+ *     `ConversationRepository.extractLargeAttachments` once the whole
+ *     `fieldsJson` blob crosses 500 KB. Note the file holds the *array's* JSON
+ *     text, not bare hex: that function stores `value.toString()`, and for a
+ *     JSONArray value that is `[16,"4f67…"]`. Sniffing for a leading `[`
+ *     distinguishes it from the bare-hex form used for field 6.
+ *  3. **Absent** — no audio, or a malformed field. Returns null either way.
+ *
+ * Returns `(mode, bytes)`, or null. Does not validate that [mode] is one we can
+ * actually decode — that is `LxmfFields.isPlayableAudioMode`'s job, and the
+ * bubble still wants to render an "unsupported codec" state for the rest.
+ *
+ * IMPORTANT: may perform disk I/O in the `_file_ref` case. Call off the main
+ * thread. Use [parseAudioMode] for the cheap "is there audio, and what kind"
+ * check during composition.
+ */
+@Suppress("ReturnCount")
+fun parseAudioField(fieldsJson: String?): Pair<Int, ByteArray>? {
+    val array = audioFieldArray(fieldsJson, allowDiskRead = true) ?: return null
+    val mode = array.optInt(0, -1)
+    val hex = array.optString(1, "")
+    if (mode < 0 || hex.isEmpty()) return null
+    return try {
+        mode to hexStringToByteArray(hex)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to decode audio payload for mode $mode", e)
+        null
+    }
+}
+
+/**
+ * Cheap variant of [parseAudioField] that returns only the `AM_*` mode.
+ *
+ * Never touches the disk and never decodes the payload, so it is safe to call
+ * during composition — the mode is enough to decide whether to draw a voice
+ * bubble and whether to draw it as playable or unsupported.
+ */
+@Suppress("SwallowedException", "ReturnCount")
+internal fun parseAudioMode(fieldsJson: String?): Int? {
+    val array = audioFieldArray(fieldsJson, allowDiskRead = false) ?: return null
+    return array.optInt(0, -1).takeIf { it >= 0 }
+}
+
+/**
+ * Resolve `fields["7"]` to its `[mode, hex]` array, following a `_file_ref`
+ * indirection only when [allowDiskRead] is set.
+ *
+ * When the payload is on disk and we are not allowed to read it, the mode is
+ * still recoverable from the reference object if a previous parse cached it;
+ * otherwise the caller degrades to "audio present, mode unknown", which
+ * [parseAudioMode] reports as null. In practice this only happens for clips
+ * large enough to have pushed the whole field blob past 500 KB — well beyond
+ * any plausible PTT recording — so the fast path stays allocation-light.
+ */
+@Suppress("SwallowedException", "ReturnCount")
+private fun audioFieldArray(
+    fieldsJson: String?,
+    allowDiskRead: Boolean,
+): JSONArray? {
+    if (fieldsJson == null) return null
+    return try {
+        when (val field7 = JSONObject(fieldsJson).opt("7")) {
+            is JSONArray -> field7.takeIf { it.length() >= 2 }
+
+            is JSONObject -> {
+                if (!allowDiskRead || !field7.has(FILE_REF_KEY)) return null
+                val text = loadAttachmentFromDisk(field7.getString(FILE_REF_KEY)) ?: return null
+                // extractLargeAttachments stores value.toString(); for a
+                // JSONArray value that is the array's JSON text, not bare hex.
+                if (!text.trimStart().startsWith("[")) {
+                    Log.w(TAG, "Audio _file_ref did not contain a JSON array")
+                    return null
+                }
+                JSONArray(text).takeIf { it.length() >= 2 }
+            }
+
+            else -> null
+        }
+    } catch (e: Exception) {
+        null
+    }
 }
 
 /**

@@ -291,7 +291,12 @@ fun AdvancedCard(
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        text = if (pttHighBandwidth) "High Bandwidth Codec" else "Low Bandwidth Codec",
+                        text =
+                            if (pttHighBandwidth) {
+                                "High Bandwidth (Opus)"
+                            } else {
+                                "Low Bandwidth (Codec2, for LoRa)"
+                            },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                     )
@@ -303,10 +308,12 @@ fun AdvancedCard(
             }
             Text(
                 text =
-                    "Off (default): AMR-NB at 4.75 kbps, 8 kHz mono — roughly 0.6 KB per second, " +
-                        "small enough to be practical over LoRa/RNode links. " +
-                        "On: AAC at 24 kbps, 16 kHz mono — about 3 KB per second, much better " +
-                        "audio, best over WiFi or TCP.",
+                    "Selects the codec, not just the bitrate — the same choice Sideband makes. " +
+                        "Off (default): Codec2 1200, 8 kHz mono — about 150 bytes per second, " +
+                        "roughly 15 seconds of air time per 10-second clip on a standard LoRa " +
+                        "preset. On: Opus at 24 kbps — about 3 KB per second, much better audio, " +
+                        "best over WiFi or TCP. Both are decoded by Sideband; a stock Sideband " +
+                        "install sends Codec2 unless its own high-quality PTT option is enabled.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

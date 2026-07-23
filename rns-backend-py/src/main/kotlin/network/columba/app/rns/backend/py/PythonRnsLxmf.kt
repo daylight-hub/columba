@@ -134,6 +134,8 @@ class PythonRnsLxmf(
         replyQuotedContent: String?,
         iconAppearance: IconAppearance?,
         extraFields: Map<Int, Any>?,
+        audioMode: Int?,
+        audioData: ByteArray?,
     ): Result<MessageReceipt> =
         pyResult {
             runtime.requireRunning()
@@ -145,6 +147,8 @@ class PythonRnsLxmf(
                 replyQuotedContent = replyQuotedContent,
                 iconAppearance = iconAppearance,
                 extraFields = extraFields,
+                audioMode = audioMode,
+                audioData = audioData,
             )
             // tryPropagationOnFail mirrors Sideband's `try_propagation_on_fail`
             // pattern: tag the LXMessage so the failure callback (in
@@ -320,6 +324,8 @@ class PythonRnsLxmf(
         replyQuotedContent: String? = null,
         iconAppearance: IconAppearance? = null,
         extraFields: Map<Int, Any>? = null,
+        audioMode: Int? = null,
+        audioData: ByteArray? = null,
     ): PyObject {
         val fields = LinkedHashMap<Int, Any>()
 
@@ -339,6 +345,14 @@ class PythonRnsLxmf(
                 listOf(name, data).toPyList()
             }
             fields[LxmfFields.FIELD_FILE_ATTACHMENTS] = attachments.toPyList()
+        }
+
+        if (audioMode != null && audioData != null) {
+            // FIELD_AUDIO: [mode_int, audio_bytes]. Must be a real Python list —
+            // same Chaquopy footgun as FIELD_IMAGE above, or upstream LXMF packs
+            // a non-iterable ArrayList into self.fields. Sideband reads exactly
+            // this shape in `core.py::ptt_playback`.
+            fields[LxmfFields.FIELD_AUDIO] = listOf(audioMode, audioData).toPyList()
         }
 
         if (replyToMessageId != null) {

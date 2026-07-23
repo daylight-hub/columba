@@ -200,6 +200,15 @@ class MessagingViewModel
         private val _selectedFileAttachments = MutableStateFlow<List<FileAttachment>>(emptyList())
         val selectedFileAttachments: StateFlow<List<FileAttachment>> = _selectedFileAttachments.asStateFlow()
 
+        /**
+         * LCS: PTT clip staged by [sendVoiceMessage], consumed by the very next
+         * [sendMessage] call. Deliberately not a StateFlow — unlike images and
+         * file attachments there is no compose-bar preview for a voice clip, and
+         * record-release sends immediately, so there is nothing for the UI to
+         * observe. `(LXMF AM_* mode, payload bytes)`.
+         */
+        private var pendingAudio: Pair<Int, ByteArray>? = null
+
         private val _isProcessingFile = MutableStateFlow(false)
         val isProcessingFile: StateFlow<Boolean> = _isProcessingFile.asStateFlow()
 
@@ -1185,6 +1194,10 @@ class MessagingViewModel
                     val imageData = _selectedImageData.value
                     val imageFormat = _selectedImageFormat.value
                     val fileAttachments = _selectedFileAttachments.value
+                    // Consume the staged PTT clip, if any. Cleared unconditionally
+                    // so a failed send can't leak the clip onto the next message.
+                    val audio = pendingAudio
+                    pendingAudio = null
 
                     // Reject pathologically large attachments before sending.
                     // Attachment bytes now cross to :reticulum out-of-band (a
@@ -1194,7 +1207,9 @@ class MessagingViewModel
                     // instead of sending. Surface a friendly message rather than
                     // a buried failure.
                     val totalAttachmentBytes =
-                        (imageData?.size?.toLong() ?: 0L) + fileAttachments.sumOf { it.sizeBytes.toLong() }
+                        (imageData?.size?.toLong() ?: 0L) +
+                            fileAttachments.sumOf { it.sizeBytes.toLong() } +
+                            (audio?.second?.size?.toLong() ?: 0L)
                     if (totalAttachmentBytes > MAX_ATTACHMENT_TOTAL_BYTES) {
                         Log.w(
                             TAG,
@@ -1208,7 +1223,9 @@ class MessagingViewModel
                         return@launch
                     }
 
-                    val sanitized = validateAndSanitizeContent(content, imageData, fileAttachments) ?: return@launch
+                    val sanitized =
+                        validateAndSanitizeContent(content, imageData, fileAttachments, audio != null)
+                            ?: return@launch
                     val destHashBytes = validateDestinationHash(destinationHash) ?: return@launch
                     val identity =
                         loadIdentityIfNeeded() ?: run {
@@ -1218,7 +1235,8 @@ class MessagingViewModel
 
                     val tryPropOnFail = settingsRepository.getTryPropagationOnFail()
                     val defaultMethod = settingsRepository.getDefaultDeliveryMethod()
-                    val deliveryMethod = determineDeliveryMethod(sanitized, imageData, fileAttachments, defaultMethod)
+                    val deliveryMethod =
+                        determineDeliveryMethod(sanitized, imageData, fileAttachments, defaultMethod, audio != null)
                     val deliveryMethodString = deliveryMethod.toStorageString()
 
                     // Convert file attachments to protocol format: List<Pair<String, ByteArray>>
@@ -1276,12 +1294,14 @@ class MessagingViewModel
                                 }.getOrNull()
                             },
                             iconAppearance = iconAppearance,
+                            audioMode = audio?.first,
+                            audioData = audio?.second,
                         )
 
                     result
                         .onSuccess { receipt ->
                             // Clear pending reply and draft after successful send
-                            handleSendSuccess(receipt, sanitized, destinationHash, imageData, imageFormat, fileAttachments, deliveryMethodString, replyToId)
+                            handleSendSuccess(receipt, sanitized, destinationHash, imageData, imageFormat, fileAttachments, deliveryMethodString, replyToId, audio)
                             clearReplyTo()
                             draftSaveJob?.cancel()
                             lastDraftText = ""
@@ -1308,6 +1328,7 @@ class MessagingViewModel
             fileAttachments: List<FileAttachment>,
             deliveryMethodString: String,
             replyToMessageId: String? = null,
+            audio: Pair<Int, ByteArray>? = null,
         ) {
             Log.d(TAG, "Message sent successfully${if (replyToMessageId != null) " (reply to ${replyToMessageId.take(16)})" else ""}")
             val fieldsJson =
@@ -1318,6 +1339,8 @@ class MessagingViewModel
                         fileAttachments,
                         replyToMessageId,
                         cacheDir = applicationContext.cacheDir,
+                        audioMode = audio?.first,
+                        audioData = audio?.second,
                     )
                 } catch (e: java.io.IOException) {
                     Log.e(TAG, "Failed to build fieldsJson (attachment I/O error), saving message without attachments", e)
@@ -1439,22 +1462,37 @@ class MessagingViewModel
         /**
          * LCS: attach a push-to-talk clip and send it in one step.
          *
-         * The attachment is written to [_selectedFileAttachments] synchronously
-         * (not inside a coroutine like [addFileAttachment]) so that the send below
-         * is guaranteed to observe it — otherwise a released PTT button could send
-         * an empty message.
+         * Clips carrying an LXMF audio mode go out as `FIELD_AUDIO` (0x07), NOT
+         * as a file attachment: Sideband only renders a voice bubble — and only
+         * autoplays via `core.py::ptt_event` — for 0x07. A clip sent under
+         * `FIELD_FILE_ATTACHMENTS` arrives as an inert file.
+         *
+         * [lxmfAudioMode] is null only for the AMR fallback profile on API < 29,
+         * which has no LXMF audio mode; those clips keep the old file-attachment
+         * behaviour so they still arrive, just without voice-message semantics.
+         *
+         * Staging is synchronous (not inside a coroutine like [addFileAttachment])
+         * so the send below is guaranteed to observe it — otherwise a released PTT
+         * button could send an empty message.
          */
         fun sendVoiceMessage(
             destinationHash: String,
             attachment: FileAttachment,
             lxmfAudioMode: Int?,
         ) {
-            _selectedFileAttachments.value = _selectedFileAttachments.value + attachment
+            if (lxmfAudioMode != null) {
+                pendingAudio = lxmfAudioMode to attachment.data
+            } else {
+                _selectedFileAttachments.value = _selectedFileAttachments.value + attachment
+            }
             Log.d(
                 TAG,
                 "Sending PTT clip: ${attachment.filename} (${attachment.sizeBytes} bytes, " +
                     "lxmfAudioMode=$lxmfAudioMode)",
             )
+            // Content is left blank here; validateAndSanitizeContent substitutes
+            // the single space Sideband itself uses for attachment-only messages
+            // (`main.py:2160`) — its send path hard-rejects `content == ""`.
             sendMessage(destinationHash, "")
         }
 
@@ -2500,10 +2538,11 @@ internal fun validateAndSanitizeContent(
     content: String,
     imageData: ByteArray?,
     fileAttachments: List<FileAttachment> = emptyList(),
+    hasAudio: Boolean = false,
 ): String? {
     // Sideband requires non-empty content to save messages to its database.
     // When sending attachments without text, use a single space (matching Sideband's behavior).
-    if (content.trim().isEmpty() && (imageData != null || fileAttachments.isNotEmpty())) {
+    if (content.trim().isEmpty() && (imageData != null || fileAttachments.isNotEmpty() || hasAudio)) {
         return " "
     }
     val validationResult = InputValidator.validateMessageContent(content)
@@ -2573,9 +2612,12 @@ private fun determineDeliveryMethod(
     imageData: ByteArray?,
     fileAttachments: List<FileAttachment> = emptyList(),
     defaultMethod: String,
+    hasAudio: Boolean = false,
 ): DeliveryMethod {
     val contentSize = sanitized.toByteArray().size
-    val hasAttachments = imageData != null || fileAttachments.isNotEmpty()
+    // Audio counts as an attachment: even a 700C clip outruns the
+    // opportunistic single-packet budget within a couple of seconds.
+    val hasAttachments = imageData != null || fileAttachments.isNotEmpty() || hasAudio
     return if (!hasAttachments && contentSize <= OPPORTUNISTIC_MAX_BYTES_HELPER) {
         Log.d(HELPER_TAG, "Using OPPORTUNISTIC delivery (content: $contentSize bytes)")
         DeliveryMethod.OPPORTUNISTIC
@@ -2592,12 +2634,15 @@ private suspend fun buildFieldsJson(
     replyToMessageId: String? = null,
     reactions: Map<String, List<String>>? = null,
     cacheDir: java.io.File? = null,
+    audioMode: Int? = null,
+    audioData: ByteArray? = null,
 ): String? {
     val hasImage = imageData != null && imageFormat != null
     val hasFiles = fileAttachments.isNotEmpty()
     val hasReply = replyToMessageId != null
     val hasReactions = !reactions.isNullOrEmpty()
-    val hasAnyContent = hasImage || hasFiles || hasReply || hasReactions
+    val hasAudio = audioMode != null && audioData != null
+    val hasAnyContent = hasImage || hasFiles || hasReply || hasReactions || hasAudio
 
     if (!hasAnyContent) return null
 
@@ -2620,6 +2665,17 @@ private suspend fun buildFieldsJson(
         // Add file attachments field (Field 5)
         if (hasFiles) {
             json.put("5", buildFileAttachmentsArray(fileAttachments, cacheDir))
+        }
+
+        // Add audio field (Field 7) for the local echo of our own PTT clip.
+        // Shape matches what event_bridge.py `_jsonable` produces for inbound
+        // messages — `[mode_int, "<hex>"]` — so MessageMapper.parseAudioField
+        // reads sent and received clips through exactly one code path.
+        if (hasAudio && audioMode != null && audioData != null) {
+            json.put(
+                "7",
+                org.json.JSONArray().put(audioMode).put(audioData.toHexString()),
+            )
         }
 
         // Add app extensions field (Field 16) for replies, reactions, and future features

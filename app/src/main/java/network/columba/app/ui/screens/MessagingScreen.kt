@@ -658,12 +658,16 @@ fun MessagingScreen(
         val session = pttSession
         pttSession = null
         if (session != null) {
-            val clip = network.columba.app.util.PttRecorder.stopAndBuildClip(session)
-            if (clip == null) {
-                Toast.makeText(context, "Too short — hold to record", Toast.LENGTH_SHORT).show()
-            } else {
-                // Attach + send atomically on release, matching Sideband's PTT behaviour.
-                viewModel.sendVoiceMessage(destinationHash, clip.attachment, clip.lxmfAudioMode)
+            // stopAndBuildClip suspends: the Codec2 profile encodes the whole
+            // clip on release, which is real work on a long recording.
+            scope.launch {
+                val clip = network.columba.app.util.PttRecorder.stopAndBuildClip(session)
+                if (clip == null) {
+                    Toast.makeText(context, "Too short — hold to record", Toast.LENGTH_SHORT).show()
+                } else {
+                    // Attach + send atomically on release, matching Sideband's PTT behaviour.
+                    viewModel.sendVoiceMessage(destinationHash, clip.attachment, clip.lxmfAudioMode)
+                }
             }
         }
     }
