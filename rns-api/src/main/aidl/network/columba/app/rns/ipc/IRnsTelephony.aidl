@@ -95,4 +95,21 @@ oneway interface IRnsTelephony {
     //
     // Mirrors RnsTelephony.setIncomingEnabled on the Kotlin side.
     void setIncomingEnabled(boolean enabled, in IRnsResultCallback cb);
+
+    // ==================== Duplex mode / PTT (LXST >= 0.5.0) ====================
+    //
+    // setCallDuplexMode signals the peer with PREFERRED_MODE (0xF1 full /
+    // 0xF2 half) and squelches or opens the local transmitter. The mode is
+    // symmetric: an LXST >= 0.5.0 peer applies it to its own transmitter too.
+    // setCallPttActive keys the transmitter while half duplex.
+    //
+    // Half-duplex state is observed through the existing isPttMode surface —
+    // the host sets it on both local and peer-initiated switches — so no new
+    // observer trio is needed here.
+    //
+    // NOTE: appended at the end on purpose. AIDL transaction ids are
+    // positional; inserting above an existing method renumbers everything
+    // after it and breaks any :reticulum process built from older AIDL.
+    void setCallDuplexMode(boolean halfDuplex, in IRnsResultCallback cb);
+    void setCallPttActive(boolean active, in IRnsResultCallback cb);
 }

@@ -278,6 +278,8 @@ class BoundRnsBackendTest {
         override suspend fun setCallMuted(muted: Boolean) {}
         override suspend fun setCallSpeaker(speakerOn: Boolean) {}
         override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = Result.success(Unit)
+        override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> = Result.success(Unit)
+        override suspend fun setCallPttActive(active: Boolean): Result<Unit> = Result.success(Unit)
         override suspend fun getCallState(): Result<VoiceCallState> = error("not used")
         override val callState: StateFlow<CallState> = callStateEmitter.asStateFlow()
         override val remoteIdentity: StateFlow<String?> = MutableStateFlow(null).asStateFlow()

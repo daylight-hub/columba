@@ -393,6 +393,16 @@ private class FakeRnsTelephony : RnsTelephony {
     override suspend fun setCallMuted(muted: Boolean) { _isMuted.value = muted }
     override suspend fun setCallSpeaker(speakerOn: Boolean) { _isSpeakerOn.value = speakerOn }
     override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = Result.success(Unit)
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> {
+        duplexModeCalls += halfDuplex
+        return Result.success(Unit)
+    }
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> {
+        pttCalls += active
+        return Result.success(Unit)
+    }
+    val duplexModeCalls = mutableListOf<Boolean>()
+    val pttCalls = mutableListOf<Boolean>()
     override suspend fun getCallState(): Result<VoiceCallState> = nextCallState
 
     override suspend fun setConnecting(destinationHash: String) {

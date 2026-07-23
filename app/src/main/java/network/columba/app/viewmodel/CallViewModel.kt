@@ -380,18 +380,16 @@ class CallViewModel
         fun togglePttMode() {
             val newMode = !telephony.isPttMode.value
             viewModelScope.launch {
+                // Optimistic UI; the host re-asserts isPttMode when the mode is
+                // actually applied, and also when the *peer* initiates a switch.
                 telephony.setPttModeLocally(newMode)
-                if (newMode) {
-                    // Entering PTT: mute transmit
-                    telephony.setMutedLocally(true)
-                    telephony.setPttActiveLocally(false)
-                    muteMutex.withLock { telephony.setCallMuted(true) }
-                } else {
-                    // Leaving PTT: unmute transmit (full duplex)
-                    telephony.setMutedLocally(false)
-                    telephony.setPttActiveLocally(false)
-                    muteMutex.withLock { telephony.setCallMuted(false) }
-                }
+                telephony.setPttActiveLocally(false)
+
+                // True half duplex (LXST >= 0.5.0): squelch the transmitter and
+                // signal the peer, which follows. Deliberately NOT a mic mute —
+                // a mute keeps transmitting encoded silence at full frame rate.
+                // The mute button stays an independent axis, as it is in LXST.
+                telephony.setCallDuplexMode(halfDuplex = newMode)
             }
         }
 
@@ -405,8 +403,10 @@ class CallViewModel
             if (callState.value !is CallState.Active) return
             viewModelScope.launch {
                 telephony.setPttActiveLocally(active)
-                telephony.setMutedLocally(!active)
-                muteMutex.withLock { telephony.setCallMuted(!active) }
+                // Squelch, not mute. Also off the mute mutex on purpose: this is
+                // a single atomic flag, and serialising it behind the mute lock
+                // adds latency exactly where it is most audible (key-up clipping).
+                telephony.setCallPttActive(active)
             }
         }
 

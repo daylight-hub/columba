@@ -118,6 +118,14 @@ class PythonRnsTelephony(
     @Volatile
     var profileSwitchHook: ((Int) -> Unit)? = null
 
+    /** LCS: set by PythonCallManager. Duplex-mode switch — same rationale as [profileSwitchHook]. */
+    @Volatile
+    var duplexModeHook: ((Boolean) -> Unit)? = null
+
+    /** LCS: set by PythonCallManager. PTT key/unkey — squelches the transmitter. */
+    @Volatile
+    var pttHook: ((Boolean) -> Unit)? = null
+
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
@@ -170,6 +178,22 @@ class PythonRnsTelephony(
                 profileSwitchHook
                     ?: error("Call manager not attached; cannot switch codec")
             hook(profileCode)
+        }
+
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        runCatching {
+            val hook =
+                duplexModeHook
+                    ?: error("Call manager not attached; cannot switch duplex mode")
+            hook(halfDuplex)
+        }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        runCatching {
+            val hook =
+                pttHook
+                    ?: error("Call manager not attached; cannot key transmitter")
+            hook(active)
         }
 
     // ==================== Host-side local-state mutators ====================

@@ -11,6 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import network.columba.app.rns.api.call.DuplexModeController
+import network.columba.app.rns.api.call.DuplexSignalling
 import network.columba.app.rns.api.util.hexToBytes
 import network.reticulum.common.DestinationDirection
 import network.reticulum.common.DestinationType
@@ -23,6 +25,7 @@ import tech.torlando.lxst.core.AudioDevice
 import tech.torlando.lxst.core.AudioPacketHandler
 import tech.torlando.lxst.core.CallController
 import tech.torlando.lxst.core.CallCoordinator
+import tech.torlando.lxst.core.CallState
 import tech.torlando.lxst.core.PacketRouter
 import tech.torlando.lxst.telephone.Profile
 import tech.torlando.lxst.telephone.Telephone
@@ -79,6 +82,13 @@ class NativeCallManager(
     private val callCoordinator: CallCoordinator = CallCoordinator.getInstance()
 
     /**
+     * LCS: duplex mode + transmit squelch. Mirrors `PythonCallManager` — see
+     * the KDoc there for why the gate lives at the [AudioPacketHandler]
+     * boundary rather than inside LXST-kt.
+     */
+    private val duplex = DuplexModeController()
+
+    /**
      * The [Telephone] instance, created during [setup].
      * Exposed so [NativeReticulumProtocol] can query call status.
      */
@@ -120,11 +130,29 @@ class NativeCallManager(
         // 2. Wire PacketRouter → transport (outbound audio and signals from audio pipeline)
         packetRouter.setPacketHandler(
             object : AudioPacketHandler {
-                override fun receiveAudioPacket(packet: ByteArray) = transport.sendPacket(packet)
+                override fun receiveAudioPacket(packet: ByteArray) {
+                    // Half-duplex squelch — drop, do not transmit encoded silence.
+                    if (duplex.shouldTransmit()) transport.sendPacket(packet)
+                }
 
                 override fun receiveSignal(signal: Int) = transport.sendSignal(signal)
             },
         )
+        transport.inboundSignalTap = ::onInboundSignal
+
+        // See PythonCallManager: duplex mode is per-call and must be cleared on
+        // every exit path, including peer hangup — not in answer(), which would
+        // discard a mode preference sent to us while ringing.
+        scope.launch {
+            callCoordinator.callState.collect { state ->
+                when (state) {
+                    is CallState.Idle, is CallState.Ended,
+                    is CallState.Busy, is CallState.Rejected,
+                    -> duplex.reset()
+                    else -> Unit
+                }
+            }
+        }
 
         // 3. Wire transport → PacketRouter (inbound audio from remote peer).
         //    Signal routing is set by Telephone.init (see step 4).
@@ -323,6 +351,7 @@ class NativeCallManager(
         destinationHash: String,
         profileCode: Int?,
     ) {
+        duplex.reset()
         scope.launch {
             val destBytes = destinationHash.hexToBytes()
             val profile =
@@ -357,11 +386,36 @@ class NativeCallManager(
         telephone.switchProfile(profile)
     }
 
+    /** LCS: switch the call between full and half duplex. See `PythonCallManager.setDuplexMode`. */
+    fun setDuplexMode(halfDuplex: Boolean) {
+        Log.i(TAG, "Switching call to ${if (halfDuplex) "half" else "full"} duplex")
+        duplex.applyMode(halfDuplex)
+        callCoordinator.setPttModeLocally(halfDuplex)
+        callCoordinator.setPttActiveLocally(false)
+        transport.sendSignal(DuplexSignalling.signalFor(halfDuplex))
+    }
+
+    /** LCS: key (true) / unkey (false) the transmitter. No-op in full duplex. */
+    fun setPttActive(active: Boolean) {
+        duplex.setPttActive(active)
+    }
+
+    /** LCS: peer-initiated duplex switch, tapped off the inbound signal stream. */
+    private fun onInboundSignal(signal: Int) {
+        if (!DuplexSignalling.isModeSignal(signal)) return
+        val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
+        Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")
+        duplex.applyMode(halfDuplex)
+        callCoordinator.setPttModeLocally(halfDuplex)
+        callCoordinator.setPttActiveLocally(false)
+    }
+
     override fun answer() {
         telephone.answer()
     }
 
     override fun hangup() {
+        duplex.reset()
         telephone.hangup()
     }
 
