@@ -444,8 +444,8 @@ fun MessagingScreen(
     var showCodecSelectionDialog by remember { mutableStateOf(false) }
 
     // LCS: which voice message is currently playing / decoding, for the bubble.
-    val playingVoiceMessageId by viewModel.playingVoiceMessageId.collectAsState()
-    val loadingVoiceMessageId by viewModel.loadingVoiceMessageId.collectAsState()
+    val playingVoiceMessageId by viewModel.playingVoiceMessageId.collectAsStateWithLifecycle()
+    val loadingVoiceMessageId by viewModel.loadingVoiceMessageId.collectAsStateWithLifecycle()
     var recommendedCodecProfile by remember { mutableStateOf(CodecProfile.DEFAULT) }
     var isProbingLinkSpeed by remember { mutableStateOf(false) }
 
