@@ -126,10 +126,6 @@ import network.columba.app.rns.api.model.CallState
 import javax.inject.Inject
 
 /**
- * Main activity for the Columba LXMF Messenger application.
- */
-@AndroidEntryPoint
-/**
  * LCS: true once the system splash has been removed from the window.
  *
  * File-level rather than a MainActivity property because the consumer,
@@ -143,6 +139,10 @@ import javax.inject.Inject
  */
 private val splashDismissed = mutableStateOf(false)
 
+/**
+ * Main activity for the Columba LXMF Messenger application.
+ */
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     companion object {
         private const val TAG = "MainActivity"
