@@ -332,7 +332,11 @@ fun MessagingScreen(
     onBackClick: () -> Unit,
     onPeerClick: () -> Unit = {},
     onViewMessageDetails: (messageId: String) -> Unit = {},
-    onVoiceCall: (profileCode: Int) -> Unit = {},
+    // LCS: the second argument is the conservative link estimate in bits per
+    // second behind the codec choice, or null if the link was never probed. The
+    // call screen needs it to decide whether to offer a codec change; without
+    // it the advisory can never appear.
+    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?) -> Unit = { _, _ -> },
     onLocateOnMap: (peerHash: String) -> Unit = {},
     viewModel: MessagingViewModel = hiltViewModel(),
     settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
@@ -1859,7 +1863,16 @@ fun MessagingScreen(
             onDismiss = { showCodecSelectionDialog = false },
             onProfileSelected = { profile ->
                 showCodecSelectionDialog = false
-                onVoiceCall(profile.code)
+                onVoiceCall(
+                    profile.code,
+                    conversationLinkState?.let { link ->
+                        CodecProfile.getConservativeBandwidthBps(
+                            expectedRateBps = link.expectedRateBps,
+                            establishmentRateBps = link.establishmentRateBps,
+                            nextHopBitrateBps = link.nextHopBitrateBps,
+                        )
+                    },
+                )
             },
         )
     }

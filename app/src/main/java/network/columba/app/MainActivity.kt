@@ -2077,9 +2077,13 @@ fun ColumbaNavigation(
                                         val encodedId = Uri.encode(messageId)
                                         navController.navigate("message_detail/$encodedId")
                                     },
-                                    onVoiceCall = { profileCode ->
+                                    onVoiceCall = { profileCode, linkSpeedBps ->
                                         val encodedHash = Uri.encode(destinationHash)
-                                        navController.navigate("voice_call/$encodedHash?profileCode=$profileCode")
+                                        // -1 means "not measured"; NavType.LongType has no nullable form.
+                                        val speedArg = linkSpeedBps ?: -1L
+                                        navController.navigate(
+                                            "voice_call/$encodedHash?profileCode=$profileCode&linkSpeedBps=$speedArg",
+                                        )
                                     },
                                     onLocateOnMap = { peerHash ->
                                         mapViewModel.focusOnContact(peerHash)
@@ -2203,7 +2207,9 @@ fun ColumbaNavigation(
 
                             // Voice Call Screen (outgoing/active call)
                             composable(
-                                route = "voice_call/{destinationHash}?autoAnswer={autoAnswer}&profileCode={profileCode}",
+                                route =
+                                    "voice_call/{destinationHash}?autoAnswer={autoAnswer}" +
+                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}",
                                 arguments =
                                     listOf(
                                         navArgument("destinationHash") { type = NavType.StringType },
@@ -2215,18 +2221,24 @@ fun ColumbaNavigation(
                                             type = NavType.IntType
                                             defaultValue = -1 // -1 means use default
                                         },
+                                        navArgument("linkSpeedBps") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L // -1 means not measured
+                                        },
                                     ),
                             ) { backStackEntry ->
                                 val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
                                 val autoAnswer = backStackEntry.arguments?.getBoolean("autoAnswer") ?: false
                                 val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
                                 val profileCode = if (profileCodeArg == -1) null else profileCodeArg
+                                val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
 
                                 VoiceCallScreen(
                                     destinationHash = destinationHash,
                                     onEndCall = exitCallFlow,
                                     autoAnswer = autoAnswer,
                                     profileCode = profileCode,
+                                    linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
                                 )
                             }
 
@@ -2295,13 +2307,6 @@ fun ColumbaNavigation(
                     )
                 }
 
-                // LCS: branded wordmark, shown on every Android version so the
-                // splash reads identically everywhere. Waits for the system
-                // splash to actually leave the screen before starting its dwell.
-                network.columba.app.ui.components.LcsBrandedSplashOverlay(
-                    show = splashDismissed.value,
-                )
-
                 // LCS: the one-time crash-reporting opt-in popup is removed.
                 // LCS ships the noSentry flavor, so the prompt could only ever
                 // appear as a dead end — and an unprompted dialog asking to send
@@ -2310,5 +2315,21 @@ fun ColumbaNavigation(
                 // building the sentry flavor deliberately.
             }
         }
+
+        // LCS: the branded splash — logo and wordmark on white.
+        //
+        // Declared LAST inside ColumbaTheme, AFTER the Surface. That
+        // ordering is the whole fix: siblings in the same window paint in
+        // declaration order, so while this sat above the Surface it was
+        // drawn first and the app's own background painted straight over
+        // it — the splash was rendering every launch, just underneath
+        // everything, which is why the screen came up blank white.
+        //
+        // Still not a Dialog: a Dialog needs its own window, and the frame
+        // or two that takes to attach lets the app show through as the
+        // system splash lifts.
+        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+        )
     }
 }
