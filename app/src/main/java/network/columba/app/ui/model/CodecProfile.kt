@@ -73,6 +73,24 @@ enum class CodecProfile(
     companion object {
         val DEFAULT = QUALITY_MEDIUM
 
+        /**
+         * LCS: tiers offered by the in-call codec selector.
+         *
+         * Deliberately a subset of [entries] — the dial-time dialog still lists
+         * every profile. Mid-call the choice has to be quick and unambiguous, so
+         * QUALITY_MAX is dropped (a poor fit for any radio link) along with both
+         * LATENCY_* profiles, which are QUALITY_MEDIUM with different frame
+         * timing and read as confusing peers of "Medium" in a five-item list.
+         */
+        val IN_CALL_TIERS: List<CodecProfile> =
+            listOf(
+                BANDWIDTH_ULTRA_LOW,
+                BANDWIDTH_VERY_LOW,
+                BANDWIDTH_LOW,
+                QUALITY_MEDIUM,
+                QUALITY_HIGH,
+            )
+
         fun fromCode(code: Int): CodecProfile? = entries.find { it.code == code }
 
         /**

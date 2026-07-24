@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
@@ -55,7 +57,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import network.columba.app.call.PttMediaSessionManager
 import network.columba.app.rns.api.model.CallState
+import kotlinx.coroutines.delay
 import network.columba.app.ui.components.CallQualityAdvisory
+import network.columba.app.ui.components.InCallCodecDialog
 import network.columba.app.ui.model.CodecProfile
 import network.columba.app.viewmodel.CallViewModel
 
@@ -97,6 +101,29 @@ fun VoiceCallScreen(
     val recommendedProfile by viewModel.recommendedProfile.collectAsStateWithLifecycle()
     val measuredBps by viewModel.measuredBps.collectAsStateWithLifecycle()
     val advisoryDismissed by viewModel.advisoryDismissed.collectAsStateWithLifecycle()
+
+    // LCS: in-call codec picker + peer-initiated duplex notice.
+    var showCodecDialog by remember { mutableStateOf(false) }
+    var duplexNotice by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.peerDuplexChange.collect { halfDuplex ->
+            duplexNotice =
+                if (halfDuplex) {
+                    "Peer switched to half duplex \u2014 hold PTT to talk"
+                } else {
+                    "Peer switched to full duplex"
+                }
+        }
+    }
+
+    // Transient: the chip carries the mode from here on.
+    LaunchedEffect(duplexNotice) {
+        if (duplexNotice != null) {
+            delay(6000)
+            duplexNotice = null
+        }
+    }
 
     // PTT MediaSession for Bluetooth headset button capture
     val pttManager =
@@ -289,6 +316,25 @@ fun VoiceCallScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                // LCS: explicit duplex indicator. The PTT button already implies
+                // the mode, but a peer can move the call without any local
+                // action, so the state needs to be readable at a glance.
+                if (callState is CallState.Active) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DuplexChip(isHalfDuplex = isPttMode)
+                }
+
+                duplexNotice?.let { notice ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = notice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    )
+                }
             }
 
             // LCS: codec advisory. Only while the call is up, and only until the
@@ -322,7 +368,7 @@ fun VoiceCallScreen(
             ) {
                 // Secondary controls row (mute + ptt + speaker)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(bottom = 32.dp),
                 ) {
                     // Mute button (disabled in PTT mode since PTT controls transmit)
@@ -343,6 +389,19 @@ fun VoiceCallScreen(
                         onClick = { viewModel.togglePttMode() },
                         enabled = callState is CallState.Active,
                         testTag = "pttToggle",
+                    )
+
+                    // LCS: on-demand codec switch. Previously reachable only
+                    // through CallQualityAdvisory, which appears solely when the
+                    // measured link disagrees with the active profile and is gone
+                    // for good once dismissed.
+                    CallControlButton(
+                        icon = Icons.Default.GraphicEq,
+                        label = "Codec",
+                        isActive = false,
+                        onClick = { showCodecDialog = true },
+                        enabled = callState is CallState.Active,
+                        testTag = "codecButton",
                     )
 
                     // Speaker button
@@ -386,6 +445,56 @@ fun VoiceCallScreen(
                 )
             }
         }
+    }
+
+    if (showCodecDialog) {
+        InCallCodecDialog(
+            currentProfile = activeProfile,
+            recommendedProfile = recommendedProfile,
+            onDismiss = { showCodecDialog = false },
+            onProfileSelected = { profile ->
+                showCodecDialog = false
+                viewModel.switchCodec(profile)
+            },
+        )
+    }
+}
+
+/**
+ * LCS: duplex-mode indicator.
+ *
+ * Half duplex is symmetric and can be engaged by the peer, so the mode is not
+ * always something this user chose. A persistent chip means it never has to be
+ * inferred from whether the PTT button happens to be showing.
+ */
+@Composable
+private fun DuplexChip(isHalfDuplex: Boolean) {
+    val container =
+        if (isHalfDuplex) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val content =
+        if (isHalfDuplex) {
+            MaterialTheme.colorScheme.onTertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(percent = 50))
+                .background(container)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .testTag("duplexChip"),
+    ) {
+        Text(
+            text = if (isHalfDuplex) "HALF DUPLEX \u00b7 PTT" else "FULL DUPLEX",
+            style = MaterialTheme.typography.labelSmall,
+            color = content,
+        )
     }
 }
 

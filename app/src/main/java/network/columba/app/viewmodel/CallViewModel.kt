@@ -10,9 +10,13 @@ import network.columba.app.rns.api.model.CallState
 import network.columba.app.ui.model.CodecProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -48,6 +52,39 @@ class CallViewModel
 
         // Serializes mute IPC calls to prevent race conditions (e.g. PTT release vs toggle off)
         private val muteMutex = Mutex()
+
+        /**
+         * LCS: emitted when the *peer* moves the call between duplex modes.
+         *
+         * Half duplex is symmetric — a peer switching squelches this device's
+         * transmitter too — so the mic can go dead with nothing on screen
+         * explaining why. No new IPC is needed to detect it: this ViewModel is
+         * the only thing that asks for a local switch, so any other transition
+         * of [isPttMode] came from the peer.
+         *
+         * `true` = peer switched to half duplex.
+         */
+        private val _peerDuplexChange = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+        val peerDuplexChange: SharedFlow<Boolean> = _peerDuplexChange.asSharedFlow()
+
+        /** Mode this device just asked for; the echo back is not a peer change. */
+        @Volatile
+        private var expectedDuplexMode: Boolean? = null
+
+        init {
+            viewModelScope.launch {
+                // drop(1): the current value is the starting state, not a change.
+                telephony.isPttMode.drop(1).collect { halfDuplex ->
+                    when {
+                        expectedDuplexMode == halfDuplex -> expectedDuplexMode = null
+                        // The host clears isPttMode on call teardown; that is not
+                        // the peer switching modes.
+                        callState.value !is CallState.Active -> Unit
+                        else -> _peerDuplexChange.tryEmit(halfDuplex)
+                    }
+                }
+            }
+        }
 
         // Expose call state from telephony seam
         val callState: StateFlow<CallState> = telephony.callState
@@ -379,6 +416,7 @@ class CallViewModel
          */
         fun togglePttMode() {
             val newMode = !telephony.isPttMode.value
+            expectedDuplexMode = newMode
             viewModelScope.launch {
                 // Optimistic UI; the host re-asserts isPttMode when the mode is
                 // actually applied, and also when the *peer* initiates a switch.
