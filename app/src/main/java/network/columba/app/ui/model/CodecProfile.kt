@@ -86,14 +86,33 @@ enum class CodecProfile(
          * @param probe The link speed probe result
          * @return Conservative bandwidth estimate in bits per second, or null if no data
          */
-        fun getConservativeBandwidthBps(probe: LinkSpeedProbeResult): Long? {
+        fun getConservativeBandwidthBps(probe: LinkSpeedProbeResult): Long? =
+            getConservativeBandwidthBps(
+                expectedRateBps = probe.expectedRateBps,
+                establishmentRateBps = probe.establishmentRateBps,
+                nextHopBitrateBps = probe.nextHopBitrateBps,
+            )
+
+        /**
+         * LCS: rate-field overload.
+         *
+         * `LinkSpeedProbeResult` and `ConversationLinkManager.LinkState` are
+         * unrelated types that happen to carry the same three rate figures —
+         * one is the result of an explicit probe, the other the live state of
+         * an established link. Taking the fields directly lets both feed the
+         * same estimate without `CodecProfile` depending on either type.
+         */
+        fun getConservativeBandwidthBps(
+            expectedRateBps: Long?,
+            establishmentRateBps: Long?,
+            nextHopBitrateBps: Long?,
+        ): Long? {
             // Best case: actual measured throughput from prior transfers
-            val expected = probe.expectedRateBps
-            if (expected != null && expected > 0) {
-                return expected
+            if (expectedRateBps != null && expectedRateBps > 0) {
+                return expectedRateBps
             }
-            val establishment = probe.establishmentRateBps?.takeIf { it > 0 }
-            val nextHop = probe.nextHopBitrateBps?.takeIf { it > 0 }
+            val establishment = establishmentRateBps?.takeIf { it > 0 }
+            val nextHop = nextHopBitrateBps?.takeIf { it > 0 }
             return when {
                 establishment != null && nextHop != null -> minOf(establishment, nextHop)
                 establishment != null -> establishment

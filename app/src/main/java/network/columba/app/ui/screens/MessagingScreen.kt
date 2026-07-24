@@ -1865,7 +1865,13 @@ fun MessagingScreen(
                 showCodecSelectionDialog = false
                 onVoiceCall(
                     profile.code,
-                    conversationLinkState?.let { CodecProfile.getConservativeBandwidthBps(it) },
+                    conversationLinkState?.let { link ->
+                        CodecProfile.getConservativeBandwidthBps(
+                            expectedRateBps = link.expectedRateBps,
+                            establishmentRateBps = link.establishmentRateBps,
+                            nextHopBitrateBps = link.nextHopBitrateBps,
+                        )
+                    },
                 )
             },
         )
