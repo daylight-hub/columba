@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,14 +25,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
 import network.columba.app.R
 import network.columba.app.ui.theme.LibertyNavy40
@@ -57,6 +57,13 @@ import network.columba.app.ui.theme.LibertySilver40
  * has been removed from the v31/v33 themes. Every device now shows the same
  * thing: system splash with the logo on white, then this — logo above the
  * wordmark — then the app.
+ *
+ * ## How it is hosted
+ *
+ * Declared at the theme root in `MainActivity`, outside the app's `Surface`, so
+ * it covers the whole UI while drawing in the same window. Deliberately not a
+ * `Dialog`: that would be a separate window, and the frame or two the system
+ * takes to attach one is long enough for the app to show through.
  *
  * ## Why [show] exists
  *
@@ -107,18 +114,20 @@ fun LcsBrandedSplashOverlay(
         label = "lcs_splash_fade",
     )
 
-    Dialog(
-        onDismissRequest = { },
-        properties =
-            DialogProperties(
-                dismissOnBackPress = false,
-                dismissOnClickOutside = false,
-                // Without this the dialog is inset to the platform's default
-                // dialog width and the white field would not cover the screen.
-                usePlatformDefaultWidth = false,
-            ),
+    // No Dialog: this draws in the app's own window, so it is on screen the
+    // same frame the system splash is removed. A Dialog would need its own
+    // window attached first, and the frame or two that takes is enough for the
+    // app UI to show through underneath.
+    //
+    // pointerInput swallows taps so nothing behind can be pressed while the
+    // splash is up.
+    Box(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
     ) {
-        Box(
+        BoxWithConstraints(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -126,28 +135,26 @@ fun LcsBrandedSplashOverlay(
                     .alpha(alpha),
             contentAlignment = Alignment.Center,
         ) {
-            // The logo is centred on its own, NOT as the first item of a column
-            // containing the text. That is what stops this reading as a second
-            // splash screen: the system splash centres its icon, so if the logo
-            // here were pushed upward to make room for the wordmark below it,
-            // the logo would visibly jump at the handover and the user would
-            // see two screens instead of one.
-            //
-            // Centring the logo alone keeps it exactly where the system left
-            // it. The wordmark is offset beneath it, so all the user perceives
-            // is the words appearing under a logo that never moved.
+            // Clamp against the viewport so the mark cannot crowd the wordmark
+            // off a small screen — 280 dp is most of the width of a 320 dp phone.
+            val logoSize = minOf(LOGO_SIZE, maxWidth * 0.8f, maxHeight * 0.45f)
+
+            // This is the only logo the app ever draws during launch: the system
+            // splash now uses a blank icon (see splash_icon_blank.xml), because
+            // two logos in sequence read as two splash screens and could not be
+            // made to match.
             Image(
                 painter = painterResource(R.drawable.ic_launcher_foreground),
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.size(LOGO_SIZE),
+                modifier = Modifier.size(logoSize),
             )
 
             Column(
                 modifier =
                     Modifier
                         .align(Alignment.Center)
-                        .offset(y = LOGO_SIZE / 2 + 8.dp)
+                        .offset(y = logoSize * VISIBLE_GLYPH_FRACTION / 2 + 12.dp)
                         .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
@@ -179,12 +186,21 @@ fun LcsBrandedSplashOverlay(
 private const val FADE_MS = 260
 
 /**
- * Logo size, matched to the icon the system splash draws.
+ * Drawn size of the logo image.
  *
- * Fixed rather than scaled to the viewport: the whole point is that the logo
- * lands exactly where the system splash left it, and a viewport-relative size
- * would land differently on every device. 192 dp is the inner icon size the
- * platform splash uses for a non-adaptive drawable, and androidx
- * core-splashscreen matches it on older releases.
+ * Larger than it looks: `ic_launcher_foreground` is an adaptive-icon foreground,
+ * so roughly the outer third of the image is mandatory transparent safe zone and
+ * only the inner ~2/3 carries the glyph. Drawing at 280 dp therefore yields a
+ * visible mark of about 185 dp — comparable to what the system splash used to
+ * show, which cropped to that safe zone itself.
  */
-private val LOGO_SIZE = 192.dp
+private val LOGO_SIZE = 280.dp
+
+/**
+ * Fraction of [LOGO_SIZE] the visible glyph actually occupies.
+ *
+ * Adaptive-icon foregrounds reserve the outer third for masking, so the wordmark
+ * has to be positioned against this rather than the image bounds — otherwise it
+ * sits a wasted 45 dp of transparency below the logo.
+ */
+private const val VISIBLE_GLYPH_FRACTION = 0.66f

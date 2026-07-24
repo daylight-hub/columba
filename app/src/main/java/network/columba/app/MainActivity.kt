@@ -1086,6 +1086,18 @@ fun ColumbaNavigation(
     }
 
     ColumbaTheme(selectedTheme = settingsState.selectedTheme) {
+        // LCS: the branded splash. Declared here, at the theme root and OUTSIDE
+        // the Surface, so it paints over everything in the SAME window.
+        //
+        // It used to be a Dialog nested in the Scaffold. A Dialog gets its own
+        // window, and window attachment costs a frame or two — long enough for
+        // the app UI to show through between the system splash being removed
+        // and the branded screen appearing. That gap is what read as a flash.
+        // Same window means same frame: nothing to see through.
+        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+        )
+
         // Prompt for precise location when the user has enabled location sharing
         // and chosen precise precision but only approximate access is granted.
         // Fires on app start, after a settings import, and when sharing/precision
@@ -2306,13 +2318,6 @@ fun ColumbaNavigation(
                         primaryActionLabel = if (useAppSettings) "Open Settings" else "Grant Permissions",
                     )
                 }
-
-                // LCS: branded wordmark, shown on every Android version so the
-                // splash reads identically everywhere. Waits for the system
-                // splash to actually leave the screen before starting its dwell.
-                network.columba.app.ui.components.LcsBrandedSplashOverlay(
-                    show = splashDismissed.value,
-                )
 
                 // LCS: the one-time crash-reporting opt-in popup is removed.
                 // LCS ships the noSentry flavor, so the prompt could only ever
