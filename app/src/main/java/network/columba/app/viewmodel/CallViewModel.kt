@@ -71,30 +71,6 @@ class CallViewModel
         @Volatile
         private var expectedDuplexMode: Boolean? = null
 
-        init {
-            // The host owns the effective profile: the callee never picked one,
-            // and either side can switch mid-call. 0 means "not yet known" —
-            // keep whatever is on screen rather than snapping back to Medium.
-            viewModelScope.launch {
-                telephony.activeProfileCode.collect { code ->
-                    CodecProfile.fromCode(code)?.let { _activeProfile.value = it }
-                }
-            }
-
-            viewModelScope.launch {
-                // drop(1): the current value is the starting state, not a change.
-                telephony.isPttMode.drop(1).collect { halfDuplex ->
-                    when {
-                        expectedDuplexMode == halfDuplex -> expectedDuplexMode = null
-                        // The host clears isPttMode on call teardown; that is not
-                        // the peer switching modes.
-                        callState.value !is CallState.Active -> Unit
-                        else -> _peerDuplexChange.tryEmit(halfDuplex)
-                    }
-                }
-            }
-        }
-
         // Expose call state from telephony seam
         val callState: StateFlow<CallState> = telephony.callState
         val isMuted: StateFlow<Boolean> = telephony.isMuted
@@ -140,6 +116,42 @@ class CallViewModel
 
         // Track duration timer job to prevent multiple concurrent timers
         private var durationTimerJob: kotlinx.coroutines.Job? = null
+
+        /*
+         * NOTE: this init block must stay BELOW the property declarations it
+         * touches (callState, _activeProfile, _peerDuplexChange).
+         *
+         * viewModelScope dispatches on Dispatchers.Main.immediate, and the
+         * ViewModel is constructed on the main thread, so `collect` on a
+         * StateFlow runs its first emission SYNCHRONOUSLY inside <init>.
+         * Kotlin initialises properties in declaration order, so an init block
+         * placed above them sees nulls and dies with a getClass() NPE the
+         * moment a non-default value arrives — which on the callee is exactly
+         * when the caller's profile preference lands while ringing.
+         */
+        init {
+            // The host owns the effective profile: the callee never picked one,
+            // and either side can switch mid-call. 0 means "not yet known" —
+            // keep whatever is on screen rather than snapping back to Medium.
+            viewModelScope.launch {
+                telephony.activeProfileCode.collect { code ->
+                    CodecProfile.fromCode(code)?.let { _activeProfile.value = it }
+                }
+            }
+
+            viewModelScope.launch {
+                // drop(1): the current value is the starting state, not a change.
+                telephony.isPttMode.drop(1).collect { halfDuplex ->
+                    when {
+                        expectedDuplexMode == halfDuplex -> expectedDuplexMode = null
+                        // The host clears isPttMode on call teardown; that is not
+                        // the peer switching modes.
+                        callState.value !is CallState.Active -> Unit
+                        else -> _peerDuplexChange.tryEmit(halfDuplex)
+                    }
+                }
+            }
+        }
 
         init {
             // Track call duration when active

@@ -993,7 +993,14 @@ fun ColumbaNavigation(
     }
     val callState by telephony.callState.collectAsState()
 
-    LaunchedEffect(callState) {
+    LaunchedEffect(callState, navBackStackEntry) {
+        // On a cold start triggered by the incoming call itself, this effect can
+        // run before the NavHost attaches its graph, and navigate() throws
+        // "Navigation graph has not been set". navBackStackEntry is null until
+        // then; re-running when it lands means the call screen appears a beat
+        // later instead of crashing the process.
+        if (navBackStackEntry == null) return@LaunchedEffect
+
         when (val state = callState) {
             is CallState.Incoming -> {
                 val identityHash = state.identityHash
