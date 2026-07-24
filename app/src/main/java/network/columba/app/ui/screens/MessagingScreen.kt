@@ -336,7 +336,7 @@ fun MessagingScreen(
     // second behind the codec choice, or null if the link was never probed. The
     // call screen needs it to decide whether to offer a codec change; without
     // it the advisory can never appear.
-    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?) -> Unit = { _, _ -> },
+    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?, halfDuplex: Boolean) -> Unit = { _, _, _ -> },
     onLocateOnMap: (peerHash: String) -> Unit = {},
     viewModel: MessagingViewModel = hiltViewModel(),
     settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
