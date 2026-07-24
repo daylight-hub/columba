@@ -2077,9 +2077,13 @@ fun ColumbaNavigation(
                                         val encodedId = Uri.encode(messageId)
                                         navController.navigate("message_detail/$encodedId")
                                     },
-                                    onVoiceCall = { profileCode ->
+                                    onVoiceCall = { profileCode, linkSpeedBps ->
                                         val encodedHash = Uri.encode(destinationHash)
-                                        navController.navigate("voice_call/$encodedHash?profileCode=$profileCode")
+                                        // -1 means "not measured"; NavType.LongType has no nullable form.
+                                        val speedArg = linkSpeedBps ?: -1L
+                                        navController.navigate(
+                                            "voice_call/$encodedHash?profileCode=$profileCode&linkSpeedBps=$speedArg",
+                                        )
                                     },
                                     onLocateOnMap = { peerHash ->
                                         mapViewModel.focusOnContact(peerHash)
@@ -2203,7 +2207,9 @@ fun ColumbaNavigation(
 
                             // Voice Call Screen (outgoing/active call)
                             composable(
-                                route = "voice_call/{destinationHash}?autoAnswer={autoAnswer}&profileCode={profileCode}",
+                                route =
+                                    "voice_call/{destinationHash}?autoAnswer={autoAnswer}" +
+                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}",
                                 arguments =
                                     listOf(
                                         navArgument("destinationHash") { type = NavType.StringType },
@@ -2215,18 +2221,24 @@ fun ColumbaNavigation(
                                             type = NavType.IntType
                                             defaultValue = -1 // -1 means use default
                                         },
+                                        navArgument("linkSpeedBps") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L // -1 means not measured
+                                        },
                                     ),
                             ) { backStackEntry ->
                                 val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
                                 val autoAnswer = backStackEntry.arguments?.getBoolean("autoAnswer") ?: false
                                 val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
                                 val profileCode = if (profileCodeArg == -1) null else profileCodeArg
+                                val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
 
                                 VoiceCallScreen(
                                     destinationHash = destinationHash,
                                     onEndCall = exitCallFlow,
                                     autoAnswer = autoAnswer,
                                     profileCode = profileCode,
+                                    linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
                                 )
                             }
 

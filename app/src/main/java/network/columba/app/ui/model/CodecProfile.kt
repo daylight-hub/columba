@@ -106,12 +106,12 @@ enum class CodecProfile(
          * Recommend a codec profile based on link probe results.
          *
          * Uses conservative bandwidth thresholds with headroom for overhead:
-         * - Codec2 700C (0.7 kbps): recommend when < 1.5 kbps
-         * - Codec2 1600 (1.6 kbps): recommend when 1.5-4 kbps
-         * - Codec2 3200 (3.2 kbps): recommend when 4-10 kbps
-         * - Opus low (~12 kbps): recommend when 10-32 kbps
-         * - Opus medium (~24 kbps): recommend when 32-64 kbps
-         * - Opus high (~48 kbps): recommend when > 64 kbps
+         * - Codec2 700C: recommend when < 2 kbps
+         * - Codec2 1600: recommend when 2-6 kbps
+         * - Codec2 3200: recommend when 6-24 kbps (every LoRa preset lands here)
+         * - Opus low: recommend when 24-64 kbps
+         * - Opus medium: recommend when 64-128 kbps
+         * - Opus high: recommend when > 128 kbps
          *
          * @param probe The link speed probe result
          * @return Recommended codec profile based on available bandwidth
@@ -151,15 +151,28 @@ enum class CodecProfile(
             return fits.ordinal < profile.ordinal
         }
 
-        /** Ladder shared by [recommendFromProbe] and [isTooHeavyFor]. */
+        /**
+         * Ladder shared by [recommendFromProbe] and [isTooHeavyFor].
+         *
+         * LCS raised the Codec2/Opus boundary from 10 kbps to 24 kbps. The old
+         * figure compared a codec's nominal bitrate against the link's *raw*
+         * rate, which is far too optimistic on LoRa: a Short Fast RNode link
+         * measures around 10.9 kbps raw, but after RNS framing, link overhead
+         * and retries the usable throughput is a fraction of that — and Opus
+         * needs sustained headroom, not a rate it can only just meet.
+         *
+         * The practical effect of the old boundary was that every RNode link
+         * fast enough to be usable at all was told to run Opus, so the
+         * recommendation never actually pointed at Codec2 where it mattered.
+         */
         fun recommendFromBandwidth(bandwidthBps: Long): CodecProfile {
             val kbps = bandwidthBps / 1000.0
             return when {
-                kbps < 1.5 -> BANDWIDTH_ULTRA_LOW // Codec2 700C
-                kbps < 4 -> BANDWIDTH_VERY_LOW // Codec2 1600
-                kbps < 10 -> BANDWIDTH_LOW // Codec2 3200
-                kbps < 32 -> QUALITY_MEDIUM // Opus low
-                kbps < 64 -> QUALITY_HIGH // Opus medium
+                kbps < 2 -> BANDWIDTH_ULTRA_LOW // Codec2 700C
+                kbps < 6 -> BANDWIDTH_VERY_LOW // Codec2 1600
+                kbps < 24 -> BANDWIDTH_LOW // Codec2 3200 — covers all LoRa presets
+                kbps < 64 -> QUALITY_MEDIUM // Opus low
+                kbps < 128 -> QUALITY_HIGH // Opus medium
                 else -> QUALITY_MAX // Opus high
             }
         }

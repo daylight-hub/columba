@@ -4,13 +4,12 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -99,6 +98,9 @@ fun LcsBrandedSplashOverlay(
 
     if (!visible) return
 
+    // Fades out only. There is deliberately no fade IN: the overlay has to be
+    // fully painted the instant the system splash is removed, or the user sees
+    // a flash of the app underneath and the two screens stop reading as one.
     val alpha by animateFloatAsState(
         targetValue = if (fading) 0f else 1f,
         animationSpec = tween(durationMillis = FADE_MS),
@@ -116,7 +118,7 @@ fun LcsBrandedSplashOverlay(
                 usePlatformDefaultWidth = false,
             ),
     ) {
-        BoxWithConstraints(
+        Box(
             modifier =
                 Modifier
                     .fillMaxSize()
@@ -124,34 +126,38 @@ fun LcsBrandedSplashOverlay(
                     .alpha(alpha),
             contentAlignment = Alignment.Center,
         ) {
-            // Scale the logo to the viewport but keep it within bounds: big
-            // enough to read on a small phone, not dominant on a tablet.
-            val logoSize = (minOf(maxWidth, maxHeight) * 0.34f).coerceIn(96.dp, 180.dp)
+            // The logo is centred on its own, NOT as the first item of a column
+            // containing the text. That is what stops this reading as a second
+            // splash screen: the system splash centres its icon, so if the logo
+            // here were pushed upward to make room for the wordmark below it,
+            // the logo would visibly jump at the handover and the user would
+            // see two screens instead of one.
+            //
+            // Centring the logo alone keeps it exactly where the system left
+            // it. The wordmark is offset beneath it, so all the user perceives
+            // is the words appearing under a logo that never moved.
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(LOGO_SIZE),
+            )
 
             Column(
                 modifier =
                     Modifier
-                        .fillMaxWidth()
+                        .align(Alignment.Center)
+                        .offset(y = LOGO_SIZE / 2 + 8.dp)
                         .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
             ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_launcher_foreground),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(logoSize),
-                )
-
-                Spacer(Modifier.height(12.dp))
-
                 // Stacked, not side by side: together these need roughly 300 dp
                 // on one line, which clips on the 320 dp-wide screens still in
                 // use on the Android versions this has to cover.
                 Text(
                     text = "Liberty Chat",
                     color = LibertyNavy40,
-                    fontSize = 26.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -160,7 +166,7 @@ fun LcsBrandedSplashOverlay(
                 Text(
                     text = "powered by Columba",
                     color = LibertySilver40,
-                    fontSize = 13.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -171,3 +177,14 @@ fun LcsBrandedSplashOverlay(
 }
 
 private const val FADE_MS = 260
+
+/**
+ * Logo size, matched to the icon the system splash draws.
+ *
+ * Fixed rather than scaled to the viewport: the whole point is that the logo
+ * lands exactly where the system splash left it, and a viewport-relative size
+ * would land differently on every device. 192 dp is the inner icon size the
+ * platform splash uses for a non-adaptive drawable, and androidx
+ * core-splashscreen matches it on older releases.
+ */
+private val LOGO_SIZE = 192.dp

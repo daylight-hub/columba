@@ -141,6 +141,22 @@ fun <T> QualitySelectionDialog(
                 // the link probe is in flight).
                 PathInfoSection(linkState, isProbing = isProbing)
 
+                // LCS: legend for the star. It marks whichever option the link
+                // probe suggests, and moves as the measurement changes — which
+                // is unreadable without saying so.
+                if (recommendedOption != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RecommendedChip()
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Suggested for this link",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
                 if (linkState != null || isProbing) {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
