@@ -8,6 +8,7 @@ import network.columba.app.rns.api.model.CallState
 import network.columba.app.rns.ipc.BundleKeys
 import network.columba.app.rns.ipc.IRnsTelephony
 import network.columba.app.rns.ipc.callback.IRnsBoolEventCallback
+import network.columba.app.rns.ipc.callback.IRnsIntEventCallback
 import network.columba.app.rns.ipc.callback.IRnsCallStateCallback
 import network.columba.app.rns.ipc.callback.IRnsNullableStringEventCallback
 import network.columba.app.rns.ipc.callback.IRnsResultCallback
@@ -62,6 +63,12 @@ internal class ServerRnsTelephony(
         upstream = { impl.isPttActive },
         callbackBinder = { it.asBinder() },
         emit = { cb, value -> cb.onBool(value) },
+    )
+    private val activeProfileCodeHub = ObserverHub<Int, IRnsIntEventCallback>(
+        scope = scope,
+        upstream = { impl.activeProfileCode },
+        callbackBinder = { it.asBinder() },
+        emit = { cb, value -> cb.onInt(value) },
     )
 
     // ==================== Call control (IPC actions) ====================
@@ -168,6 +175,15 @@ internal class ServerRnsTelephony(
         isPttModeHub.registerObserver(cb)
     override fun unregisterIsPttModeObserver(cb: IRnsBoolEventCallback) =
         isPttModeHub.unregisterObserver(cb)
+
+    override fun getCurrentActiveProfileCode(cb: IRnsIntEventCallback) {
+        try { cb.onInt(impl.activeProfileCode.value) } catch (_: RemoteException) { /* client dead */ }
+    }
+
+    override fun registerActiveProfileCodeObserver(cb: IRnsIntEventCallback) =
+        activeProfileCodeHub.registerObserver(cb)
+    override fun unregisterActiveProfileCodeObserver(cb: IRnsIntEventCallback) =
+        activeProfileCodeHub.unregisterObserver(cb)
 
     override fun getCurrentIsPttActive(cb: IRnsBoolEventCallback) {
         try { cb.onBool(impl.isPttActive.value) } catch (_: RemoteException) { /* client dead */ }

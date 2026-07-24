@@ -121,6 +121,7 @@ class CallViewModelTest {
         coEvery { mockTelephony.declineCall() } answers { }
         coEvery { mockTelephony.setCallMuted(any()) } answers { }
         coEvery { mockTelephony.setCallSpeaker(any()) } answers { }
+        every { mockTelephony.activeProfileCode } returns MutableStateFlow(0)
         coEvery { mockTelephony.setCallDuplexMode(any()) } returns Result.success(Unit)
         coEvery { mockTelephony.setCallPttActive(any()) } returns Result.success(Unit)
 

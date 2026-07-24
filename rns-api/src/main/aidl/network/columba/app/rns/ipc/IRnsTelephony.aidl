@@ -15,6 +15,7 @@
 package network.columba.app.rns.ipc;
 
 import network.columba.app.rns.ipc.callback.IRnsBoolEventCallback;
+import network.columba.app.rns.ipc.callback.IRnsIntEventCallback;
 import network.columba.app.rns.ipc.callback.IRnsCallStateCallback;
 import network.columba.app.rns.ipc.callback.IRnsNullableStringEventCallback;
 import network.columba.app.rns.ipc.callback.IRnsResultCallback;
@@ -114,4 +115,11 @@ oneway interface IRnsTelephony {
     // after it and breaks any :reticulum process built from older AIDL.
     void setCallDuplexMode(boolean halfDuplex, in IRnsResultCallback cb);
     void setCallPttActive(boolean active, in IRnsResultCallback cb);
+
+    // StateFlow<Int> activeProfileCode — the LXST profile the call is actually
+    // running on (0 = unknown). Needed because a profile switch can originate
+    // at the *peer*, and because the callee never picked one locally.
+    void getCurrentActiveProfileCode(in IRnsIntEventCallback cb);
+    void registerActiveProfileCodeObserver(in IRnsIntEventCallback cb);
+    void unregisterActiveProfileCodeObserver(in IRnsIntEventCallback cb);
 }

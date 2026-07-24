@@ -99,6 +99,13 @@ internal class BoundRnsTelephony(
             .stateIn(scope, SharingStarted.Eagerly, false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    override val activeProfileCode: StateFlow<Int> =
+        backendFlow
+            .filterNotNull()
+            .flatMapLatest { it.telephony.activeProfileCode }
+            .stateIn(scope, SharingStarted.Eagerly, 0)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     override val isPttActive: StateFlow<Boolean> =
         backendFlow
             .filterNotNull()

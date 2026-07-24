@@ -72,6 +72,15 @@ class CallViewModel
         private var expectedDuplexMode: Boolean? = null
 
         init {
+            // The host owns the effective profile: the callee never picked one,
+            // and either side can switch mid-call. 0 means "not yet known" —
+            // keep whatever is on screen rather than snapping back to Medium.
+            viewModelScope.launch {
+                telephony.activeProfileCode.collect { code ->
+                    CodecProfile.fromCode(code)?.let { _activeProfile.value = it }
+                }
+            }
+
             viewModelScope.launch {
                 // drop(1): the current value is the starting state, not a change.
                 telephony.isPttMode.drop(1).collect { halfDuplex ->
@@ -379,8 +388,9 @@ class CallViewModel
                 result
                     .onSuccess {
                         Log.i(TAG, "Switched call codec to ${profile.displayName}")
-                        _activeProfile.value = profile
-                        // The advisory has served its purpose once acted on.
+                        // _activeProfile is not set here: the host publishes the
+                        // effective profile, so a switch that silently did
+                        // nothing can no longer show as applied.
                         _recommendedProfile.value = null
                     }.onFailure {
                         Log.e(TAG, "Failed to switch codec to ${profile.displayName}", it)

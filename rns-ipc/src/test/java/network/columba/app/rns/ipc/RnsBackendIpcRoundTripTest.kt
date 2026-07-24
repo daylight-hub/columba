@@ -397,6 +397,9 @@ private class FakeRnsTelephony : RnsTelephony {
     override suspend fun setCallMuted(muted: Boolean) { _isMuted.value = muted }
     override suspend fun setCallSpeaker(speakerOn: Boolean) { _isSpeakerOn.value = speakerOn }
     override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = Result.success(Unit)
+    val activeProfileCodeState = kotlinx.coroutines.flow.MutableStateFlow(0)
+    override val activeProfileCode: kotlinx.coroutines.flow.StateFlow<Int> = activeProfileCodeState
+
     override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> {
         duplexModeCalls += halfDuplex
         return Result.success(Unit)

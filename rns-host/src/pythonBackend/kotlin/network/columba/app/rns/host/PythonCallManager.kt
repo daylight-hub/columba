@@ -137,6 +137,7 @@ class PythonCallManager(
                     -> {
                         duplex.reset()
                         pendingHalfDuplex.set(false)
+                        backend.telephonyImpl.publishActiveProfileCode(0)
                     }
                     else -> Unit
                 }
@@ -414,8 +415,17 @@ class PythonCallManager(
         val profile =
             Profile.fromId(profileCode)
                 ?: error("Unknown codec profile 0x${profileCode.toString(16)}")
+        // LXST-kt's switchProfile() returns silently when the call is not
+        // established, which used to surface as a success the UI acted on —
+        // the local codec label changed while nothing went over the link.
+        // Fail loudly instead so the ViewModel can report it.
+        if (telephone.callStatus != Signalling.STATUS_ESTABLISHED) {
+            error("Call not established; cannot switch codec (status=${telephone.callStatus})")
+        }
+
         Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
         telephone.switchProfile(profile)
+        backend.telephonyImpl.publishActiveProfileCode(profile.id)
     }
 
     /**
@@ -459,6 +469,18 @@ class PythonCallManager(
             return
         }
 
+        // The effective profile can change without any local action: the caller
+        // announces its choice while we are ringing, and either side can switch
+        // mid-call. Publishing here is what lets the UI show the truth on the
+        // receiving end of both — otherwise it shows whatever this device
+        // last picked, which for a callee is simply the default.
+        if (signal >= DuplexSignalling.PREFERRED_PROFILE) {
+            val code = signal - DuplexSignalling.PREFERRED_PROFILE
+            Log.i(TAG, "Peer profile signal: 0x${code.toString(16)}")
+            backend.telephonyImpl.publishActiveProfileCode(code)
+            return
+        }
+
         if (!DuplexSignalling.isModeSignal(signal)) return
         val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
         Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")
@@ -475,6 +497,7 @@ class PythonCallManager(
     ) {
         duplex.reset()
         pendingHalfDuplex.set(halfDuplex)
+        backend.telephonyImpl.publishActiveProfileCode(profileCode ?: 0)
         scope.launch {
             val destBytes = destinationHash.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val profile = profileCode?.let { code ->

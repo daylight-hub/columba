@@ -120,6 +120,20 @@ interface RnsTelephony {
     val isPttActive: StateFlow<Boolean>
 
     /**
+     * LXST profile code the call is actually running on, or 0 when unknown.
+     *
+     * Host-owned rather than derived from what this device picked at dial time,
+     * because the profile can change without any local action:
+     *  - the callee never chose one — it learns the caller's preference from a
+     *    `PREFERRED_PROFILE` signal while ringing;
+     *  - either side can switch mid-call, and LXST applies it symmetrically.
+     *
+     * Without this the UI shows whatever this device last selected, which is
+     * simply wrong on the receiving end of both cases.
+     */
+    val activeProfileCode: StateFlow<Int>
+
+    /**
      * Update host-side `callState` to [CallState.Connecting] for the
      * given destination. UI calls this before issuing [initiateCall] so
      * the connecting UI renders immediately rather than waiting for the

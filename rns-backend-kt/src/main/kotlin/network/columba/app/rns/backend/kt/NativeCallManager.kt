@@ -69,6 +69,13 @@ class NativeCallManager(
     val transport: NativeNetworkTransport,
     private val callPrivacyBridge: CallPrivacyBridge? = null,
 ) : CallController {
+    /**
+     * LCS: back-reference for publishing host-owned call state (currently the
+     * effective codec profile). Set by [NativeRnsBackendImpl] right after
+     * construction; null-safe so tests can build a manager standalone.
+     */
+    var profilePublisher: ((Int) -> Unit)? = null
+
     companion object {
         private const val TAG = "NativeCallManager"
         private const val LXST_APP_NAME = "lxst"
@@ -154,6 +161,7 @@ class NativeCallManager(
                     -> {
                         duplex.reset()
                         pendingHalfDuplex.set(false)
+                        profilePublisher?.invoke(0)
                     }
                     else -> Unit
                 }
@@ -360,6 +368,7 @@ class NativeCallManager(
     ) {
         duplex.reset()
         pendingHalfDuplex.set(halfDuplex)
+        profilePublisher?.invoke(profileCode ?: 0)
         scope.launch {
             val destBytes = destinationHash.hexToBytes()
             val profile =
@@ -390,8 +399,13 @@ class NativeCallManager(
         val profile =
             Profile.fromId(profileCode)
                 ?: error("Unknown codec profile 0x${profileCode.toString(16)}")
+        if (telephone.callStatus != Signalling.STATUS_ESTABLISHED) {
+            error("Call not established; cannot switch codec (status=${telephone.callStatus})")
+        }
+
         Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
         telephone.switchProfile(profile)
+        profilePublisher?.invoke(profile.id)
     }
 
     /** LCS: switch the call between full and half duplex. See `PythonCallManager.setDuplexMode`. */
@@ -415,6 +429,14 @@ class NativeCallManager(
         if (signal == Signalling.STATUS_RINGING && pendingHalfDuplex.compareAndSet(true, false)) {
             Log.i(TAG, "Dialling half duplex; announcing mode to callee")
             setDuplexMode(true)
+            return
+        }
+
+        // See PythonCallManager: the profile can change without local action.
+        if (signal >= DuplexSignalling.PREFERRED_PROFILE) {
+            val code = signal - DuplexSignalling.PREFERRED_PROFILE
+            Log.i(TAG, "Peer profile signal: 0x${code.toString(16)}")
+            profilePublisher?.invoke(code)
             return
         }
 

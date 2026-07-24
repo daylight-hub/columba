@@ -119,6 +119,14 @@ class PythonRnsTelephony(
     var profileSwitchHook: ((Int) -> Unit)? = null
 
     /** LCS: set by PythonCallManager. Duplex-mode switch — same rationale as [profileSwitchHook]. */
+    private val _activeProfileCode = MutableStateFlow(0)
+    override val activeProfileCode: StateFlow<Int> = _activeProfileCode.asStateFlow()
+
+    /** Set by PythonCallManager whenever the effective profile changes. */
+    fun publishActiveProfileCode(code: Int) {
+        _activeProfileCode.value = code
+    }
+
     @Volatile
     var duplexModeHook: ((Boolean) -> Unit)? = null
 
