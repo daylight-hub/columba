@@ -88,6 +88,9 @@ class NativeCallManager(
      */
     private val duplex = DuplexModeController()
 
+    /** LCS: dialled half duplex; announced on inbound STATUS_RINGING. */
+    private val pendingHalfDuplex = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /**
      * The [Telephone] instance, created during [setup].
      * Exposed so [NativeReticulumProtocol] can query call status.
@@ -148,7 +151,10 @@ class NativeCallManager(
                 when (state) {
                     is CallState.Idle, is CallState.Ended,
                     is CallState.Busy, is CallState.Rejected,
-                    -> duplex.reset()
+                    -> {
+                        duplex.reset()
+                        pendingHalfDuplex.set(false)
+                    }
                     else -> Unit
                 }
             }
@@ -350,8 +356,10 @@ class NativeCallManager(
     fun call(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean = false,
     ) {
         duplex.reset()
+        pendingHalfDuplex.set(halfDuplex)
         scope.launch {
             val destBytes = destinationHash.hexToBytes()
             val profile =
@@ -402,6 +410,14 @@ class NativeCallManager(
 
     /** LCS: peer-initiated duplex switch, tapped off the inbound signal stream. */
     private fun onInboundSignal(signal: Int) {
+        // See PythonCallManager: the callee ringing is the first moment the
+        // mode preference can be sent.
+        if (signal == Signalling.STATUS_RINGING && pendingHalfDuplex.compareAndSet(true, false)) {
+            Log.i(TAG, "Dialling half duplex; announcing mode to callee")
+            setDuplexMode(true)
+            return
+        }
+
         if (!DuplexSignalling.isModeSignal(signal)) return
         val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
         Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")

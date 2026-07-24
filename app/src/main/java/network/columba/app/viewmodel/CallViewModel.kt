@@ -239,7 +239,11 @@ class CallViewModel
         fun initiateCall(
             destinationHash: String,
             profileCode: Int? = null,
+            halfDuplex: Boolean = false,
         ) {
+            // The host will flip isPttMode when the mode is applied at ring
+            // time; that echo is this device's own request, not the peer's.
+            expectedDuplexMode = if (halfDuplex) true else null
             Log.w(TAG, "📞📞📞 initiateCall() CALLED - destHash=${destinationHash.take(16)}, profile=${profileCode ?: "default"}...")
             Log.w(TAG, "📞 Current callState=${callState.value}")
             _isConnecting.value = true
@@ -255,7 +259,7 @@ class CallViewModel
 
                 while (retryCount < maxRetries) {
                     Log.w(TAG, "📞 Calling telephony.initiateCall() (attempt ${retryCount + 1}/$maxRetries)...")
-                    val result = telephony.initiateCall(destinationHash, profileCode)
+                    val result = telephony.initiateCall(destinationHash, profileCode, halfDuplex)
                     Log.w(TAG, "📞 telephony.initiateCall() returned: success=${result.isSuccess}")
 
                     if (result.isSuccess) {

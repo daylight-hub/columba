@@ -2077,12 +2077,13 @@ fun ColumbaNavigation(
                                         val encodedId = Uri.encode(messageId)
                                         navController.navigate("message_detail/$encodedId")
                                     },
-                                    onVoiceCall = { profileCode, linkSpeedBps ->
+                                    onVoiceCall = { profileCode, linkSpeedBps, halfDuplex ->
                                         val encodedHash = Uri.encode(destinationHash)
                                         // -1 means "not measured"; NavType.LongType has no nullable form.
                                         val speedArg = linkSpeedBps ?: -1L
                                         navController.navigate(
-                                            "voice_call/$encodedHash?profileCode=$profileCode&linkSpeedBps=$speedArg",
+                                            "voice_call/$encodedHash?profileCode=$profileCode" +
+                                                "&linkSpeedBps=$speedArg&halfDuplex=$halfDuplex",
                                         )
                                     },
                                     onLocateOnMap = { peerHash ->
@@ -2209,7 +2210,8 @@ fun ColumbaNavigation(
                             composable(
                                 route =
                                     "voice_call/{destinationHash}?autoAnswer={autoAnswer}" +
-                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}",
+                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}" +
+                                        "&halfDuplex={halfDuplex}",
                                 arguments =
                                     listOf(
                                         navArgument("destinationHash") { type = NavType.StringType },
@@ -2225,6 +2227,10 @@ fun ColumbaNavigation(
                                             type = NavType.LongType
                                             defaultValue = -1L // -1 means not measured
                                         },
+                                        navArgument("halfDuplex") {
+                                            type = NavType.BoolType
+                                            defaultValue = false // LCS: full duplex unless asked
+                                        },
                                     ),
                             ) { backStackEntry ->
                                 val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
@@ -2232,6 +2238,7 @@ fun ColumbaNavigation(
                                 val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
                                 val profileCode = if (profileCodeArg == -1) null else profileCodeArg
                                 val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
+                                val halfDuplex = backStackEntry.arguments?.getBoolean("halfDuplex") ?: false
 
                                 VoiceCallScreen(
                                     destinationHash = destinationHash,
@@ -2239,6 +2246,7 @@ fun ColumbaNavigation(
                                     autoAnswer = autoAnswer,
                                     profileCode = profileCode,
                                     linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
+                                    halfDuplex = halfDuplex,
                                 )
                             }
 

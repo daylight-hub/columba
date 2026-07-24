@@ -336,7 +336,7 @@ fun MessagingScreen(
     // second behind the codec choice, or null if the link was never probed. The
     // call screen needs it to decide whether to offer a codec change; without
     // it the advisory can never appear.
-    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?) -> Unit = { _, _ -> },
+    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?, halfDuplex: Boolean) -> Unit = { _, _, _ -> },
     onLocateOnMap: (peerHash: String) -> Unit = {},
     viewModel: MessagingViewModel = hiltViewModel(),
     settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
@@ -1861,10 +1861,11 @@ fun MessagingScreen(
             linkState = conversationLinkState,
             isProbing = isProbingLinkSpeed,
             onDismiss = { showCodecSelectionDialog = false },
-            onProfileSelected = { profile ->
+            onProfileSelected = { profile, halfDuplex ->
                 showCodecSelectionDialog = false
                 onVoiceCall(
                     profile.code,
+<<<<<<< ours
                     conversationLinkState?.let { link ->
                         CodecProfile.getConservativeBandwidthBps(
                             expectedRateBps = link.expectedRateBps,
@@ -1872,6 +1873,10 @@ fun MessagingScreen(
                             nextHopBitrateBps = link.nextHopBitrateBps,
                         )
                     },
+=======
+                    conversationLinkState?.let { CodecProfile.getConservativeBandwidthBps(it) },
+                    halfDuplex,
+>>>>>>> theirs
                 )
             },
         )

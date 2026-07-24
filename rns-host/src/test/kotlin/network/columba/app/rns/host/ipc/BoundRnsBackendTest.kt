@@ -271,7 +271,11 @@ class BoundRnsBackendTest {
 
     private class FakeRnsTelephony : RnsTelephony {
         val callStateEmitter = MutableStateFlow<CallState>(CallState.Idle)
-        override suspend fun initiateCall(destinationHash: String, profileCode: Int?) = Result.success(Unit)
+        override suspend fun initiateCall(
+            destinationHash: String,
+            profileCode: Int?,
+            halfDuplex: Boolean,
+        ) = Result.success(Unit)
         override suspend fun answerCall() = Result.success(Unit)
         override suspend fun hangupCall() {}
         override suspend fun declineCall() {}

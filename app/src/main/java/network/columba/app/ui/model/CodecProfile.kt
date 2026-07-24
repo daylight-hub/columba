@@ -94,6 +94,22 @@ enum class CodecProfile(
         fun fromCode(code: Int): CodecProfile? = entries.find { it.code == code }
 
         /**
+         * LCS: should this call default to half duplex at dial time?
+         *
+         * Keyed off the profile the link probe recommends rather than a second
+         * bandwidth threshold, so "low bandwidth" means exactly one thing across
+         * the dial dialog, the advisory, and this. The three tiers below are the
+         * Codec2 ones (700C / 1600 / 3200 bps) — where full duplex over LoRa is
+         * what actually breaks these calls.
+         *
+         * Only ever a *default*: the toggle is per-call and always overridable.
+         */
+        fun defaultsToHalfDuplex(recommended: CodecProfile): Boolean =
+            recommended == BANDWIDTH_ULTRA_LOW ||
+                recommended == BANDWIDTH_VERY_LOW ||
+                recommended == BANDWIDTH_LOW
+
+        /**
          * Get a conservative bandwidth estimate from link probe results.
          *
          * Uses min of establishment rate and next hop bitrate for safety.

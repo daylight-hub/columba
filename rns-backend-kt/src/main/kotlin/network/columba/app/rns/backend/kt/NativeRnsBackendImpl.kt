@@ -2046,13 +2046,14 @@ class NativeRnsBackendImpl(
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val mgr =
                     callManager
                         ?: error("Call manager not initialized")
-                mgr.call(destinationHash, profileCode)
+                mgr.call(destinationHash, profileCode, halfDuplex)
             }
         }
 

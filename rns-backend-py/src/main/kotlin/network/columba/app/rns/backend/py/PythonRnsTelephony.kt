@@ -108,7 +108,7 @@ class PythonRnsTelephony(
 
     /** Set by PythonCallManager — bypasses CallCoordinator which drops profileCode. */
     @Volatile
-    var profileAwareCallHook: ((String, Int?) -> Unit)? = null
+    var profileAwareCallHook: ((String, Int?, Boolean) -> Unit)? = null
 
     /**
      * LCS: set by PythonCallManager. Same reason as [profileAwareCallHook] —
@@ -129,9 +129,10 @@ class PythonRnsTelephony(
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> =
         runCatching {
-            profileAwareCallHook?.invoke(destinationHash, profileCode)
+            profileAwareCallHook?.invoke(destinationHash, profileCode, halfDuplex)
                 ?: callCoordinator.initiateCall(destinationHash)
         }
 

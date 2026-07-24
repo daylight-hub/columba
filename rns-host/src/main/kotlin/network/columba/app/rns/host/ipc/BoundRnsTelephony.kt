@@ -27,8 +27,11 @@ internal class BoundRnsTelephony(
 ) : RnsTelephony {
     private suspend fun awaitBound(): RnsBackend = backendFlow.filterNotNull().first()
 
-    override suspend fun initiateCall(destinationHash: String, profileCode: Int?): Result<Unit> =
-        awaitBound().telephony.initiateCall(destinationHash, profileCode)
+    override suspend fun initiateCall(
+        destinationHash: String,
+        profileCode: Int?,
+        halfDuplex: Boolean,
+    ): Result<Unit> = awaitBound().telephony.initiateCall(destinationHash, profileCode, halfDuplex)
 
     override suspend fun answerCall(): Result<Unit> = awaitBound().telephony.answerCall()
 

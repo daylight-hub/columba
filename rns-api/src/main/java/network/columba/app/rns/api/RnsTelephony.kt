@@ -38,6 +38,7 @@ interface RnsTelephony {
     suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int? = null,
+        halfDuplex: Boolean = false,
     ): Result<Unit>
 
     /**

@@ -118,12 +118,14 @@ internal class ClientRnsTelephony(
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> = runCatching {
         awaitResult { cb ->
             remote.initiateCall(
                 destinationHash,
                 profileCode ?: 0,
                 profileCode != null,
+                halfDuplex,
                 cb,
             )
         }

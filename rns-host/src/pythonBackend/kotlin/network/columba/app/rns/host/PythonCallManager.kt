@@ -90,6 +90,15 @@ class PythonCallManager(
      */
     private val duplex = DuplexModeController()
 
+    /**
+     * LCS: this call was dialled half duplex; announce it when the callee rings.
+     *
+     * The preference cannot be sent at dial time — there is no link yet. LXST
+     * sends it on inbound STATUS_RINGING, and consumes it there, so a redial
+     * does not inherit a stale flag.
+     */
+    private val pendingHalfDuplex = java.util.concurrent.atomic.AtomicBoolean(false)
+
     init {
         // Auto-run setup() at backend READY (:rns-backend-py can't reach
         // here, so observe its status flow instead of being called inline
@@ -105,8 +114,8 @@ class PythonCallManager(
                     Log.e(TAG, "Auto-setup on backend READY failed", it)
                 }
             }
-            backend.telephonyImpl.profileAwareCallHook = { destHex, profileCode ->
-                call(destHex, profileCode)
+            backend.telephonyImpl.profileAwareCallHook = { destHex, profileCode, halfDuplex ->
+                call(destHex, profileCode, halfDuplex)
             }
             backend.telephonyImpl.profileSwitchHook = ::switchProfile
             backend.telephonyImpl.duplexModeHook = ::setDuplexMode
@@ -125,7 +134,10 @@ class PythonCallManager(
                 when (state) {
                     is CallState.Idle, is CallState.Ended,
                     is CallState.Busy, is CallState.Rejected,
-                    -> duplex.reset()
+                    -> {
+                        duplex.reset()
+                        pendingHalfDuplex.set(false)
+                    }
                     else -> Unit
                 }
             }
@@ -437,6 +449,16 @@ class PythonCallManager(
      * Not echoed back — matching LXST's `switch_mode(from_signalling=True)`.
      */
     private fun onInboundSignal(signal: Int) {
+        // Caller side: the callee is ringing, so the link is up and the mode
+        // preference can go out. LXST batches this with the profile preference
+        // in one packet; two packets are equivalent, since the receiver
+        // dispatches each signal in the array independently.
+        if (signal == Signalling.STATUS_RINGING && pendingHalfDuplex.compareAndSet(true, false)) {
+            Log.i(TAG, "Dialling half duplex; announcing mode to callee")
+            setDuplexMode(true)
+            return
+        }
+
         if (!DuplexSignalling.isModeSignal(signal)) return
         val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
         Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")
@@ -446,8 +468,13 @@ class PythonCallManager(
     }
 
     /** Profile-aware overload — invoked from PythonRnsTelephony via the hook. */
-    fun call(destinationHash: String, profileCode: Int?) {
+    fun call(
+        destinationHash: String,
+        profileCode: Int?,
+        halfDuplex: Boolean = false,
+    ) {
         duplex.reset()
+        pendingHalfDuplex.set(halfDuplex)
         scope.launch {
             val destBytes = destinationHash.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val profile = profileCode?.let { code ->

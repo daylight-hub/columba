@@ -22,7 +22,9 @@ import network.columba.app.rns.ipc.callback.IRnsResultCallback;
 oneway interface IRnsTelephony {
     // ==================== Call control (IPC actions) ====================
 
-    void initiateCall(String destinationHash, int profileCode, boolean hasProfileCode, in IRnsResultCallback cb);
+    // halfDuplex: dial straight into half duplex (LXST >= 0.5.0). The mode
+    // preference is sent to the callee when it starts ringing.
+    void initiateCall(String destinationHash, int profileCode, boolean hasProfileCode, boolean halfDuplex, in IRnsResultCallback cb);
     void answerCall(in IRnsResultCallback cb);
 
     // hangupCall, declineCall, setCallMuted, setCallSpeaker are suspend-Unit on Kotlin.

@@ -85,6 +85,13 @@ fun VoiceCallScreen(
      * the codec advisory; nothing re-measures during the call.
      */
     linkSpeedBps: Long? = null,
+    /**
+     * LCS: dial this call in half duplex. Chosen per-call in the codec dialog,
+     * which pre-selects it when the link probe lands on a low-bandwidth tier.
+     * Ignored for incoming calls — the caller's preference arrives as a mode
+     * signal while we are still ringing.
+     */
+    halfDuplex: Boolean = false,
     viewModel: CallViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -174,7 +181,7 @@ fun VoiceCallScreen(
             hasAudioPermission = isGranted
             if (isGranted && callState is CallState.Idle) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission granted, initiating call...")
-                viewModel.initiateCall(destinationHash, profileCode)
+                viewModel.initiateCall(destinationHash, profileCode, halfDuplex)
             } else if (!isGranted) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission denied, cannot make call")
             }
@@ -202,7 +209,7 @@ fun VoiceCallScreen(
                     bandwidthBps = linkBandwidthBps,
                     profile = resolvedProfile,
                 )
-                viewModel.initiateCall(destinationHash, profileCode)
+                viewModel.initiateCall(destinationHash, profileCode, halfDuplex)
             } else if (!permissionRequested) {
                 android.util.Log.w("VoiceCallScreen", "📞 Requesting microphone permission...")
                 permissionRequested = true

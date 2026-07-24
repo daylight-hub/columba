@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,6 +111,13 @@ fun <T> QualitySelectionDialog(
     isProbing: Boolean = false,
     transferTimeEstimates: Map<T, String?>? = null,
     confirmButtonText: String = "Confirm",
+    /**
+     * LCS: when non-null, renders a half-duplex toggle under the options. Null
+     * for dialogs where duplex is meaningless (image quality), which keeps this
+     * generic component unchanged for every existing caller.
+     */
+    halfDuplex: Boolean? = null,
+    onHalfDuplexChange: ((Boolean) -> Unit)? = null,
     onConfirm: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -188,6 +196,14 @@ fun <T> QualitySelectionDialog(
                         }
                     }
                 }
+
+                if (halfDuplex != null && onHalfDuplexChange != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    DuplexModeToggle(
+                        halfDuplex = halfDuplex,
+                        onChange = onHalfDuplexChange,
+                    )
+                }
             }
         },
         confirmButton = {
@@ -203,6 +219,41 @@ fun <T> QualitySelectionDialog(
             }
         },
     )
+}
+
+/**
+ * LCS: dial-time half-duplex toggle.
+ *
+ * Half duplex is symmetric — engaging it PTT-gates *both* ends of the call — so
+ * the copy says so rather than presenting it as a local preference.
+ */
+@Composable
+private fun DuplexModeToggle(
+    halfDuplex: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Push-to-talk (half duplex)",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text =
+                    if (halfDuplex) {
+                        "Both ends hold to talk. Roughly halves airtime."
+                    } else {
+                        "Both ends can talk at once."
+                    },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = halfDuplex, onCheckedChange = onChange)
+    }
 }
 
 /**

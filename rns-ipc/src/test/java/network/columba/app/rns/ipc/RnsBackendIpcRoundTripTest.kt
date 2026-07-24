@@ -386,7 +386,11 @@ private class FakeRnsTelephony : RnsTelephony {
         _callState.value = state
     }
 
-    override suspend fun initiateCall(destinationHash: String, profileCode: Int?) = nextInitiateResult
+    override suspend fun initiateCall(
+        destinationHash: String,
+        profileCode: Int?,
+        halfDuplex: Boolean,
+    ) = nextInitiateResult
     override suspend fun answerCall() = nextAnswerResult
     override suspend fun hangupCall() { hangupCount++ }
     override suspend fun declineCall() { declineCount++ }

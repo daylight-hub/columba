@@ -115,7 +115,7 @@ class CallViewModelTest {
         }
 
         // Network IPC actions — default success.
-        coEvery { mockTelephony.initiateCall(any(), any()) } returns Result.success(Unit)
+        coEvery { mockTelephony.initiateCall(any(), any(), any()) } returns Result.success(Unit)
         coEvery { mockTelephony.answerCall() } returns Result.success(Unit)
         coEvery { mockTelephony.hangupCall() } answers { }
         coEvery { mockTelephony.declineCall() } answers { }
@@ -195,6 +195,16 @@ class CallViewModelTest {
 
             assertTrue(connectingHashSlot.isCaptured)
             assertEquals(testHash, connectingHashSlot.captured)
+        }
+
+    @Test
+    fun `initiateCall forwards the dial-time duplex mode`() =
+        runTest {
+            val testHash = "abc123def456789012345678901234567890"
+            viewModel.initiateCall(testHash, profileCode = 0x10, halfDuplex = true)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify { mockTelephony.initiateCall(testHash, 0x10, true) }
         }
 
     @Test

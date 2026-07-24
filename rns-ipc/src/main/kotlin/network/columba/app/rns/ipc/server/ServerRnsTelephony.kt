@@ -70,9 +70,12 @@ internal class ServerRnsTelephony(
         destinationHash: String,
         profileCode: Int,
         hasProfileCode: Boolean,
+        halfDuplex: Boolean,
         cb: IRnsResultCallback,
     ) = dispatch(cb, scope) {
-        impl.initiateCall(destinationHash, if (hasProfileCode) profileCode else null).bundleOrThrow()
+        impl
+            .initiateCall(destinationHash, if (hasProfileCode) profileCode else null, halfDuplex)
+            .bundleOrThrow()
     }
 
     override fun answerCall(cb: IRnsResultCallback) = dispatch(cb, scope) {
