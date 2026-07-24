@@ -1086,18 +1086,6 @@ fun ColumbaNavigation(
     }
 
     ColumbaTheme(selectedTheme = settingsState.selectedTheme) {
-        // LCS: the branded splash. Declared here, at the theme root and OUTSIDE
-        // the Surface, so it paints over everything in the SAME window.
-        //
-        // It used to be a Dialog nested in the Scaffold. A Dialog gets its own
-        // window, and window attachment costs a frame or two — long enough for
-        // the app UI to show through between the system splash being removed
-        // and the branded screen appearing. That gap is what read as a flash.
-        // Same window means same frame: nothing to see through.
-        network.columba.app.ui.components.LcsBrandedSplashOverlay(
-            show = splashDismissed.value,
-        )
-
         // Prompt for precise location when the user has enabled location sharing
         // and chosen precise precision but only approximate access is granted.
         // Fires on app start, after a settings import, and when sharing/precision
@@ -2327,5 +2315,21 @@ fun ColumbaNavigation(
                 // building the sentry flavor deliberately.
             }
         }
+
+        // LCS: the branded splash — logo and wordmark on white.
+        //
+        // Declared LAST inside ColumbaTheme, AFTER the Surface. That
+        // ordering is the whole fix: siblings in the same window paint in
+        // declaration order, so while this sat above the Surface it was
+        // drawn first and the app's own background painted straight over
+        // it — the splash was rendering every launch, just underneath
+        // everything, which is why the screen came up blank white.
+        //
+        // Still not a Dialog: a Dialog needs its own window, and the frame
+        // or two that takes to attach lets the app show through as the
+        // system splash lifts.
+        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+        )
     }
 }
