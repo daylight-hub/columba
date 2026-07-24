@@ -51,6 +51,12 @@ internal class BoundRnsTelephony(
     override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
         awaitBound().telephony.switchCallProfile(profileCode)
 
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        awaitBound().telephony.setCallDuplexMode(halfDuplex)
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        awaitBound().telephony.setCallPttActive(active)
+
     override suspend fun getCallState(): Result<VoiceCallState> =
         awaitBound().telephony.getCallState()
 

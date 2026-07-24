@@ -166,6 +166,35 @@ interface RnsTelephony {
      */
     suspend fun switchCallProfile(profileCode: Int): Result<Unit>
 
+    /**
+     * LCS: switch the call between full and half duplex (LXST >= 0.5.0).
+     *
+     * Half duplex squelches the local transmitter — no packets are put on the
+     * air until the user keys PTT via [setCallPttActive]. This is *not* a mic
+     * mute: a mute still transmits encoded silence at full frame rate, which
+     * on a low-bitrate LoRa link costs the same airtime as speech.
+     *
+     * The mode is announced to the peer as `PREFERRED_MODE + mode`
+     * (`0xF1`/`0xF2`) and is **symmetric** — a peer running LXST >= 0.5.0
+     * applies it to its own transmitter too, so both parties become
+     * PTT-gated. Peers older than 0.5.0 ignore the signal and stay full
+     * duplex; this side still gets working PTT.
+     *
+     * Host-side `isPttMode` is updated to match, including when the peer
+     * initiates the switch, so the UI follows without extra plumbing.
+     *
+     * Requires an established call.
+     */
+    suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit>
+
+    /**
+     * LCS: key (true) or unkey (false) the transmitter while half duplex.
+     *
+     * No-op in full duplex. Replaces the old PTT implementation, which
+     * toggled the mic mute and therefore kept transmitting.
+     */
+    suspend fun setCallPttActive(active: Boolean): Result<Unit>
+
     /** Update host-side `isPttMode`. */
     suspend fun setPttModeLocally(enabled: Boolean)
 

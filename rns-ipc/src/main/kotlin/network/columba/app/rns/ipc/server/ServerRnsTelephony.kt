@@ -104,6 +104,16 @@ internal class ServerRnsTelephony(
         Bundle.EMPTY
     }
 
+    override fun setCallDuplexMode(halfDuplex: Boolean, cb: IRnsResultCallback) = dispatch(cb, scope) {
+        impl.setCallDuplexMode(halfDuplex).getOrThrow()
+        Bundle.EMPTY
+    }
+
+    override fun setCallPttActive(active: Boolean, cb: IRnsResultCallback) = dispatch(cb, scope) {
+        impl.setCallPttActive(active).getOrThrow()
+        Bundle.EMPTY
+    }
+
     override fun getCallState(cb: IRnsResultCallback) = dispatch(cb, scope) {
         val state = impl.getCallState().getOrThrow()
         Bundle().apply { putParcelable(BundleKeys.CALL_STATE, state) }

@@ -2126,6 +2126,18 @@ class NativeRnsBackendImpl(
             mgr.switchProfile(profileCode)
         }
 
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot switch duplex mode")
+            mgr.setDuplexMode(halfDuplex)
+        }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot key transmitter")
+            mgr.setPttActive(active)
+        }
+
     override suspend fun setPttModeLocally(enabled: Boolean) {
         callCoordinator.setPttModeLocally(enabled)
     }

@@ -156,6 +156,16 @@ internal class ClientRnsTelephony(
         Unit
     }
 
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.setCallDuplexMode(halfDuplex, cb) }
+        Unit
+    }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.setCallPttActive(active, cb) }
+        Unit
+    }
+
     override suspend fun getCallState(): Result<VoiceCallState> = runCatching {
         val bundle = awaitResult { cb -> remote.getCallState(cb) }
         bundle.classLoader = VoiceCallState::class.java.classLoader
