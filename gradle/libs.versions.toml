@@ -32,7 +32,7 @@ rns-core = { module = "com.github.torlando-tech.reticulum-kt:rns-core", version.
 rns-interfaces = { module = "com.github.torlando-tech.reticulum-kt:rns-interfaces", version.ref = "reticulumKt" }
 rns-android = { module = "com.github.torlando-tech.reticulum-kt:rns-android", version.ref = "reticulumKt" }
 lxmf-kt = { module = "com.github.torlando-tech:LXMF-kt", version.ref = "lxmfKt" }
-lxst-kt = { module = "com.github.daylight-hub:LXST-kt", version.ref = "lxstKt" }
+lxst-kt = { module = "com.github.torlando-tech:LXST-kt", version.ref = "lxstKt" }
 
 # Compose
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
