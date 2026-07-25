@@ -4,6 +4,8 @@ package network.columba.app.ui.components
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -197,13 +200,6 @@ fun <T> QualitySelectionDialog(
                     }
                 }
 
-                if (halfDuplex != null && onHalfDuplexChange != null) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    DuplexModeToggle(
-                        halfDuplex = halfDuplex,
-                        onChange = onHalfDuplexChange,
-                    )
-                }
             }
         },
         confirmButton = {
@@ -214,18 +210,29 @@ fun <T> QualitySelectionDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            // Toggle sits to the LEFT of Cancel when duplex selection applies.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (halfDuplex != null && onHalfDuplexChange != null) {
+                    DuplexModeToggle(
+                        halfDuplex = halfDuplex,
+                        onChange = onHalfDuplexChange,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
         },
     )
 }
 
 /**
- * LCS: dial-time half-duplex toggle.
+ * LCS: compact dial-time duplex selector, sized to sit in the dialog button row
+ * beside Cancel. Two labelled segments — tapping either selects that mode.
  *
- * Half duplex is symmetric — engaging it PTT-gates *both* ends of the call — so
- * the copy says so rather than presenting it as a local preference.
+ * Half duplex is symmetric (it PTT-gates both ends), but at dial time this is
+ * simply the mode the call opens in, so the labels are plain.
  */
 @Composable
 private fun DuplexModeToggle(
@@ -233,27 +240,51 @@ private fun DuplexModeToggle(
     onChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Push-to-talk (half duplex)",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Text(
-                text =
-                    if (halfDuplex) {
-                        "Both ends hold to talk. Roughly halves airtime."
-                    } else {
-                        "Both ends can talk at once."
-                    },
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = halfDuplex, onCheckedChange = onChange)
+        DuplexSegment(
+            label = "Full Duplex",
+            selected = !halfDuplex,
+            onClick = { onChange(false) },
+        )
+        DuplexSegment(
+            label = "Half Duplex/PTT",
+            selected = halfDuplex,
+            onClick = { onChange(true) },
+        )
     }
+}
+
+@Composable
+private fun DuplexSegment(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg =
+        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val fg =
+        if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        color = fg,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(bg)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+    )
 }
 
 /**
