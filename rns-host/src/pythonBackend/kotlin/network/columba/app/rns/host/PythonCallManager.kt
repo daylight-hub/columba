@@ -424,12 +424,10 @@ class PythonCallManager(
         }
 
         Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
-        // Transmit-only: change OUR codec and let the peer's receiver
-        // auto-detect it from the packet header. switchProfile() would also
-        // send PREFERRED_PROFILE, dragging the peer's transmit codec along —
-        // both transmitters moving through the change transient at once is
-        // what killed the audio. Mirrors how Sideband / MeshChat behave.
-        telephone.switchTransmitProfile(profile)
+        // Use LXST-kt's built-in switchProfile: reconfigures our transmit AND
+        // signals the peer (PREFERRED_PROFILE), exactly as Sideband/MeshChat do
+        // when they switch. This is the mechanism dial-time already uses.
+        telephone.switchProfile(profile)
         backend.telephonyImpl.publishActiveProfileCode(profile.id)
     }
 
