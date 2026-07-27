@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
@@ -59,7 +58,6 @@ import network.columba.app.call.PttMediaSessionManager
 import network.columba.app.rns.api.model.CallState
 import kotlinx.coroutines.delay
 import network.columba.app.ui.components.CallQualityAdvisory
-import network.columba.app.ui.components.InCallCodecDialog
 import network.columba.app.ui.model.CodecProfile
 import network.columba.app.viewmodel.CallViewModel
 
@@ -110,7 +108,6 @@ fun VoiceCallScreen(
     val advisoryDismissed by viewModel.advisoryDismissed.collectAsStateWithLifecycle()
 
     // LCS: in-call codec picker + peer-initiated duplex notice.
-    var showCodecDialog by remember { mutableStateOf(false) }
     var duplexNotice by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -352,7 +349,6 @@ fun VoiceCallScreen(
                     recommendedProfile = recommendedProfile,
                     measuredBps = measuredBps,
                     isPttMode = isPttMode,
-                    onSelectProfile = { viewModel.switchCodec(it) },
                     onEnablePtt = { viewModel.togglePttMode() },
                     onDismiss = { viewModel.dismissAdvisory() },
                     modifier = Modifier.padding(horizontal = 24.dp),
@@ -398,19 +394,6 @@ fun VoiceCallScreen(
                         testTag = "pttToggle",
                     )
 
-                    // LCS: on-demand codec switch. Previously reachable only
-                    // through CallQualityAdvisory, which appears solely when the
-                    // measured link disagrees with the active profile and is gone
-                    // for good once dismissed.
-                    CallControlButton(
-                        icon = Icons.Default.GraphicEq,
-                        label = "Codec",
-                        isActive = false,
-                        onClick = { showCodecDialog = true },
-                        enabled = callState is CallState.Active,
-                        testTag = "codecButton",
-                    )
-
                     // Speaker button
                     CallControlButton(
                         icon = if (isSpeakerOn) Icons.Default.VolumeUp else Icons.Default.VolumeDown,
@@ -454,17 +437,6 @@ fun VoiceCallScreen(
         }
     }
 
-    if (showCodecDialog) {
-        InCallCodecDialog(
-            currentProfile = activeProfile,
-            recommendedProfile = recommendedProfile,
-            onDismiss = { showCodecDialog = false },
-            onProfileSelected = { profile ->
-                showCodecDialog = false
-                viewModel.switchCodec(profile)
-            },
-        )
-    }
 }
 
 /**

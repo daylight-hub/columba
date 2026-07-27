@@ -23,8 +23,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.NetworkCheck
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,7 +76,6 @@ import network.columba.app.ui.model.CodecProfile
  *   link was never measured or is comfortably fast enough.
  * @param measuredBps measured link rate in bits per second, or null if unknown.
  * @param isPttMode whether half-duplex is already engaged.
- * @param onSelectProfile switch the call to this codec.
  * @param onEnablePtt engage half-duplex.
  * @param onDismiss hide the advisory for the rest of this call.
  */
@@ -88,7 +85,6 @@ fun CallQualityAdvisory(
     recommendedProfile: CodecProfile?,
     measuredBps: Int?,
     isPttMode: Boolean,
-    onSelectProfile: (CodecProfile) -> Unit,
     onEnablePtt: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -159,17 +155,11 @@ fun CallQualityAdvisory(
 
                 Spacer(Modifier.height(12.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    CodecMenuButton(
-                        currentProfile = currentProfile,
-                        recommendedProfile = recommendedProfile,
-                        onSelectProfile = onSelectProfile,
-                    )
-
-                    if (!isPttMode) {
+                if (!isPttMode) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         TextButton(onClick = onEnablePtt) {
                             Icon(
                                 imageVector = Icons.Default.Mic,
@@ -208,49 +198,6 @@ fun CallQualityAdvisory(
  * The experimental low-latency profiles are omitted; mid-call is the wrong
  * moment to try one.
  */
-@Composable
-private fun CodecMenuButton(
-    currentProfile: CodecProfile,
-    recommendedProfile: CodecProfile,
-    onSelectProfile: (CodecProfile) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box {
-        TextButton(onClick = { expanded = true }) {
-            Icon(
-                imageVector = Icons.Default.GraphicEq,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text("Change codec", style = MaterialTheme.typography.labelLarge)
-        }
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            CodecMenuSection("Codec2 — for LoRa links")
-            CodecProfile.codec2Profiles().forEach { profile ->
-                CodecMenuRow(profile, currentProfile, recommendedProfile) {
-                    expanded = false
-                    onSelectProfile(profile)
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            CodecMenuSection("Opus — for WiFi or TCP")
-            CodecProfile.opusProfiles().forEach { profile ->
-                CodecMenuRow(profile, currentProfile, recommendedProfile) {
-                    expanded = false
-                    onSelectProfile(profile)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun CodecMenuSection(label: String) {
@@ -262,47 +209,6 @@ private fun CodecMenuSection(label: String) {
     )
 }
 
-@Composable
-private fun CodecMenuRow(
-    profile: CodecProfile,
-    currentProfile: CodecProfile,
-    recommendedProfile: CodecProfile,
-    onClick: () -> Unit,
-) {
-    DropdownMenuItem(
-        onClick = onClick,
-        leadingIcon = {
-            if (profile == currentProfile) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Currently in use",
-                    modifier = Modifier.size(18.dp),
-                )
-            } else {
-                Spacer(Modifier.size(18.dp))
-            }
-        },
-        text = {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = profile.displayName,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    if (profile == recommendedProfile) {
-                        Spacer(Modifier.width(8.dp))
-                        RecommendedTag()
-                    }
-                }
-                Text(
-                    text = profile.description,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-    )
-}
 
 @Composable
 private fun RecommendedTag() {
