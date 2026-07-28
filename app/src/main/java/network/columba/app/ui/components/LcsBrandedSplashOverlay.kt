@@ -4,13 +4,13 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -135,45 +135,46 @@ fun LcsBrandedSplashOverlay(
                     .alpha(alpha),
             contentAlignment = Alignment.Center,
         ) {
-            // Clamp against the viewport so the mark cannot crowd the wordmark
-            // off a small screen — 280 dp is most of the width of a 320 dp phone.
-            val logoSize = minOf(LOGO_SIZE, maxWidth * 0.8f, maxHeight * 0.45f)
-
-            // This is the only logo the app ever draws during launch: the system
-            // splash now uses a blank icon (see splash_icon_blank.xml), because
-            // two logos in sequence read as two splash screens and could not be
-            // made to match.
-            Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(logoSize),
-            )
+            // Logo and wordmark are stacked as ordinary siblings in one centred
+            // Column, with a real gap between them. No overlap tricks: the
+            // previous version centred the logo and then offset the text up over
+            // it, which only worked for an adaptive-icon foreground with a
+            // transparent safe zone. The LCS logo fills its whole image, so that
+            // offset pulled the words up into the logo. A Column that just lays
+            // them out top-to-bottom needs no assumptions about the artwork.
+            val logoSize = minOf(LOGO_SIZE, maxWidth * 0.7f, maxHeight * 0.4f)
 
             Column(
-                modifier =
-                    Modifier
-                        .align(Alignment.Center)
-                        .offset(y = logoSize * VISIBLE_GLYPH_FRACTION / 2 + 12.dp)
-                        .padding(horizontal = 32.dp),
+                modifier = Modifier.padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                // Stacked, not side by side: together these need roughly 300 dp
-                // on one line, which clips on the 320 dp-wide screens still in
-                // use on the Android versions this has to cover.
+                // The only logo drawn at launch — the system splash uses a blank
+                // icon (splash_icon_blank.xml) so this is the single source.
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(logoSize),
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                // Stacked, not side by side: together on one line these need
+                // roughly 300 dp, which clips on 320 dp-wide screens.
                 Text(
                     text = "Liberty Chat",
                     color = LibertyNavy40,
-                    fontSize = 28.sp,
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = "powered by Columba",
                     color = LibertySilver40,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -186,21 +187,9 @@ fun LcsBrandedSplashOverlay(
 private const val FADE_MS = 260
 
 /**
- * Drawn size of the logo image.
+ * Drawn size of the logo, clamped against the viewport at the call site.
  *
- * Larger than it looks: `ic_launcher_foreground` is an adaptive-icon foreground,
- * so roughly the outer third of the image is mandatory transparent safe zone and
- * only the inner ~2/3 carries the glyph. Drawing at 280 dp therefore yields a
- * visible mark of about 185 dp — comparable to what the system splash used to
- * show, which cropped to that safe zone itself.
+ * The LCS artwork fills its whole image (no transparent safe zone), so this is
+ * the actual visible size of the mark.
  */
-private val LOGO_SIZE = 280.dp
-
-/**
- * Fraction of [LOGO_SIZE] the visible glyph actually occupies.
- *
- * Adaptive-icon foregrounds reserve the outer third for masking, so the wordmark
- * has to be positioned against this rather than the image bounds — otherwise it
- * sits a wasted 45 dp of transparency below the logo.
- */
-private const val VISIBLE_GLYPH_FRACTION = 0.66f
+private val LOGO_SIZE = 200.dp
