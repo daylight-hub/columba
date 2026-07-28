@@ -446,6 +446,7 @@ class PythonCallManager(
     fun setDuplexMode(halfDuplex: Boolean) {
         Log.i(TAG, "Switching call to ${if (halfDuplex) "half" else "full"} duplex")
         duplex.applyMode(halfDuplex)
+        syncTransmitSquelch()
         callCoordinator.setPttModeLocally(halfDuplex)
         callCoordinator.setPttActiveLocally(false)
         transport.sendSignal(DuplexSignalling.signalFor(halfDuplex))
@@ -454,6 +455,22 @@ class PythonCallManager(
     /** LCS: key (true) / unkey (false) the transmitter. No-op in full duplex. */
     fun setPttActive(active: Boolean) {
         duplex.setPttActive(active)
+        syncTransmitSquelch()
+    }
+
+    /**
+     * LCS battery saver: keep the native encoder skip in lockstep with the
+     * squelch gate. When squelched (HDX, PTT released) the capture callback
+     * skips the Opus/Codec2 encode entirely, so no codec work runs while
+     * listening. shouldTransmit() is the single source of truth; !it is squelch.
+     *
+     * Requires LXST-kt >= 0.0.9-lcs (Telephone.setTransmitSquelch). Safe no-op
+     * before a call is established — the flag is re-synced on every mode/PTT
+     * change and on call setup.
+     */
+    private fun syncTransmitSquelch() {
+        runCatching { telephone.setTransmitSquelch(!duplex.shouldTransmit()) }
+            .onFailure { Log.w(TAG, "setTransmitSquelch failed", it) }
     }
 
     /**
@@ -488,6 +505,7 @@ class PythonCallManager(
         val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
         Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")
         duplex.applyMode(halfDuplex)
+        syncTransmitSquelch()
         callCoordinator.setPttModeLocally(halfDuplex)
         callCoordinator.setPttActiveLocally(false)
     }
