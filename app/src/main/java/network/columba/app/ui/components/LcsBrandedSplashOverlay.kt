@@ -82,7 +82,7 @@ import network.columba.app.ui.theme.LibertySilver40
 @Composable
 fun LcsBrandedSplashOverlay(
     show: Boolean,
-    visibleDurationMs: Long = 1100L,
+    visibleDurationMs: Long = 2200L,
 ) {
     // Latches on the first `show`, so a recomposition cannot replay the splash
     // mid-session. rememberSaveable rather than remember: the flag driving
@@ -93,17 +93,29 @@ fun LcsBrandedSplashOverlay(
     var visible by remember { mutableStateOf(false) }
     var fading by remember { mutableStateOf(false) }
 
+    // Show as soon as the system splash releases.
     LaunchedEffect(show) {
-        if (!show || hasRun) return@LaunchedEffect
-        hasRun = true
-        visible = true
+        if (show && !hasRun) {
+            hasRun = true
+            visible = true
+        }
+    }
+
+    if (!visible) return
+
+    // Start the dwell only once `visible` is true and the overlay has actually
+    // been composed — not when `show` flips. The system splash holds the screen
+    // until the app has finished loading, which can be most of a second; timing
+    // the dwell from `show` meant that load time was subtracted from the 1100 ms
+    // and the reader saw only the tail. Anchoring it here gives the full
+    // duration of readable, fully-painted branding every launch.
+    LaunchedEffect(visible) {
+        if (!visible || fading) return@LaunchedEffect
         delay(visibleDurationMs)
         fading = true
         delay(FADE_MS.toLong())
         visible = false
     }
-
-    if (!visible) return
 
     // Fades out only. There is deliberately no fade IN: the overlay has to be
     // fully painted the instant the system splash is removed, or the user sees
