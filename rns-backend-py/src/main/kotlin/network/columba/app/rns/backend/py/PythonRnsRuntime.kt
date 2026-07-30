@@ -242,10 +242,16 @@ class PythonRnsRuntime(
             )}",
         )
 
-        val configDir = File(config.storagePath, "reticulum").apply { mkdirs() }
+        // LCS: resolve any .local (mDNS) TCPClient hosts to numeric IPs before
+        // writing the config Python reads — Python's socket layer can't resolve
+        // .local on Android. Runs on every start(), so a changed RNode IP is
+        // picked up on reconnect. Best-effort: unresolved names pass through.
+        val resolvedConfig = MdnsResolver.resolveInterfaces(appContext, config)
+
+        val configDir = File(resolvedConfig.storagePath, "reticulum").apply { mkdirs() }
         File(configDir, "config").writeText(
             RnsConfigFile.build(
-                config = config,
+                config = resolvedConfig,
                 joinShareInstance = joinShareInstance,
                 hostShareInstance = hostShareInstance,
                 skipAutoInterface = skipAutoInterface,
