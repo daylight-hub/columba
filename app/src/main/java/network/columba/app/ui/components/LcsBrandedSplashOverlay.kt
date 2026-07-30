@@ -103,6 +103,13 @@ fun LcsBrandedSplashOverlay(
 
     if (!visible) return
 
+    // Flips true one recomposition after the overlay first shows, so the alpha
+    // tween below animates 0 -> 1 (a fade-in) rather than starting at 1.
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(visible) {
+        if (visible) appeared = true
+    }
+
     // Start the dwell only once `visible` is true and the overlay has actually
     // been composed — not when `show` flips. The system splash holds the screen
     // until the app has finished loading, which can be most of a second; timing
@@ -113,16 +120,21 @@ fun LcsBrandedSplashOverlay(
         if (!visible || fading) return@LaunchedEffect
         delay(visibleDurationMs)
         fading = true
-        delay(FADE_MS.toLong())
+        delay(FADE_OUT_MS.toLong())
         visible = false
     }
 
-    // Fades out only. There is deliberately no fade IN: the overlay has to be
-    // fully painted the instant the system splash is removed, or the user sees
-    // a flash of the app underneath and the two screens stop reading as one.
+    // Cross-fades in over the system splash, then out to the app.
+    //
+    // The system splash already shows the LCS logo on white; this overlay shows
+    // the same logo plus the wordmark on the same white. Easing in (rather than
+    // snapping) means the words appear gently and any small difference in how
+    // the platform sized or centred its icon versus this one is smoothed over
+    // at the seam instead of reading as a jump.
+    val target = if (appeared && !fading) 1f else 0f
     val alpha by animateFloatAsState(
-        targetValue = if (fading) 0f else 1f,
-        animationSpec = tween(durationMillis = FADE_MS),
+        targetValue = target,
+        animationSpec = tween(durationMillis = if (fading) FADE_OUT_MS else FADE_IN_MS),
         label = "lcs_splash_fade",
     )
 
@@ -140,11 +152,13 @@ fun LcsBrandedSplashOverlay(
                 .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
     ) {
         BoxWithConstraints(
+            // Opaque white for the whole lifetime of the overlay. The alpha
+            // below is applied to the CONTENT only, not this field, so fading
+            // the logo/wordmark in or out never lets the app show through.
             modifier =
                 Modifier
                     .fillMaxSize()
-                    .background(Color.White)
-                    .alpha(alpha),
+                    .background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
             // Logo and wordmark are stacked as ordinary siblings in one centred
@@ -157,12 +171,16 @@ fun LcsBrandedSplashOverlay(
             val logoSize = minOf(LOGO_SIZE, maxWidth * 0.7f, maxHeight * 0.4f)
 
             Column(
-                modifier = Modifier.padding(horizontal = 32.dp),
+                modifier =
+                    Modifier
+                        .alpha(alpha)
+                        .padding(horizontal = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                // The only logo drawn at launch — the system splash uses a blank
-                // icon (splash_icon_blank.xml) so this is the single source.
+                // Same logo the system splash already showed — the overlay
+                // continues it on the same white field and adds the wordmark,
+                // so the handover reads as words appearing, not a new screen.
                 Image(
                     painter = painterResource(R.drawable.ic_launcher_foreground),
                     contentDescription = null,
@@ -196,7 +214,8 @@ fun LcsBrandedSplashOverlay(
     }
 }
 
-private const val FADE_MS = 260
+private const val FADE_IN_MS = 220
+private const val FADE_OUT_MS = 300
 
 /**
  * Drawn size of the logo, clamped against the viewport at the call site.

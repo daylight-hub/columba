@@ -3,13 +3,12 @@
     <!-- Main app theme (used after splash) -->
     <style name="Theme.Columba" parent="android:Theme.Material.Light.NoActionBar" />
 
-    <!-- Splash screen theme: white field, LCS badge, navy wordmark branding strip.
-         The navy wordmark uses the platform-only android:windowSplashScreenBrandingImage
-         attribute, which exists from API 31 — see values-v31/themes.xml. It is NOT a
-         compat attribute, so it must not appear here or resource linking fails. -->
+    <!-- Splash: white field with the LCS logo, shown from the first frame while
+         the app loads. The system splash is icon-only; the wordmark is added by
+         the in-app overlay (LcsBrandedSplashOverlay) on the same white field. -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_blank</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>
 </resources>
