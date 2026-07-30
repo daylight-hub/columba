@@ -2,14 +2,18 @@
 <resources>
     <!-- Android 12+ (API 31).
 
-         LCS deliberately does NOT set android:windowSplashScreenBrandingImage
-         here. It exists only on API 31+, and androidx core-splashscreen does not
-         emulate it, so using it would give a different splash on Android 10/11
-         than on Android 12+. The wordmark is drawn by the app instead
-         (LcsBrandedSplashOverlay) so every device shows the same thing. -->
+         The system splash shows the LCS logo (windowSplashScreenAnimatedIcon)
+         so a logo is on screen from the very first frame, while the app loads.
+         It can only show an icon, never text — so the wordmark is added by the
+         in-app overlay (LcsBrandedSplashOverlay), which continues on the same
+         white field with the same logo plus "Liberty Chat / powered by Columba".
+
+         android:windowSplashScreenBrandingImage is deliberately NOT used: it is
+         API 31+ only and androidx core-splashscreen does not emulate it, so it
+         would differ across Android versions. -->
     <style name="Theme.Columba.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon_blank</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="postSplashScreenTheme">@style/Theme.Columba</item>
     </style>
 </resources>
