@@ -119,7 +119,16 @@ internal object MdnsResolver {
                 val latch = CountDownLatch(1)
                 resolveLatches[name] = latch
                 resolveOne(nsd, serviceInfo) { host, ip ->
-                    if (host != null && ip != null) out[host] = ip
+                    if (ip != null) {
+                        // Key by the service INSTANCE name (<name>.local) — this
+                        // is what the user typed. RNodes advertise their hostname
+                        // as "<ip>.local", so the instance name is the reliable
+                        // link back to "iprnode.local".
+                        out["${name.lowercase()}.local"] = ip
+                        // Also key by the resolved hostname for devices that
+                        // advertise a real <name>.local hostname.
+                        if (host != null) out[host] = ip
+                    }
                     latch.countDown()
                 }
             }
