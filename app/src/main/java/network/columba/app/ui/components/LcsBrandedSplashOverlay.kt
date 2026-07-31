@@ -19,7 +19,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,12 +84,13 @@ fun LcsBrandedSplashOverlay(
     visibleDurationMs: Long = 2200L,
     onFinished: () -> Unit = {},
 ) {
-    // Latches on the first `show`, so a recomposition cannot replay the splash
-    // mid-session. rememberSaveable rather than remember: the flag driving
-    // `show` is process-scoped, so on an Activity recreation (rotation, "don't
-    // keep activities") it is already true — a plain remember would reset here
-    // and replay the splash on every rotation.
-    var hasRun by rememberSaveable { mutableStateOf(false) }
+    // Latches on the first `show` so a recomposition within this composition
+    // cannot replay the splash. Plain remember, NOT rememberSaveable: it must
+    // reset on every fresh launch so the splash plays each cold/warm start, and
+    // it survives rotation on its own because rotation reuses the composition.
+    // (rememberSaveable persisted it across launches, which made the splash play
+    // once and never again — and the gate below then opened before the logo.)
+    var hasRun by remember { mutableStateOf(false) }
     var visible by remember { mutableStateOf(false) }
     var fading by remember { mutableStateOf(false) }
 
@@ -124,13 +124,6 @@ fun LcsBrandedSplashOverlay(
         delay(FADE_OUT_MS.toLong())
         visible = false
         onFinished()
-    }
-
-    // If the splash will not run this session (already shown once, or `show`
-    // was consumed before this composed), release the gate immediately so
-    // permission prompts are not held forever.
-    LaunchedEffect(show, hasRun) {
-        if (hasRun && !visible && !fading) onFinished()
     }
 
     // Cross-fades in over the system splash, then out to the app.

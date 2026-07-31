@@ -289,6 +289,14 @@ class MainActivity : ComponentActivity() {
         // which is exactly what happened in 1.2.0: the wordmark rendered behind
         // the splash and removed itself before the splash lifted. Gating on this
         // flag is the only way to know the user can actually see the screen.
+        // LCS: reset per launch. splashDismissed / splashFinished are file-level
+        // (process-scoped), so on a warm start they would still read true from
+        // the previous launch — the overlay would think it had already finished
+        // and skip straight to opening the permission gate. Clear them here so
+        // every onCreate runs the splash from scratch.
+        splashDismissed.value = false
+        splashFinished.value = false
+
         splashScreen.setOnExitAnimationListener { provider ->
             provider.remove()
             splashDismissed.value = true
