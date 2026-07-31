@@ -83,6 +83,7 @@ import network.columba.app.ui.theme.LibertySilver40
 fun LcsBrandedSplashOverlay(
     show: Boolean,
     visibleDurationMs: Long = 2200L,
+    onFinished: () -> Unit = {},
 ) {
     // Latches on the first `show`, so a recomposition cannot replay the splash
     // mid-session. rememberSaveable rather than remember: the flag driving
@@ -122,6 +123,14 @@ fun LcsBrandedSplashOverlay(
         fading = true
         delay(FADE_OUT_MS.toLong())
         visible = false
+        onFinished()
+    }
+
+    // If the splash will not run this session (already shown once, or `show`
+    // was consumed before this composed), release the gate immediately so
+    // permission prompts are not held forever.
+    LaunchedEffect(show, hasRun) {
+        if (hasRun && !visible && !fading) onFinished()
     }
 
     // Cross-fades in over the system splash, then out to the app.

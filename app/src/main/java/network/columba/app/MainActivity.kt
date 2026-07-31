@@ -140,6 +140,18 @@ import javax.inject.Inject
 private val splashDismissed = mutableStateOf(false)
 
 /**
+ * LCS: true once the branded splash overlay has fully finished — dwell plus
+ * fade-out, not merely the system splash lifting.
+ *
+ * Permission sheets (Bluetooth, precise location) are gated on this. They fire
+ * from LaunchedEffects that otherwise run the instant the app composes, i.e.
+ * behind the splash — which is why the Bluetooth sheet was popping up over
+ * the logo as the wordmark faded in. Holding them until the branding is gone
+ * means: splash, then app, then any prompt — never a prompt over the splash.
+ */
+private val splashFinished = mutableStateOf(false)
+
+/**
  * Main activity for the Columba LXMF Messenger application.
  */
 @AndroidEntryPoint
@@ -953,10 +965,18 @@ fun ColumbaNavigation(
     val hasEnabledBluetoothInterface by interfaceRepository.hasEnabledBluetoothInterface.collectAsState(
         initial = false,
     )
-    LaunchedEffect(onboardingState.hasCompletedOnboarding, hasEnabledBluetoothInterface) {
+    LaunchedEffect(
+        onboardingState.hasCompletedOnboarding,
+        hasEnabledBluetoothInterface,
+        splashFinished.value,
+    ) {
         // Only show permission sheet if activity is still active (at least STARTED)
         // to prevent BadTokenException when showing ModalBottomSheet
         if (!LifecycleGuard.isActiveForWindows(lifecycleOwner)) return@LaunchedEffect
+        // LCS: hold until the branded splash has fully finished, so this sheet
+        // never appears over it. splashFinished is a LaunchedEffect key, so this
+        // re-runs and fires the moment the splash completes.
+        if (!splashFinished.value) return@LaunchedEffect
         if (!onboardingState.hasCompletedOnboarding) return@LaunchedEffect
         if (!hasEnabledBluetoothInterface) return@LaunchedEffect
         if (BlePermissionManager.hasAllPermissions(context)) return@LaunchedEffect
@@ -1096,7 +1116,12 @@ fun ColumbaNavigation(
         network.columba.app.ui.components.PreciseLocationPermissionPrompt(
             locationSharingEnabled = settingsState.locationSharingEnabled,
             locationPrecisionRadius = settingsState.locationPrecisionRadius,
-            enabled = !settingsState.isLoading && onboardingState.hasCompletedOnboarding,
+            // LCS: also hold until the branded splash finishes, so the sheet
+            // never appears over it.
+            enabled =
+                !settingsState.isLoading &&
+                    onboardingState.hasCompletedOnboarding &&
+                    splashFinished.value,
             dismissed = settingsState.preciseLocationPromptDismissed,
             onDismiss = { settingsViewModel.dismissPreciseLocationPrompt() },
         )
@@ -2330,6 +2355,7 @@ fun ColumbaNavigation(
         // system splash lifts.
         network.columba.app.ui.components.LcsBrandedSplashOverlay(
             show = splashDismissed.value,
+            onFinished = { splashFinished.value = true },
         )
     }
 }
