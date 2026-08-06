@@ -33,7 +33,7 @@ import network.columba.app.ui.components.LocalCapabilities
 
 /**
  * Advanced settings card — houses power-user toggles and options that most users should
- * leave alone. Sits between the RNode Flasher and About cards so it's findable but
+ * leave alone. Sits above the About card so it's findable but
  * out of the way.
  *
  * @param isExpanded Whether the card is currently expanded

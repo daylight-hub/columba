@@ -107,7 +107,6 @@ import network.columba.app.ui.screens.ThemeEditorScreen
 import network.columba.app.ui.screens.ThemeManagementScreen
 import network.columba.app.ui.screens.VoiceCallScreen
 import network.columba.app.ui.screens.buildFocusInterfaceDetails
-import network.columba.app.ui.screens.flasher.RNodeFlasherScreen
 import network.columba.app.ui.screens.offlinemaps.OfflineMapDownloadScreen
 import network.columba.app.ui.screens.offlinemaps.OfflineMapsScreen
 import network.columba.app.ui.screens.onboarding.OnboardingPagerScreen
@@ -601,14 +600,6 @@ sealed class PendingNavigation {
         val deviceName: String,
     ) : PendingNavigation()
 
-    /** Navigate directly to flasher with skip-detection mode for bootloader flashing */
-    data class DirectFlash(
-        val usbDeviceId: Int,
-        val vendorId: Int,
-        val productId: Int,
-        val deviceName: String,
-    ) : PendingNavigation()
-
     /** Navigate to NomadNet browser with a specific node and path */
     data class NomadNetBrowser(
         val nodeHash: String,
@@ -884,17 +875,6 @@ fun ColumbaNavigation(
                         navController.navigate(route)
                         Log.d("ColumbaNavigation", "Navigated to RNode wizard with USB: ${navigation.usbDeviceId}")
                     }
-                    is PendingNavigation.DirectFlash -> {
-                        // Navigate directly to flasher with skip-detection mode
-                        val route =
-                            "rnode_flasher?skipDetection=true" +
-                                "&usbDeviceId=${navigation.usbDeviceId}" +
-                                "&usbVendorId=${navigation.vendorId}" +
-                                "&usbProductId=${navigation.productId}" +
-                                "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
-                        navController.navigate(route)
-                        Log.d("ColumbaNavigation", "Navigated to flasher (direct): ${navigation.usbDeviceId}")
-                    }
                     is PendingNavigation.NomadNetBrowser -> {
                         val encoded = Uri.encode(navigation.path)
                         navController.navigate("nomadnet_browser/${navigation.nodeHash}?path=$encoded")
@@ -1074,7 +1054,6 @@ fun ColumbaNavigation(
             "theme_editor",
             "rnode_wizard",
             "tcp_client_wizard",
-            "rnode_flasher",
             "usb_device_action",
             "voice_call/",
             "incoming_call/",
@@ -1553,9 +1532,6 @@ fun ColumbaNavigation(
                                             restoreState = false // Don't restore state so filter applies
                                         }
                                     },
-                                    onNavigateToFlasher = {
-                                        navController.navigate("rnode_flasher")
-                                    },
                                     onNavigateToBlockedUsers = {
                                         navController.navigate("blocked_users")
                                     },
@@ -1608,17 +1584,6 @@ fun ColumbaNavigation(
                                 network.columba.app.ui.screens.UsbDeviceActionScreen(
                                     deviceName = usbDeviceName,
                                     onNavigateBack = { navController.popBackStack() },
-                                    onFlashFirmware = {
-                                        val route =
-                                            "rnode_flasher" +
-                                                "?usbDeviceId=$usbDeviceId" +
-                                                "&usbVendorId=$usbVendorId" +
-                                                "&usbProductId=$usbProductId" +
-                                                "&usbDeviceName=${Uri.encode(usbDeviceName)}"
-                                        navController.navigate(route) {
-                                            popUpTo("usb_device_action") { inclusive = true }
-                                        }
-                                    },
                                     onConfigureRNode = {
                                         val route =
                                             "rnode_wizard?connectionType=usb" +
@@ -1659,54 +1624,6 @@ fun ColumbaNavigation(
                                 )
                             }
 
-                            composable(
-                                route =
-                                    "rnode_flasher?skipDetection={skipDetection}&tncConfigOnly={tncConfigOnly}" +
-                                        "&usbDeviceId={usbDeviceId}" +
-                                        "&usbVendorId={usbVendorId}&usbProductId={usbProductId}&usbDeviceName={usbDeviceName}",
-                                arguments =
-                                    listOf(
-                                        navArgument("skipDetection") {
-                                            type = NavType.BoolType
-                                            defaultValue = false
-                                        },
-                                        navArgument("tncConfigOnly") {
-                                            type = NavType.BoolType
-                                            defaultValue = false
-                                        },
-                                        navArgument("usbDeviceId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbVendorId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbProductId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbDeviceName") {
-                                            type = NavType.StringType
-                                            defaultValue = ""
-                                            nullable = true
-                                        },
-                                    ),
-                            ) { backStackEntry ->
-                                val skipDetection = backStackEntry.arguments?.getBoolean("skipDetection") ?: false
-                                val tncConfigOnly = backStackEntry.arguments?.getBoolean("tncConfigOnly") ?: false
-                                val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
-                                RNodeFlasherScreen(
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onComplete = { navController.popBackStack() },
-                                    onNavigateToRNodeWizard = {
-                                        navController.navigate("rnode_wizard")
-                                    },
-                                    skipDetection = skipDetection,
-                                    tncConfigOnly = tncConfigOnly,
-                                    preselectedUsbDeviceId = if (usbDeviceId > 0) usbDeviceId else null,
-                                )
-                            }
 
                             composable("interface_management") {
                                 InterfaceManagementScreen(

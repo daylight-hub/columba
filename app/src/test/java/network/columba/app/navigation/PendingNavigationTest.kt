@@ -132,44 +132,8 @@ class PendingNavigationTest {
         assertEquals(nav1.hashCode(), nav2.hashCode())
     }
 
-    // ==================== DirectFlash Tests ====================
 
-    @Test
-    fun `DirectFlash has correct properties`() {
-        val flash =
-            PendingNavigation.DirectFlash(
-                usbDeviceId = 789,
-                vendorId = 0x0403,
-                productId = 0x6001,
-                deviceName = "FTDI Serial",
-            )
 
-        assertEquals(789, flash.usbDeviceId)
-        assertEquals(0x0403, flash.vendorId)
-        assertEquals(0x6001, flash.productId)
-        assertEquals("FTDI Serial", flash.deviceName)
-    }
-
-    @Test
-    fun `DirectFlash instances with same values are equal`() {
-        val flash1 =
-            PendingNavigation.DirectFlash(
-                usbDeviceId = 789,
-                vendorId = 0x0403,
-                productId = 0x6001,
-                deviceName = "FTDI Serial",
-            )
-        val flash2 =
-            PendingNavigation.DirectFlash(
-                usbDeviceId = 789,
-                vendorId = 0x0403,
-                productId = 0x6001,
-                deviceName = "FTDI Serial",
-            )
-
-        assertEquals(flash1, flash2)
-        assertEquals(flash1.hashCode(), flash2.hashCode())
-    }
 
     // ==================== InterfaceStats Tests ====================
 
@@ -203,7 +167,6 @@ class PendingNavigationTest {
     fun `all USB navigation types are distinct`() {
         val usbAction = PendingNavigation.UsbDeviceAction(1, 0x1A86, 0x7523, "Device")
         val rnodeWizard = PendingNavigation.RNodeWizardWithUsb(1, 0x1A86, 0x7523, "Device")
-        val directFlash = PendingNavigation.DirectFlash(1, 0x1A86, 0x7523, "Device")
 
         // Even with same parameters, different types should not be equal
         assertNotEquals(usbAction, rnodeWizard)
@@ -223,7 +186,6 @@ class PendingNavigationTest {
                 PendingNavigation.InterfaceStats(1L),
                 PendingNavigation.UsbDeviceAction(1, 0x1A86, 0x7523, "Device"),
                 PendingNavigation.RNodeWizardWithUsb(1, 0x1A86, 0x7523, "Device"),
-                PendingNavigation.DirectFlash(1, 0x1A86, 0x7523, "Device"),
             )
 
         for (navigation in navigations) {

@@ -49,7 +49,6 @@ import androidx.compose.ui.unit.dp
 fun UsbDeviceActionScreen(
     deviceName: String,
     onNavigateBack: () -> Unit,
-    onFlashFirmware: () -> Unit,
     onConfigureRNode: () -> Unit,
     onConfigureTransport: () -> Unit,
     onDisableTransport: () -> Unit,
@@ -181,16 +180,6 @@ fun UsbDeviceActionScreen(
             )
 
             Spacer(modifier = Modifier.height(32.dp))
-
-            // Flash Firmware option
-            ActionCard(
-                icon = Icons.Default.Memory,
-                title = "Flash Firmware",
-                description = "Update or install RNode firmware on this device",
-                onClick = onFlashFirmware,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Configure RNode option
             ActionCard(

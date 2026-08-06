@@ -100,7 +100,6 @@ fun SettingsScreen(
     onNavigateToCustomThemes: () -> Unit = {},
     onNavigateToMigration: () -> Unit = {},
     onNavigateToAnnounces: (filterType: String?) -> Unit = {},
-    onNavigateToFlasher: () -> Unit = {},
     onNavigateToApkSharing: () -> Unit = {},
     onNavigateToBlockedUsers: () -> Unit = {},
 ) {
