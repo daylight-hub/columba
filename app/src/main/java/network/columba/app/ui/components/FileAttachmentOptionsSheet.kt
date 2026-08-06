@@ -36,7 +36,6 @@ import network.columba.app.R
  * @param filename The name of the file to display
  * @param onOpenWith Callback when "Open with..." is selected
  * @param onSaveToDevice Callback when "Save to device" is selected
- * @param onUpdatePyxis Optional callback for a recognized Pyxis update package
  * @param onDismiss Callback when the sheet is dismissed
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +45,6 @@ fun FileAttachmentOptionsSheet(
     filename: String,
     onOpenWith: () -> Unit,
     onSaveToDevice: () -> Unit,
-    onUpdatePyxis: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -72,20 +70,6 @@ fun FileAttachmentOptionsSheet(
 
             HorizontalDivider()
 
-            if (onUpdatePyxis != null) {
-                ListItem(
-                    headlineContent = { Text(stringResource(R.string.pyxis_update_attachment_action)) },
-                    supportingContent = { Text(stringResource(R.string.pyxis_update_attachment_action_description)) },
-                    leadingContent = {
-                        Icon(
-                            Icons.Default.SystemUpdate,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    },
-                    modifier = Modifier.clickable { onUpdatePyxis() },
-                )
-            }
 
             // Open with option
             ListItem(

@@ -251,3 +251,39 @@ val OledSecondaryContainer40 = Color(0xFFF2DCF3) // Very light lavender - Second
 val OledOnSecondaryContainer40 = Color(0xFF392C3D) // Dark purple-gray
 val OledSurface40 = Color(0xFFF9F7FA) // Very light surface for light theme
 val OledOutline40 = Color(0xFF7A7179) // Purple-gray outline for light theme
+
+// ============================================
+// Liberty Theme Colors (LCS: Navy / Gold / Silver)
+// Matches the Liberty Communication Systems, Inc. logo.
+// ============================================
+
+// Dark theme colors (80 = lighter tones for dark surfaces)
+val LibertyNavy80 = Color(0xFF9EC7F5) // Light navy/sky blue
+val LibertyGold80 = Color(0xFFE8C86A) // Light gold
+val LibertySilver80 = Color(0xFFC9CDD3) // Light silver
+
+// Light theme colors (40 = deep tones for light surfaces)
+val LibertyNavy40 = Color(0xFF0A3A6B) // Deep navy (logo ring)
+val LibertyGold40 = Color(0xFF9A7400) // Rich gold (readable with white text)
+val LibertySilver40 = Color(0xFF6E7378) // Medium silver-gray
+
+// Liberty theme - Material 3 additional color roles (dark)
+val LibertyOnPrimary80 = Color(0xFF06294D) // On-primary for dark theme
+val LibertyContainer80 = Color(0xFF0E4A86) // Navy primary container for dark theme
+val LibertyOnContainer80 = Color(0xFFCFE4FF) // On-primary-container for dark theme
+val LibertyOnSecondary80 = Color(0xFF3A2E00) // Deep gold-brown - On-secondary for dark theme
+val LibertyOnTertiary80 = Color(0xFF23272B) // Dark slate - On-tertiary for dark theme
+val LibertySurface80 = Color(0xFF3F464E) // Surface variant for dark theme
+val LibertyOutline80 = Color(0xFFA6AEB8) // Outline for dark theme
+
+// Liberty theme - Material 3 additional color roles (light)
+val LibertyContainer40 = Color(0xFFD3E4FF) // Navy primary container for light theme
+val LibertyOnContainer40 = Color(0xFF001C3B) // On-primary-container for light theme
+val LibertySurface40 = Color(0xFFDDE3EA) // Surface variant for light theme
+val LibertyOutline40 = Color(0xFF4A5560) // Outline for light theme
+
+// Shiny red accent - used for a few high-emphasis CTA buttons across the app.
+val LcsRed = Color(0xFFE01E2B) // Primary shiny red
+val LcsRedLight = Color(0xFFFF5A63) // Top gloss highlight
+val LcsRedDeep = Color(0xFFB3141F) // Bottom of the gloss gradient
+val LcsRedDark = Color(0xFFFF6B70) // Lighter red for dark surfaces

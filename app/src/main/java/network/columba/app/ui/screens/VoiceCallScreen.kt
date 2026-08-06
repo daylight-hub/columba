@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
@@ -54,8 +55,11 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import network.columba.app.call.PttMediaSessionManager
-import network.columba.app.viewmodel.CallViewModel
 import network.columba.app.rns.api.model.CallState
+import kotlinx.coroutines.delay
+import network.columba.app.ui.components.CallQualityAdvisory
+import network.columba.app.ui.model.CodecProfile
+import network.columba.app.viewmodel.CallViewModel
 
 /**
  * Voice call screen for active/outgoing calls.
@@ -73,6 +77,19 @@ fun VoiceCallScreen(
     onEndCall: () -> Unit,
     autoAnswer: Boolean = false,
     profileCode: Int? = null,
+    /**
+     * LCS: conservative link estimate in bits per second taken before dialling,
+     * or null if the link was never probed. Used only to decide whether to show
+     * the codec advisory; nothing re-measures during the call.
+     */
+    linkSpeedBps: Long? = null,
+    /**
+     * LCS: dial this call in half duplex. Chosen per-call in the codec dialog,
+     * which pre-selects it when the link probe lands on a low-bandwidth tier.
+     * Ignored for incoming calls — the caller's preference arrives as a mode
+     * signal while we are still ringing.
+     */
+    halfDuplex: Boolean = false,
     viewModel: CallViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -83,6 +100,34 @@ fun VoiceCallScreen(
     val isPttActive by viewModel.isPttActive.collectAsStateWithLifecycle()
     val callDuration by viewModel.callDuration.collectAsStateWithLifecycle()
     val peerName by viewModel.peerName.collectAsStateWithLifecycle()
+
+    // LCS: mid-call codec advisory state.
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val recommendedProfile by viewModel.recommendedProfile.collectAsStateWithLifecycle()
+    val measuredBps by viewModel.measuredBps.collectAsStateWithLifecycle()
+    val advisoryDismissed by viewModel.advisoryDismissed.collectAsStateWithLifecycle()
+
+    // LCS: in-call codec picker + peer-initiated duplex notice.
+    var duplexNotice by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.peerDuplexChange.collect { halfDuplex ->
+            duplexNotice =
+                if (halfDuplex) {
+                    "Peer switched to half duplex \u2014 hold PTT to talk"
+                } else {
+                    "Peer switched to full duplex"
+                }
+        }
+    }
+
+    // Transient: the chip carries the mode from here on.
+    LaunchedEffect(duplexNotice) {
+        if (duplexNotice != null) {
+            delay(6000)
+            duplexNotice = null
+        }
+    }
 
     // PTT MediaSession for Bluetooth headset button capture
     val pttManager =
@@ -115,6 +160,16 @@ fun VoiceCallScreen(
     }
     var permissionRequested by remember { mutableStateOf(false) }
 
+    // LCS: the codec this call actually opened with, and what the link measured
+    // beforehand. profileCode is null when the caller did not pick explicitly,
+    // in which case the call runs on CodecProfile.DEFAULT.
+    val resolvedProfile =
+        remember(profileCode) {
+            profileCode?.let { code -> CodecProfile.entries.firstOrNull { it.code == code } }
+                ?: CodecProfile.DEFAULT
+        }
+    val linkBandwidthBps: Long? = remember(linkSpeedBps) { linkSpeedBps }
+
     // Permission launcher
     val permissionLauncher =
         rememberLauncherForActivityResult(
@@ -123,7 +178,7 @@ fun VoiceCallScreen(
             hasAudioPermission = isGranted
             if (isGranted && callState is CallState.Idle) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission granted, initiating call...")
-                viewModel.initiateCall(destinationHash, profileCode)
+                viewModel.initiateCall(destinationHash, profileCode, halfDuplex)
             } else if (!isGranted) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission denied, cannot make call")
             }
@@ -144,7 +199,14 @@ fun VoiceCallScreen(
         if (callState is CallState.Idle) {
             if (hasAudioPermission) {
                 android.util.Log.w("VoiceCallScreen", "📞 Permission already granted, calling initiateCall()...")
-                viewModel.initiateCall(destinationHash, profileCode)
+                // LCS: hand the pre-dial link measurement to the ViewModel so the
+                // advisory can compare it against the codec actually used. No
+                // probe runs during the call — see recordLinkMeasurement.
+                viewModel.recordLinkMeasurement(
+                    bandwidthBps = linkBandwidthBps,
+                    profile = resolvedProfile,
+                )
+                viewModel.initiateCall(destinationHash, profileCode, halfDuplex)
             } else if (!permissionRequested) {
                 android.util.Log.w("VoiceCallScreen", "📞 Requesting microphone permission...")
                 permissionRequested = true
@@ -258,6 +320,39 @@ fun VoiceCallScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+
+                // LCS: explicit duplex indicator. The PTT button already implies
+                // the mode, but a peer can move the call without any local
+                // action, so the state needs to be readable at a glance.
+                if (callState is CallState.Active) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DuplexChip(isHalfDuplex = isPttMode)
+                }
+
+                duplexNotice?.let { notice ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = notice,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    )
+                }
+            }
+
+            // LCS: codec advisory. Only while the call is up, and only until the
+            // user acts on it or dismisses it.
+            if (callState is CallState.Active && !advisoryDismissed) {
+                CallQualityAdvisory(
+                    currentProfile = activeProfile,
+                    recommendedProfile = recommendedProfile,
+                    measuredBps = measuredBps,
+                    isPttMode = isPttMode,
+                    onEnablePtt = { viewModel.togglePttMode() },
+                    onDismiss = { viewModel.dismissAdvisory() },
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
             }
 
             // Center: PTT hold-to-talk button (only in PTT mode during active call)
@@ -276,7 +371,7 @@ fun VoiceCallScreen(
             ) {
                 // Secondary controls row (mute + ptt + speaker)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(bottom = 32.dp),
                 ) {
                     // Mute button (disabled in PTT mode since PTT controls transmit)
@@ -340,6 +435,45 @@ fun VoiceCallScreen(
                 )
             }
         }
+    }
+
+}
+
+/**
+ * LCS: duplex-mode indicator.
+ *
+ * Half duplex is symmetric and can be engaged by the peer, so the mode is not
+ * always something this user chose. A persistent chip means it never has to be
+ * inferred from whether the PTT button happens to be showing.
+ */
+@Composable
+private fun DuplexChip(isHalfDuplex: Boolean) {
+    val container =
+        if (isHalfDuplex) {
+            MaterialTheme.colorScheme.tertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        }
+    val content =
+        if (isHalfDuplex) {
+            MaterialTheme.colorScheme.onTertiaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+
+    Box(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(percent = 50))
+                .background(container)
+                .padding(horizontal = 12.dp, vertical = 4.dp)
+                .testTag("duplexChip"),
+    ) {
+        Text(
+            text = if (isHalfDuplex) "HALF DUPLEX \u00b7 PTT" else "FULL DUPLEX",
+            style = MaterialTheme.typography.labelSmall,
+            color = content,
+        )
     }
 }
 

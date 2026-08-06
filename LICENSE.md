@@ -1,3 +1,23 @@
+LIBERTY CHAT — LICENSE & ATTRIBUTION NOTICE
+===========================================
+
+Liberty Chat — powered by Torlando-Tech's Columba — is a branded distribution by
+Liberty Communication Systems, Inc. ("LCS") of the Columba application.
+
+  * Original application: Columba — Copyright (c) 2025-2026 Columba
+    Contributors (torlando-tech). Original design and source code.
+    Upstream: https://github.com/torlando-tech/columba
+  * LCS branding, configuration, and modifications:
+    Copyright (c) 2026 Liberty Communication Systems, Inc.
+
+Columba is licensed under the Mozilla Public License, Version 2.0 (below).
+This fork remains under the same MPL 2.0 license. Per MPL 2.0, the original
+copyright notices are retained and the source of any modified MPL-covered
+files is disclosed at the LCS fork repository. The names, trademarks, and
+logos of the original authors are not used to endorse or promote this fork.
+
+-------------------------------------------------------------------------------
+
 Mozilla Public License Version 2.0
 ==================================
 

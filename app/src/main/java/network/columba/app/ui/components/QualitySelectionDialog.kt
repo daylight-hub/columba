@@ -4,6 +4,8 @@ package network.columba.app.ui.components
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +65,16 @@ data class QualityOption<T>(
     val displayName: String,
     val description: String,
     val isExperimental: Boolean = false,
+    /**
+     * LCS: optional static badge shown beside the name, independent of the
+     * dynamic "Recommended" chip.
+     *
+     * The two answer different questions. "Recommended" reflects what the live
+     * link probe measured right now; this one is a fixed editorial note that
+     * survives whatever the probe says — used to mark the codec LCS suggests
+     * for voice over a LoRa/RNode link.
+     */
+    val lcsBadge: String? = null,
 )
 
 /**
@@ -99,6 +114,13 @@ fun <T> QualitySelectionDialog(
     isProbing: Boolean = false,
     transferTimeEstimates: Map<T, String?>? = null,
     confirmButtonText: String = "Confirm",
+    /**
+     * LCS: when non-null, renders a half-duplex toggle under the options. Null
+     * for dialogs where duplex is meaningless (image quality), which keeps this
+     * generic component unchanged for every existing caller.
+     */
+    halfDuplex: Boolean? = null,
+    onHalfDuplexChange: ((Boolean) -> Unit)? = null,
     onConfirm: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -130,6 +152,22 @@ fun <T> QualitySelectionDialog(
                 // the link probe is in flight).
                 PathInfoSection(linkState, isProbing = isProbing)
 
+                // LCS: legend for the star. It marks whichever option the link
+                // probe suggests, and moves as the measurement changes — which
+                // is unreadable without saying so.
+                if (recommendedOption != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RecommendedChip()
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Suggested for this link",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
                 if (linkState != null || isProbing) {
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -154,12 +192,14 @@ fun <T> QualitySelectionDialog(
                                 isSelected = option.value == selectedValue,
                                 isRecommended = option.value == recommendedOption,
                                 isExperimental = option.isExperimental,
+                                lcsBadge = option.lcsBadge,
                                 transferTime = transferTimeEstimates?.get(option.value),
                                 onClick = { selectedValue = option.value },
                             )
                         }
                     }
                 }
+
             }
         },
         confirmButton = {
@@ -170,10 +210,80 @@ fun <T> QualitySelectionDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            // Toggle sits to the LEFT of Cancel when duplex selection applies.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (halfDuplex != null && onHalfDuplexChange != null) {
+                    DuplexModeToggle(
+                        halfDuplex = halfDuplex,
+                        onChange = onHalfDuplexChange,
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
             }
         },
+    )
+}
+
+/**
+ * LCS: compact dial-time duplex selector, sized to sit in the dialog button row
+ * beside Cancel. Two labelled segments — tapping either selects that mode.
+ *
+ * Half duplex is symmetric (it PTT-gates both ends), but at dial time this is
+ * simply the mode the call opens in, so the labels are plain.
+ */
+@Composable
+private fun DuplexModeToggle(
+    halfDuplex: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        DuplexSegment(
+            label = "Full Duplex",
+            selected = !halfDuplex,
+            onClick = { onChange(false) },
+        )
+        DuplexSegment(
+            label = "Half Duplex/PTT",
+            selected = halfDuplex,
+            onClick = { onChange(true) },
+        )
+    }
+}
+
+@Composable
+private fun DuplexSegment(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val bg =
+        if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val fg =
+        if (selected) {
+            MaterialTheme.colorScheme.onPrimary
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        color = fg,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(bg)
+                .clickable(onClick = onClick)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
     )
 }
 
@@ -263,6 +373,7 @@ fun QualityOptionRow(
     isSelected: Boolean,
     isRecommended: Boolean,
     isExperimental: Boolean = false,
+    lcsBadge: String? = null,
     transferTime: String? = null,
     onClick: () -> Unit,
 ) {
@@ -316,6 +427,21 @@ fun QualityOptionRow(
                     if (isExperimental && !isRecommended) {
                         Spacer(modifier = Modifier.width(8.dp))
                         ExperimentalChip()
+                    }
+
+                    // LCS: static editorial badge, shown alongside whatever the
+                    // probe-driven "Recommended" chip decided.
+                    if (lcsBadge != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = {
+                                Text(
+                                    text = lcsBadge,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            },
+                        )
                     }
                 }
 

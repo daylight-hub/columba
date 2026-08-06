@@ -120,8 +120,6 @@ import network.columba.app.ui.screens.ThemeEditorScreen
 import network.columba.app.ui.screens.ThemeManagementScreen
 import network.columba.app.ui.screens.VoiceCallScreen
 import network.columba.app.ui.screens.buildFocusInterfaceDetails
-import network.columba.app.ui.screens.flasher.PyxisUpdaterScreen
-import network.columba.app.ui.screens.flasher.RNodeFlasherScreen
 import network.columba.app.ui.screens.offlinemaps.OfflineMapDownloadScreen
 import network.columba.app.ui.screens.offlinemaps.OfflineMapsScreen
 import network.columba.app.ui.screens.onboarding.OnboardingPagerScreen
@@ -138,6 +136,32 @@ import network.columba.app.viewmodel.SharedImageViewModel
 import network.columba.app.viewmodel.SharedTextViewModel
 import network.columba.app.rns.api.model.CallState
 import javax.inject.Inject
+
+/**
+ * LCS: true once the system splash has been removed from the window.
+ *
+ * File-level rather than a MainActivity property because the consumer,
+ * [ColumbaNavigation], is a top-level composable rather than a method of the
+ * Activity — an Activity-private field is simply not in scope there.
+ *
+ * Process-scoped, which is the correct lifetime: the splash belongs to a cold
+ * start, and a fresh process is exactly when it should play again. The overlay
+ * keeps its own `rememberSaveable` latch so an Activity recreation (rotation,
+ * "don't keep activities") does not replay it.
+ */
+private val splashDismissed = mutableStateOf(false)
+
+/**
+ * LCS: true once the branded splash overlay has fully finished — dwell plus
+ * fade-out, not merely the system splash lifting.
+ *
+ * Permission sheets (Bluetooth, precise location) are gated on this. They fire
+ * from LaunchedEffects that otherwise run the instant the app composes, i.e.
+ * behind the splash — which is why the Bluetooth sheet was popping up over
+ * the logo as the wordmark faded in. Holding them until the branding is gone
+ * means: splash, then app, then any prompt — never a prompt over the splash.
+ */
+private val splashFinished = mutableStateOf(false)
 
 /**
  * Main activity for the Columba LXMF Messenger application.
@@ -164,6 +188,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var crashReportManager: CrashReportManager
+
 
     @Inject
     lateinit var transportAdmin: RnsTransportAdmin
@@ -279,6 +304,27 @@ class MainActivity : ComponentActivity() {
         var isThemeReady = false
         var isOnboardingReady = false
         splashScreen.setKeepOnScreenCondition { !isThemeReady || !isOnboardingReady }
+
+        // LCS: fire once the system splash actually leaves the screen.
+        //
+        // setContent below composes the whole tree immediately, while the splash
+        // is still covering it. Anything that starts a timer on composition —
+        // like the branded wordmark overlay — would run and expire underneath,
+        // which is exactly what happened in 1.2.0: the wordmark rendered behind
+        // the splash and removed itself before the splash lifted. Gating on this
+        // flag is the only way to know the user can actually see the screen.
+        // LCS: reset per launch. splashDismissed / splashFinished are file-level
+        // (process-scoped), so on a warm start they would still read true from
+        // the previous launch — the overlay would think it had already finished
+        // and skip straight to opening the permission gate. Clear them here so
+        // every onCreate runs the splash from scratch.
+        splashDismissed.value = false
+        splashFinished.value = false
+
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.remove()
+            splashDismissed.value = true
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -437,13 +483,6 @@ class MainActivity : ComponentActivity() {
             usbDevice.productId,
         )
 
-    private suspend fun detectConnectedPyxis(
-        usbDevice: UsbDevice,
-    ): network.columba.app.rns.host.flasher.PyxisDeviceIdentity? {
-        if (!isEsp32S3Candidate(usbDevice)) return null
-        return network.columba.app.rns.host.flasher.RNodeFlasher(this)
-            .detectPyxisDevice(usbDevice.deviceId)
-    }
 
     private suspend fun detectConnectedRNode(usbDevice: UsbDevice): Boolean {
         val flasher = network.columba.app.rns.host.flasher.RNodeFlasher(this)
@@ -452,27 +491,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private data class UsbAttachmentClassification(
-        val pyxisIdentity: network.columba.app.rns.host.flasher.PyxisDeviceIdentity?,
         val configuredRNode: InterfaceEntity?,
     )
 
     private suspend fun classifyAttachedUsbDevice(usbDevice: UsbDevice): UsbAttachmentClassification {
-        val pyxisIdentity = detectConnectedPyxis(usbDevice)
+        // LCS: Pyxis detection removed with the firmware flasher. Any ESP32-S3
+        // candidate is probed directly for RNode firmware.
         val isEsp32S3 = isEsp32S3Candidate(usbDevice)
         val savedInterface = interfaceRepository.findRNodeByUsbVidPid(usbDevice.vendorId, usbDevice.productId)
-        val shouldProbeRNode = isEsp32S3 && pyxisIdentity == null
         val confirmedRNode =
-            shouldProbeRNode && savedInterface != null && detectConnectedRNode(usbDevice)
-        val firmwareClassification =
-            classifySharedEsp32S3Firmware(
-                pyxisDetected = pyxisIdentity != null,
-                rnodeDetected = confirmedRNode,
-            )
-        val configuredRNode =
-            savedInterface?.takeIf {
-                !isEsp32S3 || firmwareClassification == SharedEsp32S3FirmwareClassification.RNODE
-            }
-        return UsbAttachmentClassification(pyxisIdentity, configuredRNode)
+            isEsp32S3 && savedInterface != null && detectConnectedRNode(usbDevice)
+        val configuredRNode = savedInterface?.takeIf { !isEsp32S3 || confirmedRNode }
+        return UsbAttachmentClassification(configuredRNode)
     }
 
     private fun isUsbDeviceAttached(deviceId: Int): Boolean =
@@ -498,176 +528,6 @@ class MainActivity : ComponentActivity() {
         return usbClassificationJob
     }
 
-    /**
-     * Handle USB device attachment - check if it's already configured as an RNode interface.
-     */
-    private fun handleUsbDeviceAttached(usbDevice: UsbDevice) {
-        Log.d(TAG, "🔌 handleUsbDeviceAttached called for device: ${usbDevice.deviceName}")
-
-        // Check if bootloader flash mode is active - skip all auto-navigation
-        // This prevents us from communicating with a device that's in bootloader mode
-        if (bootloaderFlashModeActive) {
-            Log.d(TAG, "🔌 Bootloader flash mode active - skipping auto-navigation")
-            return
-        }
-
-        // Check if we've already handled this device recently (debounce)
-        // But allow retry if previous attempt didn't reconnect due to missing permission
-        val now = System.currentTimeMillis()
-        if (shouldIgnoreDuplicateUsbEvent(usbDevice.deviceId, now)) {
-            Log.d(TAG, "🔌 Ignoring duplicate USB event for device ${usbDevice.deviceId} (debounce)")
-            return
-        }
-
-        val previousClassificationJob = beginUsbClassification(usbDevice.deviceId, now)
-        usbClassificationJob = lifecycleScope.launch {
-            try {
-                previousClassificationJob?.cancelAndJoin()
-                Log.d(
-                    TAG,
-                    "🔌 Looking up USB device: VID=${usbDevice.vendorId} (0x${usbDevice.vendorId.toString(
-                        16,
-                    )}), PID=${usbDevice.productId} (0x${usbDevice.productId.toString(16)})",
-                )
-                val classification = classifyAttachedUsbDevice(usbDevice)
-                val pyxisIdentity = classification.pyxisIdentity
-                val existingInterface = classification.configuredRNode
-                Log.d(
-                    TAG,
-                    "🔌 USB classification: pyxis=${pyxisIdentity?.version ?: "no"}, " +
-                        "configuredRNode=${existingInterface?.name ?: "no"}",
-                )
-
-                if (!isUsbDeviceAttached(usbDevice.deviceId)) {
-                    Log.d(TAG, "🔌 Device detached during classification; skipping navigation")
-                    return@launch
-                }
-
-                if (existingInterface != null) {
-                    // Device is already configured - trigger reconnect and navigate to stats screen
-                    Log.d(TAG, "🔌 USB device is configured interface: ${existingInterface.name} (id=${existingInterface.id})")
-
-                    // Signal that a reconnection is starting (ViewModel will show connecting spinner)
-                    InterfaceReconnectSignal.triggerReconnect()
-
-                    // Navigate to stats screen immediately
-                    pendingNavigation.value = PendingNavigation.InterfaceStats(existingInterface.id)
-
-                    // Check if we have USB permission before attempting reconnect
-                    val usbManager = getSystemService(UsbManager::class.java)
-                    if (usbManager.hasPermission(usbDevice)) {
-                        // We have permission - reconnect immediately
-                        Log.d(TAG, "🔌 USB permission already granted, triggering reconnect")
-                        lastUsbReconnectAttempted = true
-                        try {
-                            transportAdmin.reconnectRNodeInterface()
-                        } catch (e: Exception) {
-                            Log.e(TAG, "🔌 Error triggering RNode reconnect", e)
-                        }
-                    } else {
-                        // No permission yet - the Activity intent (via processIntent) will handle
-                        // reconnection after Android grants permission through UsbResolverActivity
-                        Log.d(TAG, "🔌 No USB permission yet, skipping reconnect (will retry via Activity intent)")
-                        // lastUsbReconnectAttempted stays false, allowing retry after permission granted
-                    }
-                    Log.d(TAG, "🔌 pendingNavigation set to InterfaceStats(${existingInterface.id})")
-                } else {
-                    // Device is not configured - navigate to action screen to choose flash or configure
-                    Log.d(TAG, "🔌 USB device is not configured - launching action screen")
-                    pendingNavigation.value =
-                        PendingNavigation.UsbDeviceAction(
-                            usbDeviceId = usbDevice.deviceId,
-                            vendorId = usbDevice.vendorId,
-                            productId = usbDevice.productId,
-                            deviceName = usbDevice.deviceName,
-                            pyxisVersion = pyxisIdentity?.version,
-                        )
-                    Log.d(TAG, "🔌 pendingNavigation set to UsbDeviceAction")
-                }
-                Log.d(TAG, "🔌 pendingNavigation.value is now: ${pendingNavigation.value}")
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "🔌 Error handling USB device attachment", e)
-            } finally {
-                if (usbClassificationDeviceId == usbDevice.deviceId) {
-                    usbClassificationJob = null
-                    usbClassificationDeviceId = -1
-                }
-            }
-        }
-    }
-}
-
-/**
- * Represents a pending navigation action from an intent.
- */
-sealed class PendingNavigation {
-    data class AnnounceDetail(
-        val destinationHash: String,
-    ) : PendingNavigation()
-
-    data class Conversation(
-        val destinationHash: String,
-        val peerName: String,
-        val fromNotification: Boolean = false,
-        val notificationEventId: Long = 0L,
-    ) : PendingNavigation()
-
-    data class AddContact(
-        val lxmaUrl: String,
-    ) : PendingNavigation()
-
-    data class SharedText(
-        val text: String,
-    ) : PendingNavigation()
-
-    data class SharedImage(
-        val uris: List<Uri>,
-    ) : PendingNavigation()
-
-    data class IncomingCall(
-        val identityHash: String,
-    ) : PendingNavigation()
-
-    data class AnswerCall(
-        val identityHash: String,
-    ) : PendingNavigation()
-
-    /** Navigate to Identity Manager with a pre-filled Base32 identity key (from Sideband share) */
-    data class ImportIdentityFromText(
-        val base32Text: String,
-    ) : PendingNavigation()
-
-    /** Navigate to interface stats screen for an existing configured interface */
-    data class InterfaceStats(
-        val interfaceId: Long,
-    ) : PendingNavigation()
-
-    /** Navigate to USB device action screen to choose between flash or configure */
-    data class UsbDeviceAction(
-        val usbDeviceId: Int,
-        val vendorId: Int,
-        val productId: Int,
-        val deviceName: String,
-        val pyxisVersion: String? = null,
-    ) : PendingNavigation()
-
-    /** Navigate to RNode wizard with USB device pre-selected */
-    data class RNodeWizardWithUsb(
-        val usbDeviceId: Int,
-        val vendorId: Int,
-        val productId: Int,
-        val deviceName: String,
-    ) : PendingNavigation()
-
-    /** Navigate directly to flasher with skip-detection mode for bootloader flashing */
-    data class DirectFlash(
-        val usbDeviceId: Int,
-        val vendorId: Int,
-        val productId: Int,
-        val deviceName: String,
-    ) : PendingNavigation()
 
     /** Navigate to NomadNet browser with a specific node and path */
     data class NomadNetBrowser(
@@ -761,9 +621,6 @@ fun ColumbaNavigation(
 
     // Collect settings state (includes theme preference)
     val settingsState by settingsViewModel.state.collectAsState()
-
-    // One-time anonymous crash-reporting opt-in prompt for existing users (sentry flavor).
-    val showCrashReportingOptIn by settingsViewModel.shouldShowCrashReportingPrompt.collectAsState()
 
     // Access MapViewModel at navigation level so "Locate on Map" can set pending focus
     val mapViewModel: MapViewModel = hiltViewModel()
@@ -996,7 +853,6 @@ fun ColumbaNavigation(
                                     "&usbVendorId=${navigation.vendorId}" +
                                     "&usbProductId=${navigation.productId}" +
                                     "&usbDeviceName=${Uri.encode(navigation.deviceName)}" +
-                                    "&pyxisVersion=${Uri.encode(navigation.pyxisVersion ?: "")}"
                             navController.navigateToEntity(
                                 destination = AppDestination.USB_DEVICE_ACTION,
                                 route = route,
@@ -1021,21 +877,6 @@ fun ColumbaNavigation(
                             identityArguments = mapOf("usbDeviceId" to navigation.usbDeviceId),
                         )
                         Log.d("ColumbaNavigation", "Navigated to RNode wizard with USB: ${navigation.usbDeviceId}")
-                    }
-                    is PendingNavigation.DirectFlash -> {
-                        // Navigate directly to flasher with skip-detection mode
-                        val route =
-                            "rnode_flasher?skipDetection=true" +
-                                "&usbDeviceId=${navigation.usbDeviceId}" +
-                                "&usbVendorId=${navigation.vendorId}" +
-                                "&usbProductId=${navigation.productId}" +
-                                "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
-                        navController.navigateToEntity(
-                            destination = AppDestination.RNODE_FLASHER,
-                            route = route,
-                            identityArguments = mapOf("usbDeviceId" to navigation.usbDeviceId),
-                        )
-                        Log.d("ColumbaNavigation", "Navigated to flasher (direct): ${navigation.usbDeviceId}")
                     }
                     is PendingNavigation.NomadNetBrowser -> {
                         val encoded = Uri.encode(navigation.path)
@@ -1123,10 +964,18 @@ fun ColumbaNavigation(
     val hasEnabledBluetoothInterface by interfaceRepository.hasEnabledBluetoothInterface.collectAsState(
         initial = false,
     )
-    LaunchedEffect(onboardingState.hasCompletedOnboarding, hasEnabledBluetoothInterface) {
+    LaunchedEffect(
+        onboardingState.hasCompletedOnboarding,
+        hasEnabledBluetoothInterface,
+        splashFinished.value,
+    ) {
         // Only show permission sheet if activity is still active (at least STARTED)
         // to prevent BadTokenException when showing ModalBottomSheet
         if (!LifecycleGuard.isActiveForWindows(lifecycleOwner)) return@LaunchedEffect
+        // LCS: hold until the branded splash has fully finished, so this sheet
+        // never appears over it. splashFinished is a LaunchedEffect key, so this
+        // re-runs and fires the moment the splash completes.
+        if (!splashFinished.value) return@LaunchedEffect
         if (!onboardingState.hasCompletedOnboarding) return@LaunchedEffect
         if (!hasEnabledBluetoothInterface) return@LaunchedEffect
         if (BlePermissionManager.hasAllPermissions(context)) return@LaunchedEffect
@@ -1163,7 +1012,14 @@ fun ColumbaNavigation(
     }
     val callState by telephony.callState.collectAsState()
 
-    LaunchedEffect(callState) {
+    LaunchedEffect(callState, navBackStackEntry) {
+        // On a cold start triggered by the incoming call itself, this effect can
+        // run before the NavHost attaches its graph, and navigate() throws
+        // "Navigation graph has not been set". navBackStackEntry is null until
+        // then; re-running when it lands means the call screen appears a beat
+        // later instead of crashing the process.
+        if (navBackStackEntry == null) return@LaunchedEffect
+
         when (val state = callState) {
             is CallState.Incoming -> {
                 val identityHash = state.identityHash
@@ -1209,8 +1065,6 @@ fun ColumbaNavigation(
             "theme_editor",
             "rnode_wizard",
             "tcp_client_wizard",
-            "rnode_flasher",
-            "pyxis_updater",
             "usb_device_action",
             "voice_call/",
             "incoming_call/",
@@ -1267,7 +1121,12 @@ fun ColumbaNavigation(
         network.columba.app.ui.components.PreciseLocationPermissionPrompt(
             locationSharingEnabled = settingsState.locationSharingEnabled,
             locationPrecisionRadius = settingsState.locationPrecisionRadius,
-            enabled = !settingsState.isLoading && onboardingState.hasCompletedOnboarding,
+            // LCS: also hold until the branded splash finishes, so the sheet
+            // never appears over it.
+            enabled =
+                !settingsState.isLoading &&
+                    onboardingState.hasCompletedOnboarding &&
+                    splashFinished.value,
             dismissed = settingsState.preciseLocationPromptDismissed,
             onDismiss = { settingsViewModel.dismissPreciseLocationPrompt() },
         )
@@ -1681,12 +1540,6 @@ fun ColumbaNavigation(
                                             restoreState = false // Don't restore state so filter applies
                                         }
                                     },
-                                    onNavigateToFlasher = {
-                                        navController.navigate("rnode_flasher")
-                                    },
-                                    onNavigateToPyxisUpdater = {
-                                        navController.navigate("pyxis_updater")
-                                    },
                                     onNavigateToBlockedUsers = {
                                         navController.navigate("blocked_users")
                                     },
@@ -1714,18 +1567,12 @@ fun ColumbaNavigation(
                                             defaultValue = ""
                                             nullable = true
                                         },
-                                        navArgument("pyxisVersion") {
-                                            type = NavType.StringType
-                                            defaultValue = ""
-                                            nullable = true
-                                        },
                                     ),
                             ) { backStackEntry ->
                                 val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
                                 val usbVendorId = backStackEntry.arguments?.getInt("usbVendorId") ?: -1
                                 val usbProductId = backStackEntry.arguments?.getInt("usbProductId") ?: -1
                                 val usbDeviceName = backStackEntry.arguments?.getString("usbDeviceName") ?: "USB Device"
-                                val pyxisVersion = backStackEntry.arguments?.getString("pyxisVersion")?.ifBlank { null }
 
                                 // State for disable transport operation
                                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -1739,29 +1586,12 @@ fun ColumbaNavigation(
 
                                 network.columba.app.ui.screens.UsbDeviceActionScreen(
                                     deviceName = usbDeviceName,
-                                    pyxisVersion = pyxisVersion,
                                     isEsp32S3Candidate =
                                         network.columba.app.rns.host.flasher.ESPToolFlasher.isNativeUsbDevice(
                                             usbVendorId,
                                             usbProductId,
                                         ),
                                     onNavigateBack = { navController.popBackStack() },
-                                    onUpdatePyxis = {
-                                        navController.navigate("pyxis_updater?usbDeviceId=$usbDeviceId") {
-                                            popUpTo("usb_device_action") { inclusive = true }
-                                        }
-                                    },
-                                    onFlashFirmware = {
-                                        val route =
-                                            "rnode_flasher" +
-                                                "?usbDeviceId=$usbDeviceId" +
-                                                "&usbVendorId=$usbVendorId" +
-                                                "&usbProductId=$usbProductId" +
-                                                "&usbDeviceName=${Uri.encode(usbDeviceName)}"
-                                        navController.navigate(route) {
-                                            popUpTo("usb_device_action") { inclusive = true }
-                                        }
-                                    },
                                     onConfigureRNode = {
                                         val route =
                                             "rnode_wizard?connectionType=usb" +
@@ -1802,74 +1632,7 @@ fun ColumbaNavigation(
                                 )
                             }
 
-                            appComposable(
-                                AppDestination.PYXIS_UPDATER,
-                                arguments =
-                                    listOf(
-                                        navArgument("packageUri") {
-                                            type = NavType.StringType
-                                            defaultValue = ""
-                                            nullable = true
-                                        },
-                                        navArgument("usbDeviceId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                    ),
-                            ) { backStackEntry ->
-                                PyxisUpdaterScreen(
-                                    onNavigateBack = { navController.popBackStack() },
-                                    initialPackageUri = backStackEntry.arguments?.getString("packageUri"),
-                                    initialDeviceId =
-                                        backStackEntry.arguments?.getInt("usbDeviceId")?.takeIf { it >= 0 },
-                                )
-                            }
 
-                            appComposable(
-                                AppDestination.RNODE_FLASHER,
-                                arguments =
-                                    listOf(
-                                        navArgument("skipDetection") {
-                                            type = NavType.BoolType
-                                            defaultValue = false
-                                        },
-                                        navArgument("tncConfigOnly") {
-                                            type = NavType.BoolType
-                                            defaultValue = false
-                                        },
-                                        navArgument("usbDeviceId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbVendorId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbProductId") {
-                                            type = NavType.IntType
-                                            defaultValue = -1
-                                        },
-                                        navArgument("usbDeviceName") {
-                                            type = NavType.StringType
-                                            defaultValue = ""
-                                            nullable = true
-                                        },
-                                    ),
-                            ) { backStackEntry ->
-                                val skipDetection = backStackEntry.arguments?.getBoolean("skipDetection") ?: false
-                                val tncConfigOnly = backStackEntry.arguments?.getBoolean("tncConfigOnly") ?: false
-                                val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
-                                RNodeFlasherScreen(
-                                    onNavigateBack = { navController.popBackStack() },
-                                    onComplete = { navController.popBackStack() },
-                                    onNavigateToRNodeWizard = {
-                                        navController.navigate("rnode_wizard")
-                                    },
-                                    skipDetection = skipDetection,
-                                    tncConfigOnly = tncConfigOnly,
-                                    preselectedUsbDeviceId = if (usbDeviceId > 0) usbDeviceId else null,
-                                )
-                            }
 
                             appComposable(AppDestination.INTERFACE_MANAGEMENT) {
                                 InterfaceManagementScreen(
@@ -2276,9 +2039,14 @@ fun ColumbaNavigation(
                                         val encodedId = Uri.encode(messageId)
                                         navController.navigate("message_detail/$encodedId")
                                     },
-                                    onVoiceCall = { profileCode ->
+                                    onVoiceCall = { profileCode, linkSpeedBps, halfDuplex ->
                                         val encodedHash = Uri.encode(destinationHash)
-                                        navController.navigate("voice_call/$encodedHash?profileCode=$profileCode")
+                                        // -1 means "not measured"; NavType.LongType has no nullable form.
+                                        val speedArg = linkSpeedBps ?: -1L
+                                        navController.navigate(
+                                            "voice_call/$encodedHash?profileCode=$profileCode" +
+                                                "&linkSpeedBps=$speedArg&halfDuplex=$halfDuplex",
+                                        )
                                     },
                                     onLocateOnMap = { peerHash ->
                                         mapViewModel.focusOnContact(peerHash)
@@ -2289,11 +2057,6 @@ fun ColumbaNavigation(
                                             launchSingleTop = true
                                             restoreState = true
                                         }
-                                    },
-                                    onUpdatePyxisPackage = { packageUri ->
-                                        navController.navigate(
-                                            "pyxis_updater?packageUri=${Uri.encode(packageUri.toString())}",
-                                        )
                                     },
                                 )
                             }
@@ -2433,18 +2196,30 @@ fun ColumbaNavigation(
                                             type = NavType.IntType
                                             defaultValue = -1 // -1 means use default
                                         },
+                                        navArgument("linkSpeedBps") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L // -1 means not measured
+                                        },
+                                        navArgument("halfDuplex") {
+                                            type = NavType.BoolType
+                                            defaultValue = false // LCS: full duplex unless asked
+                                        },
                                     ),
                             ) { backStackEntry ->
                                 val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
                                 val autoAnswer = backStackEntry.arguments?.getBoolean("autoAnswer") ?: false
                                 val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
                                 val profileCode = if (profileCodeArg == -1) null else profileCodeArg
+                                val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
+                                val halfDuplex = backStackEntry.arguments?.getBoolean("halfDuplex") ?: false
 
                                 VoiceCallScreen(
                                     destinationHash = destinationHash,
                                     onEndCall = exitCallFlow,
                                     autoAnswer = autoAnswer,
                                     profileCode = profileCode,
+                                    linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
+                                    halfDuplex = halfDuplex,
                                 )
                             }
 
@@ -2511,16 +2286,30 @@ fun ColumbaNavigation(
                     )
                 }
 
-                // One-time anonymous crash-reporting opt-in for existing users. The
-                // ViewModel gates visibility (sentry flavor, onboarding complete, prompt
-                // not yet seen, not already opted in) and marks it seen on either choice.
-                if (showCrashReportingOptIn) {
-                    network.columba.app.ui.screens.settings.dialogs.CrashReportingOptInDialog(
-                        onEnable = { settingsViewModel.enableCrashReportingFromPrompt() },
-                        onDismiss = { settingsViewModel.dismissCrashReportingPrompt() },
-                    )
-                }
+                // LCS: the one-time crash-reporting opt-in popup is removed.
+                // LCS ships the noSentry flavor, so the prompt could only ever
+                // appear as a dead end — and an unprompted dialog asking to send
+                // data off-device is not something Liberty Chat should show. The
+                // toggle remains available in Settings -> Advanced for anyone
+                // building the sentry flavor deliberately.
             }
         }
+
+        // LCS: the branded splash — logo and wordmark on white.
+        //
+        // Declared LAST inside ColumbaTheme, AFTER the Surface. That
+        // ordering is the whole fix: siblings in the same window paint in
+        // declaration order, so while this sat above the Surface it was
+        // drawn first and the app's own background painted straight over
+        // it — the splash was rendering every launch, just underneath
+        // everything, which is why the screen came up blank white.
+        //
+        // Still not a Dialog: a Dialog needs its own window, and the frame
+        // or two that takes to attach lets the app show through as the
+        // system splash lifts.
+        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+            onFinished = { splashFinished.value = true },
+        )
     }
 }

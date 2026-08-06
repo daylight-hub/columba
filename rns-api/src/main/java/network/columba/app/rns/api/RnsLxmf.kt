@@ -49,6 +49,13 @@ interface RnsLxmf {
      * @param imageData Optional image data bytes
      * @param imageFormat Optional image format (e.g., "jpg", "png", "webp")
      * @param fileAttachments Optional list of file attachments as (filename, bytes) pairs
+     * @param audioMode Optional LXMF `AM_*` audio mode (see [LxmfFields]). Must be
+     *   non-null together with [audioData] to emit `FIELD_AUDIO`.
+     * @param audioData Optional audio payload bytes. Ogg-Opus container for
+     *   `AM_OPUS_OGG`; raw concatenated Codec2 frames (no header, whole frames
+     *   only) for the `AM_CODEC2_*` modes — the shape Sideband's `audioproc.py`
+     *   reads. Rides out-of-band via the attachment blob, never inline in the
+     *   Binder transaction.
      * @return Result containing MessageReceipt or failure
      */
     @Suppress("LongParameterList")
@@ -65,6 +72,8 @@ interface RnsLxmf {
         replyQuotedContent: String? = null,
         iconAppearance: IconAppearance? = null,
         extraFields: Map<Int, Any>? = null,
+        audioMode: Int? = null,
+        audioData: ByteArray? = null,
     ): Result<MessageReceipt>
 
     /**

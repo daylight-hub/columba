@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalIconButton
@@ -47,6 +48,7 @@ fun AttachmentPanel(
     onPhotoSelected: (Uri) -> Unit,
     onGalleryClick: () -> Unit,
     onFileClick: () -> Unit,
+    onCameraClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -158,6 +160,19 @@ fun AttachmentPanel(
                 }
                 Text(
                     text = "Gallery",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+
+                FilledTonalIconButton(onClick = onCameraClick) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = "Camera",
+                    )
+                }
+                Text(
+                    text = "Camera",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(end = 8.dp),

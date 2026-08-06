@@ -1312,7 +1312,7 @@ fun InterfaceTypeSelector(
                 )
                 InterfaceTypeOption(
                     title = "Bluetooth LE",
-                    description = "Direct connection to Columba users and Linux ble-reticulum devices",
+                    description = "Direct connection to Liberty Chat users and Linux ble-reticulum devices",
                     onClick = { onTypeSelected("AndroidBLE") },
                 )
                 InterfaceTypeOption(

@@ -7,11 +7,16 @@ import network.columba.app.data.repository.AnnounceRepository
 import network.columba.app.data.repository.ContactRepository
 import network.columba.app.rns.api.RnsTelephony
 import network.columba.app.rns.api.model.CallState
+import network.columba.app.ui.model.CodecProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -48,6 +53,24 @@ class CallViewModel
         // Serializes mute IPC calls to prevent race conditions (e.g. PTT release vs toggle off)
         private val muteMutex = Mutex()
 
+        /**
+         * LCS: emitted when the *peer* moves the call between duplex modes.
+         *
+         * Half duplex is symmetric — a peer switching squelches this device's
+         * transmitter too — so the mic can go dead with nothing on screen
+         * explaining why. No new IPC is needed to detect it: this ViewModel is
+         * the only thing that asks for a local switch, so any other transition
+         * of [isPttMode] came from the peer.
+         *
+         * `true` = peer switched to half duplex.
+         */
+        private val _peerDuplexChange = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+        val peerDuplexChange: SharedFlow<Boolean> = _peerDuplexChange.asSharedFlow()
+
+        /** Mode this device just asked for; the echo back is not a peer change. */
+        @Volatile
+        private var expectedDuplexMode: Boolean? = null
+
         // Expose call state from telephony seam
         val callState: StateFlow<CallState> = telephony.callState
         val isMuted: StateFlow<Boolean> = telephony.isMuted
@@ -68,8 +91,67 @@ class CallViewModel
         private val _isConnecting = MutableStateFlow(false)
         val isConnecting: StateFlow<Boolean> = _isConnecting.asStateFlow()
 
+        // ---------------------------------------------------------------
+        // LCS: mid-call codec state
+        // ---------------------------------------------------------------
+
+        /** Codec the call is currently running on. */
+        private val _activeProfile = MutableStateFlow(CodecProfile.DEFAULT)
+        val activeProfile: StateFlow<CodecProfile> = _activeProfile.asStateFlow()
+
+        /**
+         * Codec that fits the measured link, or null when the link was never
+         * measured or is comfortably fast enough for [activeProfile].
+         */
+        private val _recommendedProfile = MutableStateFlow<CodecProfile?>(null)
+        val recommendedProfile: StateFlow<CodecProfile?> = _recommendedProfile.asStateFlow()
+
+        /** Measured link rate in bits per second, or null if unknown. */
+        private val _measuredBps = MutableStateFlow<Int?>(null)
+        val measuredBps: StateFlow<Int?> = _measuredBps.asStateFlow()
+
+        /** Set once the user dismisses the advisory; cleared on the next call. */
+        private val _advisoryDismissed = MutableStateFlow(false)
+        val advisoryDismissed: StateFlow<Boolean> = _advisoryDismissed.asStateFlow()
+
         // Track duration timer job to prevent multiple concurrent timers
         private var durationTimerJob: kotlinx.coroutines.Job? = null
+
+        /*
+         * NOTE: this init block must stay BELOW the property declarations it
+         * touches (callState, _activeProfile, _peerDuplexChange).
+         *
+         * viewModelScope dispatches on Dispatchers.Main.immediate, and the
+         * ViewModel is constructed on the main thread, so `collect` on a
+         * StateFlow runs its first emission SYNCHRONOUSLY inside <init>.
+         * Kotlin initialises properties in declaration order, so an init block
+         * placed above them sees nulls and dies with a getClass() NPE the
+         * moment a non-default value arrives — which on the callee is exactly
+         * when the caller's profile preference lands while ringing.
+         */
+        init {
+            // The host owns the effective profile: the callee never picked one,
+            // and either side can switch mid-call. 0 means "not yet known" —
+            // keep whatever is on screen rather than snapping back to Medium.
+            viewModelScope.launch {
+                telephony.activeProfileCode.collect { code ->
+                    CodecProfile.fromCode(code)?.let { _activeProfile.value = it }
+                }
+            }
+
+            viewModelScope.launch {
+                // drop(1): the current value is the starting state, not a change.
+                telephony.isPttMode.drop(1).collect { halfDuplex ->
+                    when {
+                        expectedDuplexMode == halfDuplex -> expectedDuplexMode = null
+                        // The host clears isPttMode on call teardown; that is not
+                        // the peer switching modes.
+                        callState.value !is CallState.Active -> Unit
+                        else -> _peerDuplexChange.tryEmit(halfDuplex)
+                    }
+                }
+            }
+        }
 
         init {
             // Track call duration when active
@@ -178,7 +260,11 @@ class CallViewModel
         fun initiateCall(
             destinationHash: String,
             profileCode: Int? = null,
+            halfDuplex: Boolean = false,
         ) {
+            // The host will flip isPttMode when the mode is applied at ring
+            // time; that echo is this device's own request, not the peer's.
+            expectedDuplexMode = if (halfDuplex) true else null
             Log.w(TAG, "📞📞📞 initiateCall() CALLED - destHash=${destinationHash.take(16)}, profile=${profileCode ?: "default"}...")
             Log.w(TAG, "📞 Current callState=${callState.value}")
             _isConnecting.value = true
@@ -194,7 +280,7 @@ class CallViewModel
 
                 while (retryCount < maxRetries) {
                     Log.w(TAG, "📞 Calling telephony.initiateCall() (attempt ${retryCount + 1}/$maxRetries)...")
-                    val result = telephony.initiateCall(destinationHash, profileCode)
+                    val result = telephony.initiateCall(destinationHash, profileCode, halfDuplex)
                     Log.w(TAG, "📞 telephony.initiateCall() returned: success=${result.isSuccess}")
 
                     if (result.isSuccess) {
@@ -264,6 +350,71 @@ class CallViewModel
         /**
          * Toggle microphone mute.
          */
+        /**
+         * LCS: record what the link measured before dialling.
+         *
+         * Called from the call screen with the probe the caller already ran to
+         * choose a codec. Nothing probes again during the call: LXST exposes no
+         * mid-call quality telemetry, so a live measurement would mean sending
+         * probe traffic over the same link the audio is struggling on — which
+         * on a ~1 kbps LoRa link would cause the problem it was measuring.
+         *
+         * @param bandwidthBps conservative link estimate, or null if unmeasured.
+         * @param profile codec the call actually opened with.
+         */
+        fun recordLinkMeasurement(
+            bandwidthBps: Long?,
+            profile: CodecProfile,
+        ) {
+            _activeProfile.value = profile
+            _advisoryDismissed.value = false
+
+            if (bandwidthBps == null) {
+                _measuredBps.value = null
+                _recommendedProfile.value = null
+                return
+            }
+
+            _measuredBps.value = bandwidthBps.toInt()
+            _recommendedProfile.value =
+                if (CodecProfile.isTooHeavyFor(profile, bandwidthBps)) {
+                    CodecProfile.recommendFromBandwidth(bandwidthBps)
+                } else {
+                    null
+                }
+        }
+
+        /**
+         * LCS: change codec on the live call.
+         *
+         * LXST reconfigures the local pipeline and signals the peer, whose own
+         * LXST follows — so this moves both ends, including Sideband and
+         * MeshChat peers, since the signalling is upstream protocol.
+         *
+         * Works in both directions: this is also how a call goes back up to
+         * Opus after a downgrade, or after moving onto a faster interface.
+         */
+        fun switchCodec(profile: CodecProfile) {
+            viewModelScope.launch {
+                val result = telephony.switchCallProfile(profile.code)
+                result
+                    .onSuccess {
+                        Log.i(TAG, "Switched call codec to ${profile.displayName}")
+                        // _activeProfile is not set here: the host publishes the
+                        // effective profile, so a switch that silently did
+                        // nothing can no longer show as applied.
+                        _recommendedProfile.value = null
+                    }.onFailure {
+                        Log.e(TAG, "Failed to switch codec to ${profile.displayName}", it)
+                    }
+            }
+        }
+
+        /** LCS: hide the advisory for the remainder of this call. */
+        fun dismissAdvisory() {
+            _advisoryDismissed.value = true
+        }
+
         fun toggleMute() {
             val newMuted = !telephony.isMuted.value
             viewModelScope.launch {
@@ -291,19 +442,18 @@ class CallViewModel
          */
         fun togglePttMode() {
             val newMode = !telephony.isPttMode.value
+            expectedDuplexMode = newMode
             viewModelScope.launch {
+                // Optimistic UI; the host re-asserts isPttMode when the mode is
+                // actually applied, and also when the *peer* initiates a switch.
                 telephony.setPttModeLocally(newMode)
-                if (newMode) {
-                    // Entering PTT: mute transmit
-                    telephony.setMutedLocally(true)
-                    telephony.setPttActiveLocally(false)
-                    muteMutex.withLock { telephony.setCallMuted(true) }
-                } else {
-                    // Leaving PTT: unmute transmit (full duplex)
-                    telephony.setMutedLocally(false)
-                    telephony.setPttActiveLocally(false)
-                    muteMutex.withLock { telephony.setCallMuted(false) }
-                }
+                telephony.setPttActiveLocally(false)
+
+                // True half duplex (LXST >= 0.5.0): squelch the transmitter and
+                // signal the peer, which follows. Deliberately NOT a mic mute —
+                // a mute keeps transmitting encoded silence at full frame rate.
+                // The mute button stays an independent axis, as it is in LXST.
+                telephony.setCallDuplexMode(halfDuplex = newMode)
             }
         }
 
@@ -317,8 +467,10 @@ class CallViewModel
             if (callState.value !is CallState.Active) return
             viewModelScope.launch {
                 telephony.setPttActiveLocally(active)
-                telephony.setMutedLocally(!active)
-                muteMutex.withLock { telephony.setCallMuted(!active) }
+                // Squelch, not mute. Also off the mute mutex on purpose: this is
+                // a single atomic flag, and serialising it behind the mute lock
+                // adds latency exactly where it is most audible (key-up clipping).
+                telephony.setCallPttActive(active)
             }
         }
 

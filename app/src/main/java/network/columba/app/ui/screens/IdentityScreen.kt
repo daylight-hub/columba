@@ -883,7 +883,7 @@ fun BleConnectionsCard(
                 Text(
                     text =
                         "BLE connections are not available while using a shared Reticulum instance. " +
-                            "Only Columba's own instance can initiate Bluetooth LE connections.",
+                            "Only Liberty Chat's own instance can initiate Bluetooth LE connections.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

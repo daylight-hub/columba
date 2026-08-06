@@ -37,23 +37,10 @@ enum class AppDestination(
     ),
     USB_DEVICE_ACTION(
         routePattern = "usb_device_action?usbDeviceId={usbDeviceId}&usbVendorId={usbVendorId}" +
-            "&usbProductId={usbProductId}&usbDeviceName={usbDeviceName}&pyxisVersion={pyxisVersion}",
-        sampleRoute = "usb_device_action?usbDeviceId=1&usbVendorId=2&usbProductId=3" +
-            "&usbDeviceName=Test&pyxisVersion=1.0",
-        externalIdentityArguments = mapOf("usbDeviceId" to 1),
-        externalNavigationPolicy = ExternalNavigationPolicy.REUSE_SAME_ENTITY,
-    ),
-    PYXIS_UPDATER(
-        "pyxis_updater?packageUri={packageUri}&usbDeviceId={usbDeviceId}",
-        "pyxis_updater?packageUri=&usbDeviceId=-1",
-    ),
-    RNODE_FLASHER(
-        routePattern = "rnode_flasher?skipDetection={skipDetection}&tncConfigOnly={tncConfigOnly}" +
-            "&usbDeviceId={usbDeviceId}&usbVendorId={usbVendorId}" +
             "&usbProductId={usbProductId}&usbDeviceName={usbDeviceName}",
-        sampleRoute = "rnode_flasher?skipDetection=false&tncConfigOnly=false&usbDeviceId=-1" +
-            "&usbVendorId=-1&usbProductId=-1&usbDeviceName=",
-        externalIdentityArguments = mapOf("usbDeviceId" to -1),
+        sampleRoute = "usb_device_action?usbDeviceId=1&usbVendorId=2&usbProductId=3" +
+            "&usbDeviceName=Test",
+        externalIdentityArguments = mapOf("usbDeviceId" to 1),
         externalNavigationPolicy = ExternalNavigationPolicy.REUSE_SAME_ENTITY,
     ),
     INTERFACE_MANAGEMENT("interface_management"),
@@ -125,8 +112,10 @@ enum class AppDestination(
         completionContract = CompletionContract.RETURN_TO_CALLER,
     ),
     VOICE_CALL(
-        "voice_call/{destinationHash}?autoAnswer={autoAnswer}&profileCode={profileCode}",
-        "voice_call/0123456789abcdef?autoAnswer=false&profileCode=-1",
+        "voice_call/{destinationHash}?autoAnswer={autoAnswer}&profileCode={profileCode}" +
+            "&linkSpeedBps={linkSpeedBps}&halfDuplex={halfDuplex}",
+        "voice_call/0123456789abcdef?autoAnswer=false&profileCode=-1" +
+            "&linkSpeedBps=-1&halfDuplex=false",
     ),
     INCOMING_CALL("incoming_call/{identityHash}", "incoming_call/0123456789abcdef"),
 }

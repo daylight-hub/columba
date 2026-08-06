@@ -43,6 +43,36 @@ abstract class InterfaceDatabase : RoomDatabase() {
         }
 
         /**
+         * LCS: drop any seeded bootstrap interface from installs created
+         * before LCS stopped seeding one.
+         *
+         * Covers upstream Columba's "Beleth RNS Hub" and the short-lived
+         * "LCS Public Node" seed. The seed code only runs in [onCreate], so
+         * changing it does nothing for an existing database — anyone who
+         * installed an earlier build still has the row. The schema is
+         * unchanged, so this is a data cleanup rather than a Room migration;
+         * matching on the host as well as the name catches renamed rows.
+         *
+         * A user who deliberately re-adds the LCS node through the interface
+         * wizard is unaffected: the wizard writes its own name for the entry,
+         * and this only runs against the two seeded names.
+         *
+         * Cheap and idempotent: one DELETE against a table with a handful of
+         * rows, on a database that is opened once per process.
+         */
+        override fun onOpen(db: SupportSQLiteDatabase) {
+            super.onOpen(db)
+            try {
+                db.execSQL(
+                    "DELETE FROM interfaces WHERE name IN (?, ?) OR configJson LIKE ?",
+                    arrayOf<Any>("Beleth RNS Hub", "LCS Public Node", "%rns.beleth.net%"),
+                )
+            } catch (e: android.database.SQLException) {
+                android.util.Log.w("InterfaceDatabase", "Beleth cleanup failed (non-fatal)", e)
+            }
+        }
+
+        /**
          * Populate database directly using raw SQL inserts.
          * This is necessary because onCreate() runs inside a transaction,
          * and we can't use Room's DAO suspend methods which create their own transactions.
@@ -111,21 +141,14 @@ abstract class InterfaceDatabase : RoomDatabase() {
                 ),
             )
 
-            // Insert Beleth RNS Hub as bootstrap server
-            db.execSQL(
-                """
-                INSERT INTO interfaces (name, type, enabled, configJson, displayOrder)
-                VALUES (?, ?, ?, ?, ?)
-            """,
-                arrayOf<Any>(
-                    "Beleth RNS Hub",
-                    "TCPClient",
-                    // enabled=true
-                    1,
-                    """{"target_host":"rns.beleth.net","target_port":4242,"kiss_framing":false,"mode":"full","bootstrap_only":true}""",
-                    2,
-                ),
-            )
+            // LCS: no TCP bootstrap interface is seeded. Upstream Columba seeded
+            // its Beleth RNS Hub here; LCS ships neither that nor a replacement.
+            // A fresh install comes up on AutoInterface + BLE only. The LCS
+            // gateway is still offered as a bootstrap interface wherever the
+            // user actually chooses one — the onboarding TCP option and the
+            // TCP wizard's server list both carry TcpCommunityServer.isBootstrap
+            // through to the interface config. It is opt-in rather than seeded,
+            // so nothing reaches the internet unprompted.
         }
 
         /**
@@ -224,27 +247,9 @@ abstract class InterfaceDatabase : RoomDatabase() {
                     displayOrder = 1,
                 )
 
-            val belethServerInterface =
-                InterfaceEntity(
-                    name = "Beleth RNS Hub",
-                    type = "TCPClient",
-                    enabled = true,
-                    configJson =
-                        """
-                        {
-                            "target_host": "rns.beleth.net",
-                            "target_port": 4242,
-                            "kiss_framing": false,
-                            "mode": "full",
-                            "bootstrap_only": true
-                        }
-                        """.trimIndent(),
-                    displayOrder = 2,
-                )
-
+            // LCS: no TCP bootstrap interface — see the raw-SQL path above.
             interfaceDao.insertInterface(defaultAutoInterface)
             interfaceDao.insertInterface(defaultBleInterface)
-            interfaceDao.insertInterface(belethServerInterface)
         }
 
         /**

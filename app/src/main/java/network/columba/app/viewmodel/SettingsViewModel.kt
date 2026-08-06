@@ -655,7 +655,7 @@ class SettingsViewModel
                     Log.i(
                         TAG,
                         "Detected shared instance went offline - " +
-                            "Columba auto-switched to own instance",
+                            "Liberty Chat auto-switched to own instance",
                     )
                     true
                 } else {
@@ -1111,7 +1111,7 @@ class SettingsViewModel
                         .applyInterfaceChanges(
                             onServiceReady = { _state.value = _state.value.copy(isRestarting = false) },
                         ).onSuccess {
-                            Log.i(TAG, "Service restart completed - now using Columba's own instance")
+                            Log.i(TAG, "Service restart completed - now using Liberty Chat's own instance")
                         }.onFailure { error ->
                             Log.e(TAG, "Service restart failed: ${error.message}", error)
                         }.getOrThrow()
@@ -1366,7 +1366,7 @@ class SettingsViewModel
                     Log.i(
                         TAG,
                         "Shared instance went offline while we were using it - " +
-                            "restarting with Columba's own instance",
+                            "restarting with Liberty Chat's own instance",
                     )
                     // Copy from _state.value, NOT currentState: the
                     // updateHostingShareInstanceState() call earlier
@@ -1839,6 +1839,37 @@ class SettingsViewModel
                 started = SharingStarted.WhileSubscribed(5000L),
                 initialValue = false,
             )
+
+        /**
+         * LCS: whether the push-to-talk button is shown in conversations.
+         * Exposed as its own StateFlow rather than folded into the main combine().
+         */
+        val pttEnabled: StateFlow<Boolean> =
+            settingsRepository.pttEnabledFlow.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = true,
+            )
+
+        /** LCS: false = low-bandwidth (Codec2, LoRa), true = high-bandwidth (Opus, WiFi). */
+        val pttHighBandwidth: StateFlow<Boolean> =
+            settingsRepository.pttHighBandwidthFlow.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = false,
+            )
+
+        fun setPttEnabled(enabled: Boolean) {
+            viewModelScope.launch {
+                settingsRepository.setPttEnabled(enabled)
+            }
+        }
+
+        fun setPttHighBandwidth(enabled: Boolean) {
+            viewModelScope.launch {
+                settingsRepository.setPttHighBandwidth(enabled)
+            }
+        }
 
         /** Opt in from the one-time prompt and mark it seen so it never reappears. */
         fun enableCrashReportingFromPrompt() {

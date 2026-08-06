@@ -66,6 +66,16 @@ class PythonNetworkTransport(
     @Volatile
     private var signalCallback: ((Int) -> Unit)? = null
 
+    /**
+     * LCS: optional tap invoked for every inbound signal *before* it reaches
+     * [signalCallback]. LXST-kt's `Telephone` owns [signalCallback] (it installs
+     * it in its own `init`) and silently ignores signals it does not know, so
+     * duplex-mode signals (`0xF1`/`0xF2`, LXST >= 0.5.0) are picked up here
+     * instead. The signal is still forwarded — LXST-kt ignoring it is harmless.
+     */
+    @Volatile
+    var inboundSignalTap: ((Int) -> Unit)? = null
+
     /** Local identity for proactive identify after outbound link is ACTIVE. */
     @Volatile
     private var localIdentity: PyObject? = null
@@ -350,7 +360,9 @@ class PythonNetworkTransport(
             val frames = map[org.msgpack.value.ValueFactory.newInteger(FIELD_FRAMES.toLong())]
             if (signalling != null && signalling.isArrayValue) {
                 for (sig in signalling.asArrayValue()) {
-                    signalCallback?.invoke(sig.asIntegerValue().toInt())
+                    val signal = sig.asIntegerValue().toInt()
+                    inboundSignalTap?.invoke(signal)
+                    signalCallback?.invoke(signal)
                 }
             }
             if (frames != null && frames.isBinaryValue) {

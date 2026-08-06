@@ -43,6 +43,15 @@ class NativeNetworkTransport : NetworkTransport {
 
     @Volatile private var signalCallback: ((Int) -> Unit)? = null
 
+    /**
+     * LCS: optional tap invoked for every inbound signal *before* it reaches
+     * [signalCallback]. See the identical field on `PythonNetworkTransport` —
+     * duplex-mode signals (`0xF1`/`0xF2`) are handled by the call manager here
+     * because LXST-kt's `Telephone` owns [signalCallback] and ignores them.
+     */
+    @Volatile
+    var inboundSignalTap: ((Int) -> Unit)? = null
+
     @Volatile private var locallyClosingLink: Link? = null
 
     /**
@@ -280,6 +289,7 @@ class NativeNetworkTransport : NetworkTransport {
                 for (sig in signalling.asArrayValue()) {
                     val signal = sig.asIntegerValue().toInt()
                     Log.d(TAG, "Inbound signal 0x${signal.toString(16)}")
+                    inboundSignalTap?.invoke(signal)
                     // Note: we identify proactively after link establishment
                     // (see establishLinkToIdentity), so no need to re-identify
                     // on STATUS_AVAILABLE. Double-identify confuses Python Sideband.

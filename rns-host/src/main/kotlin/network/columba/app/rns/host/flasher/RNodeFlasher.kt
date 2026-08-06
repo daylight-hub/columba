@@ -883,7 +883,7 @@ class RNodeFlasher(
                         )
 
                         // Android drops USB permissions on re-enumeration but shows
-                        // UsbResolverActivity ("Open with Columba?") automatically.
+                        // UsbResolverActivity ("Open with Liberty Chat?") automatically.
                         // Don't request permission ourselves — just try to connect.
                         // If the user hasn't tapped the system dialog yet, connect()
                         // will fail and we'll retry on the next attempt.

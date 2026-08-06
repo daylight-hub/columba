@@ -1,11 +1,14 @@
 package network.columba.app.service
 
+import android.content.Context
 import android.util.Log
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import network.columba.app.data.db.dao.PeerIconDao
 import network.columba.app.data.db.entity.ContactStatus
@@ -16,9 +19,13 @@ import network.columba.app.data.repository.ContactRepository
 import network.columba.app.data.repository.ConversationRepository
 import network.columba.app.data.repository.IdentityRepository
 import network.columba.app.notifications.NotificationHelper
+import network.columba.app.repository.SettingsRepository
 import network.columba.app.rns.api.RnsCore
 import network.columba.app.rns.api.RnsLxmf
 import network.columba.app.rns.host.util.PeerNameResolver
+import network.columba.app.ui.model.parseAudioField
+import network.columba.app.util.Codec2Codec
+import network.columba.app.util.VoiceMessagePlayer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -50,6 +57,9 @@ class MessageCollector
         private val identityRepository: IdentityRepository,
         private val notificationHelper: NotificationHelper,
         private val peerIconDao: PeerIconDao,
+        private val activeConversationManager: ActiveConversationManager,
+        private val settingsRepository: SettingsRepository,
+        @ApplicationContext private val appContext: Context,
     ) {
         companion object {
             private const val TAG = "MessageCollector"
@@ -58,6 +68,42 @@ class MessageCollector
 
         // Application-scoped coroutine for background message collection
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        /**
+         * LCS: autoplay an inbound PTT clip, matching Sideband's behaviour in
+         * `core.py::_lxm_ingest` -> `ptt_event`: play only when PTT is enabled
+         * and the conversation is already on screen, so a voice message in the
+         * thread you are reading just speaks instead of buzzing.
+         *
+         * Deliberately fire-and-forget on the collector's own scope — playback
+         * lasts seconds and must not stall the message-collection loop behind
+         * it. Notification suppression is already handled: NotificationHelper
+         * bails out for the active conversation on its own.
+         */
+        private suspend fun maybeAutoplayVoiceMessage(
+            sourceHash: String,
+            fieldsJson: String?,
+        ) {
+            if (fieldsJson == null) return
+            if (activeConversationManager.activeConversation.value != sourceHash) return
+            if (!settingsRepository.pttEnabledFlow.first()) return
+
+            val (mode, payload) = parseAudioField(fieldsJson) ?: return
+            if (!VoiceMessagePlayer.canPlay(mode)) {
+                // Most commonly a Codec2 clip on a build without the native
+                // decoder, or a mode outside the Sideband-interoperable set.
+                Log.i(
+                    TAG,
+                    "Inbound voice message in unplayable mode $mode " +
+                        "(codec2Native=${Codec2Codec.isAvailable})",
+                )
+                return
+            }
+            scope.launch {
+                runCatching { VoiceMessagePlayer.play(appContext, mode, payload) }
+                    .onFailure { Log.e(TAG, "Autoplay failed for mode $mode", it) }
+            }
+        }
 
         // Track processed message IDs to avoid duplicates
         private val processedMessageIds = ConcurrentHashMap.newKeySet<String>()
@@ -157,6 +203,8 @@ class MessageCollector
                             if (!existingMessage.isRead) {
                                 try {
                                     notificationHelper.notifyMessageReceived(
+
+                                    maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
                                         destinationHash = sourceHash,
                                         peerName = peerName,
                                         messagePreview = receivedMessage.content.take(100),

@@ -195,7 +195,7 @@ fun SharedInstanceBannerCard(
                                 isHostingSharedInstance -> "Hosting Shared Instance"
                                 isInformationalState -> "Shared Instance No Longer Available"
                                 isUsingSharedInstance -> "Connected to Shared Instance"
-                                else -> "Using Columba's Own Instance"
+                                else -> "Using Liberty Chat's Own Instance"
                             },
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -232,16 +232,16 @@ fun SharedInstanceBannerCard(
                             text =
                                 "You enabled Share Instance in Advanced settings, but another " +
                                     "app on this device (e.g., Sideband) is already hosting " +
-                                    "a shared Reticulum instance on TCP 37428. Columba has " +
-                                    "joined it as a client. To host from Columba instead, " +
-                                    "disable sharing in the other app and restart Columba.",
+                                    "a shared Reticulum instance on TCP 37428. Liberty Chat has " +
+                                    "joined it as a client. To host from Liberty Chat instead, " +
+                                    "disable sharing in the other app and restart Liberty Chat.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
                         )
                     } else if (isHostingSharedInstance) {
                         Text(
                             text =
-                                "Other RNS apps on this device can connect to Columba's " +
+                                "Other RNS apps on this device can connect to Liberty Chat's " +
                                     "transport via the shared instance on TCP 37428. " +
                                     "Disable Share Instance in Advanced settings and restart " +
                                     "Reticulum to stop hosting.",
@@ -256,7 +256,7 @@ fun SharedInstanceBannerCard(
                         Text(
                             text =
                                 "The shared Reticulum instance (e.g., Sideband) is no longer " +
-                                    "available. Columba has automatically restarted with its own " +
+                                    "available. Liberty Chat has automatically restarted with its own " +
                                     "network interfaces.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
@@ -276,9 +276,9 @@ fun SharedInstanceBannerCard(
                             text =
                                 if (isUsingSharedInstance) {
                                     "Another app (e.g., Sideband) is managing the Reticulum network " +
-                                        "on this device. Columba is using that connection."
+                                        "on this device. Liberty Chat is using that connection."
                                 } else {
-                                    "Columba is running its own Reticulum instance. Toggle off to use " +
+                                    "Liberty Chat is running its own Reticulum instance. Toggle off to use " +
                                         "a shared instance if available."
                                 },
                             style = MaterialTheme.typography.bodyMedium,
@@ -296,14 +296,14 @@ fun SharedInstanceBannerCard(
                                     color = contentColor,
                                 )
                                 Text(
-                                    text = "• Your identities and messages remain private to Columba",
+                                    text = "• Your identities and messages remain private to Liberty Chat",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = contentColor,
                                 )
                                 Text(
                                     text =
-                                        "• BLE connections to other Columba users require " +
-                                            "Columba's own instance",
+                                        "• BLE connections to other Liberty Chat users require " +
+                                            "Liberty Chat's own instance",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = contentColor,
                                 )
@@ -319,7 +319,7 @@ fun SharedInstanceBannerCard(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = "Use Columba's own instance",
+                                text = "Use Liberty Chat's own instance",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = contentColor,
                             )

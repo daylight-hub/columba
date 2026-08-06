@@ -20,7 +20,6 @@ class RNodeConfigValidatorTest {
             frequencyStart = 902_000_000L,
             frequencyEnd = 928_000_000L,
             maxTxPower = 30,
-            defaultTxPower = 17,
             dutyCycle = 100,
         )
 
@@ -32,7 +31,6 @@ class RNodeConfigValidatorTest {
             frequencyStart = 869_400_000L,
             frequencyEnd = 869_650_000L,
             maxTxPower = 14,
-            defaultTxPower = 14,
             dutyCycle = 10,
         )
 
@@ -45,7 +43,6 @@ class RNodeConfigValidatorTest {
             frequencyStart = 864_000_000L,
             frequencyEnd = 868_000_000L,
             maxTxPower = 36,
-            defaultTxPower = 17,
             dutyCycle = 100,
         )
 

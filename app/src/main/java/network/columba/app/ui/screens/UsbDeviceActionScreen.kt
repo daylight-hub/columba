@@ -50,11 +50,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun UsbDeviceActionScreen(
     deviceName: String,
-    pyxisVersion: String? = null,
     isEsp32S3Candidate: Boolean = false,
     onNavigateBack: () -> Unit,
-    onUpdatePyxis: () -> Unit,
-    onFlashFirmware: () -> Unit,
     onConfigureRNode: () -> Unit,
     onConfigureTransport: () -> Unit,
     onDisableTransport: () -> Unit,
@@ -171,7 +168,7 @@ fun UsbDeviceActionScreen(
 
             // Device identity
             Text(
-                text = if (pyxisVersion != null) "Pyxis detected" else deviceName,
+                text = deviceName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -182,7 +179,6 @@ fun UsbDeviceActionScreen(
             Text(
                 text =
                     when {
-                        pyxisVersion != null -> "Firmware $pyxisVersion"
                         isEsp32S3Candidate -> "ESP32-S3 device connected"
                         else -> "What would you like to do?"
                     },
@@ -193,20 +189,8 @@ fun UsbDeviceActionScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (pyxisVersion != null || isEsp32S3Candidate) {
-                ActionCard(
-                    icon = Icons.Default.Memory,
-                    title = "Update Pyxis",
-                    description =
-                        if (pyxisVersion != null) {
-                            "Install a verified Pyxis firmware package on this device"
-                        } else {
-                            "Update an existing Pyxis installation on a T-Deck Plus"
-                        },
-                    onClick = onUpdatePyxis,
-                )
+            if (isEsp32S3Candidate) {
 
-                if (pyxisVersion != null) return@Column
 
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
@@ -216,16 +200,6 @@ fun UsbDeviceActionScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
-
-            // Flash RNode Firmware option
-            ActionCard(
-                icon = Icons.Default.Memory,
-                title = "Flash RNode Firmware",
-                description = "Update or install RNode firmware on this device",
-                onClick = onFlashFirmware,
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             // Configure RNode option
             ActionCard(

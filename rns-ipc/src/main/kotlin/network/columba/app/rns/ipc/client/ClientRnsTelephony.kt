@@ -18,6 +18,7 @@ import network.columba.app.rns.api.model.VoiceCallState
 import network.columba.app.rns.ipc.BundleKeys
 import network.columba.app.rns.ipc.IRnsTelephony
 import network.columba.app.rns.ipc.callback.IRnsBoolEventCallback
+import network.columba.app.rns.ipc.callback.IRnsIntEventCallback
 import network.columba.app.rns.ipc.callback.IRnsCallStateCallback
 import network.columba.app.rns.ipc.callback.IRnsNullableStringEventCallback
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,6 +48,7 @@ internal class ClientRnsTelephony(
     private val isSpeakerOnState = MutableStateFlow(false)
     private val isPttModeState = MutableStateFlow(false)
     private val isPttActiveState = MutableStateFlow(false)
+    private val activeProfileCodeState = MutableStateFlow(0)
 
     init {
         // CallState observer + snapshot.
@@ -63,6 +65,15 @@ internal class ClientRnsTelephony(
         registerBoolObserver(isSpeakerOnState, remote::registerIsSpeakerOnObserver, remote::unregisterIsSpeakerOnObserver)
         registerBoolObserver(isPttModeState, remote::registerIsPttModeObserver, remote::unregisterIsPttModeObserver)
         registerBoolObserver(isPttActiveState, remote::registerIsPttActiveObserver, remote::unregisterIsPttActiveObserver)
+
+        // Int observer: activeProfileCode.
+        callbackFlow<Int> {
+            val cb = object : IRnsIntEventCallback.Stub() {
+                override fun onInt(value: Int) { trySend(value) }
+            }
+            if (!registerObserverOrClose { remote.registerActiveProfileCodeObserver(cb) }) return@callbackFlow
+            awaitClose { runCatching { remote.unregisterActiveProfileCodeObserver(cb) } }
+        }.onEach { activeProfileCodeState.value = it }.launchIn(scope)
 
         // Nullable-string observer: remoteIdentity.
         callbackFlow<String?> {
@@ -89,6 +100,8 @@ internal class ClientRnsTelephony(
             isSpeakerOnState.value = runCatching { awaitBoolEvent { cb -> remote.getCurrentIsSpeakerOn(cb) } }.getOrDefault(false)
             isPttModeState.value = runCatching { awaitBoolEvent { cb -> remote.getCurrentIsPttMode(cb) } }.getOrDefault(false)
             isPttActiveState.value = runCatching { awaitBoolEvent { cb -> remote.getCurrentIsPttActive(cb) } }.getOrDefault(false)
+            activeProfileCodeState.value =
+                runCatching { awaitIntEvent { cb -> remote.getCurrentActiveProfileCode(cb) } }.getOrDefault(0)
         }
     }
 
@@ -96,6 +109,7 @@ internal class ClientRnsTelephony(
     override val remoteIdentity: StateFlow<String?> get() = remoteIdentityState.asStateFlow()
     override val isMuted: StateFlow<Boolean> get() = isMutedState.asStateFlow()
     override val isSpeakerOn: StateFlow<Boolean> get() = isSpeakerOnState.asStateFlow()
+    override val activeProfileCode: StateFlow<Int> get() = activeProfileCodeState.asStateFlow()
     override val isPttMode: StateFlow<Boolean> get() = isPttModeState.asStateFlow()
     override val isPttActive: StateFlow<Boolean> get() = isPttActiveState.asStateFlow()
 
@@ -118,12 +132,14 @@ internal class ClientRnsTelephony(
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> = runCatching {
         awaitResult { cb ->
             remote.initiateCall(
                 destinationHash,
                 profileCode ?: 0,
                 profileCode != null,
+                halfDuplex,
                 cb,
             )
         }
@@ -149,6 +165,21 @@ internal class ClientRnsTelephony(
 
     override suspend fun setCallSpeaker(speakerOn: Boolean) {
         awaitResult { cb -> remote.setCallSpeaker(speakerOn, cb) }
+    }
+
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.switchCallProfile(profileCode, cb) }
+        Unit
+    }
+
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.setCallDuplexMode(halfDuplex, cb) }
+        Unit
+    }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.setCallPttActive(active, cb) }
+        Unit
     }
 
     override suspend fun getCallState(): Result<VoiceCallState> = runCatching {
@@ -208,6 +239,22 @@ private suspend inline fun awaitCallState(
 }
 
 /** Snapshot read for a Boolean StateFlow. */
+private suspend inline fun awaitIntEvent(
+    crossinline call: (IRnsIntEventCallback) -> Unit,
+): Int = suspendCancellableCoroutine { cont ->
+    val delivered = AtomicBoolean(false)
+    val cb = object : IRnsIntEventCallback.Stub() {
+        override fun onInt(value: Int) {
+            if (delivered.compareAndSet(false, true)) cont.resume(value)
+        }
+    }
+    try {
+        call(cb)
+    } catch (e: android.os.RemoteException) {
+        if (delivered.compareAndSet(false, true)) cont.resume(0)
+    }
+}
+
 private suspend inline fun awaitBoolEvent(
     crossinline call: (IRnsBoolEventCallback) -> Unit,
 ): Boolean = suspendCancellableCoroutine { cont ->

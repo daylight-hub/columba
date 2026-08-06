@@ -1,6 +1,10 @@
 package network.columba.app.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import network.columba.app.service.ConversationLinkManager
 import network.columba.app.ui.model.CodecProfile
 
@@ -18,7 +22,10 @@ import network.columba.app.ui.model.CodecProfile
  *   immediately on open with a spinner inside the PathInfoSection, then the
  *   spinner is replaced with the probe result when the suspend completes.
  * @param onDismiss Called when the dialog is dismissed without selection
- * @param onProfileSelected Called with the selected profile when user confirms
+ * @param onProfileSelected Called with the selected profile and duplex mode
+ *   when the user confirms. Half duplex defaults on when the probe lands on a
+ *   low-bandwidth tier — see [CodecProfile.defaultsToHalfDuplex] — and is always
+ *   a per-call choice, never a stored setting.
  */
 @Composable
 fun CodecSelectionDialog(
@@ -26,8 +33,15 @@ fun CodecSelectionDialog(
     linkState: ConversationLinkManager.LinkState? = null,
     isProbing: Boolean = false,
     onDismiss: () -> Unit,
-    onProfileSelected: (CodecProfile) -> Unit,
+    onProfileSelected: (CodecProfile, Boolean) -> Unit,
 ) {
+    // Keyed on recommendedProfile: the dialog opens before the probe finishes,
+    // so the default has to re-derive when the recommendation lands.
+    var halfDuplex by
+        remember(recommendedProfile) {
+            mutableStateOf(CodecProfile.defaultsToHalfDuplex(recommendedProfile))
+        }
+
     val options =
         CodecProfile.entries.map { profile ->
             QualityOption(
@@ -35,6 +49,7 @@ fun CodecSelectionDialog(
                 displayName = profile.displayName,
                 description = profile.description,
                 isExperimental = profile.isExperimental,
+                lcsBadge = profile.lcsRecommendation,
             )
         }
 
@@ -47,7 +62,9 @@ fun CodecSelectionDialog(
         linkState = linkState,
         isProbing = isProbing,
         confirmButtonText = "Call",
-        onConfirm = onProfileSelected,
+        halfDuplex = halfDuplex,
+        onHalfDuplexChange = { halfDuplex = it },
+        onConfirm = { profile -> onProfileSelected(profile, halfDuplex) },
         onDismiss = onDismiss,
     )
 }

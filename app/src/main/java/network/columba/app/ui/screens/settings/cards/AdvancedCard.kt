@@ -3,11 +3,14 @@ package network.columba.app.ui.screens.settings.cards
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.RestartAlt
@@ -64,6 +67,10 @@ fun AdvancedCard(
     isRestarting: Boolean = false,
     crashReportingEnabled: Boolean = false,
     onCrashReportingToggle: (Boolean) -> Unit = {},
+    pttEnabled: Boolean = true,
+    onPttToggle: (Boolean) -> Unit = {},
+    pttHighBandwidth: Boolean = false,
+    onPttHighBandwidthToggle: (Boolean) -> Unit = {},
 ) {
     val canHostShareInstance = LocalCapabilities.current.performance.shareInstanceHosting
     CollapsibleSettingsCard(
@@ -141,11 +148,11 @@ fun AdvancedCard(
             }
             Text(
                 text =
-                    "Make Columba available as a shared RNS instance so other apps on this device " +
-                        "(Sideband, rnsd, …) can route through Columba's transport. " +
+                    "Make Liberty Chat available as a shared RNS instance so other apps on this device " +
+                        "(Sideband, rnsd, …) can route through Liberty Chat's transport. " +
                         "Requires a service restart to take effect. " +
                         "If another app is already hosting a shared instance on this device, " +
-                        "Columba will join it as a client instead — see the Shared Instance banner.",
+                        "Liberty Chat will join it as a client instead — see the Shared Instance banner.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -227,6 +234,104 @@ fun AdvancedCard(
                     "Send anonymous crash and error reports to help the developer fix bugs. " +
                         "No message content, contacts, or identity information is ever included. " +
                         "Off by default; you can change this at any time.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+        }
+
+        // LCS: Push-to-talk voice messages
+        Spacer(Modifier.height(16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // weight(1f) is load-bearing. Without it this Row is measured
+            // against the full incoming width, consumes all of it, and pushes
+            // the Switch past the right edge of the card — which is exactly
+            // what both PTT rows did before 1.2.1. The weight makes the label
+            // yield whatever the Switch needs.
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "Push-to-Talk Voice Messages",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(
+                checked = pttEnabled,
+                onCheckedChange = onPttToggle,
+            )
+        }
+        Text(
+            text =
+                "Show a hold-to-talk microphone button in every conversation. Hold to record, " +
+                    "release to send. Received voice messages play automatically.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        if (pttEnabled) {
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    // The qualifier that used to live here ("for LoRa") moved
+                    // into the description below: at bodyLarge it made this
+                    // label wider than the row could hold on a 360 dp screen.
+                    Text(
+                        text = if (pttHighBandwidth) "High Bandwidth" else "Low Bandwidth",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+                Switch(
+                    checked = pttHighBandwidth,
+                    onCheckedChange = onPttHighBandwidthToggle,
+                )
+            }
+            Text(
+                text =
+                    if (pttHighBandwidth) {
+                        "Opus at 24 kbps — about 3 KB per second. Much better audio, best " +
+                            "over WiFi or TCP. Too heavy for most LoRa links."
+                    } else {
+                        "Codec2 1200, 8 kHz mono — about 150 bytes per second. Roughly 15 " +
+                            "seconds of air time per 10-second clip on a standard LoRa preset."
+                    },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text =
+                    "This selects the codec, not just the bitrate — the same choice Sideband " +
+                        "makes. Sideband decodes both, and sends Codec2 unless its own " +
+                        "high-quality PTT option is switched on.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

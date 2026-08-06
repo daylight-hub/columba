@@ -38,6 +38,7 @@ interface RnsTelephony {
     suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int? = null,
+        halfDuplex: Boolean = false,
     ): Result<Unit>
 
     /**
@@ -119,6 +120,20 @@ interface RnsTelephony {
     val isPttActive: StateFlow<Boolean>
 
     /**
+     * LXST profile code the call is actually running on, or 0 when unknown.
+     *
+     * Host-owned rather than derived from what this device picked at dial time,
+     * because the profile can change without any local action:
+     *  - the callee never chose one — it learns the caller's preference from a
+     *    `PREFERRED_PROFILE` signal while ringing;
+     *  - either side can switch mid-call, and LXST applies it symmetrically.
+     *
+     * Without this the UI shows whatever this device last selected, which is
+     * simply wrong on the receiving end of both cases.
+     */
+    val activeProfileCode: StateFlow<Int>
+
+    /**
      * Update host-side `callState` to [CallState.Connecting] for the
      * given destination. UI calls this before issuing [initiateCall] so
      * the connecting UI renders immediately rather than waiting for the
@@ -145,6 +160,55 @@ interface RnsTelephony {
      * controller. See [setMutedLocally] for the same rationale.
      */
     suspend fun setSpeakerLocally(enabled: Boolean)
+
+    /**
+     * LCS: change the audio codec on an already-established call.
+     *
+     * Wraps LXST's `Telephone.switchProfile`, which does two things: it
+     * reconfigures the local transmit pipeline, and it signals the peer with
+     * `Signalling.PREFERRED_PROFILE + profile.id`. The peer's LXST handles that
+     * signal in `switchProfileFromRemote` and follows — rebuilding both its
+     * encoder and its decoder — so one side switching moves the whole call.
+     *
+     * That signalling is upstream LXST protocol, not a Columba extension, so
+     * Sideband and MeshChat peers follow a switch and this side follows theirs.
+     *
+     * There is no per-direction codec: last switch wins for both parties. A
+     * no-op if the call is not established or the profile is already active —
+     * LXST guards both cases and logs rather than throwing.
+     *
+     * @param profileCode LXST profile id, i.e. [CodecProfile.code].
+     */
+    suspend fun switchCallProfile(profileCode: Int): Result<Unit>
+
+    /**
+     * LCS: switch the call between full and half duplex (LXST >= 0.5.0).
+     *
+     * Half duplex squelches the local transmitter — no packets are put on the
+     * air until the user keys PTT via [setCallPttActive]. This is *not* a mic
+     * mute: a mute still transmits encoded silence at full frame rate, which
+     * on a low-bitrate LoRa link costs the same airtime as speech.
+     *
+     * The mode is announced to the peer as `PREFERRED_MODE + mode`
+     * (`0xF1`/`0xF2`) and is **symmetric** — a peer running LXST >= 0.5.0
+     * applies it to its own transmitter too, so both parties become
+     * PTT-gated. Peers older than 0.5.0 ignore the signal and stay full
+     * duplex; this side still gets working PTT.
+     *
+     * Host-side `isPttMode` is updated to match, including when the peer
+     * initiates the switch, so the UI follows without extra plumbing.
+     *
+     * Requires an established call.
+     */
+    suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit>
+
+    /**
+     * LCS: key (true) or unkey (false) the transmitter while half duplex.
+     *
+     * No-op in full duplex. Replaces the old PTT implementation, which
+     * toggled the mic mute and therefore kept transmitting.
+     */
+    suspend fun setCallPttActive(active: Boolean): Result<Unit>
 
     /** Update host-side `isPttMode`. */
     suspend fun setPttModeLocally(enabled: Boolean)

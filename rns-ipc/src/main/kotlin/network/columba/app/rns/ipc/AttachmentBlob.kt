@@ -10,8 +10,8 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 /**
- * Out-of-band transfer of LXMF attachment payloads (image bytes + file
- * attachments) across the [IRnsLxmf] AIDL boundary.
+ * Out-of-band transfer of LXMF attachment payloads (image bytes, file
+ * attachments, audio clips) across the [IRnsLxmf] AIDL boundary.
  *
  * A Binder transaction caps at ~1 MB shared across the whole process, so
  * attachment bytes cannot ride inline in the send calls: a multi-MB file threw
@@ -33,12 +33,23 @@ import java.io.IOException
  *   utf     imageFormat     (only present when hasFormat)
  *   int     fileCount
  *   repeat fileCount: utf name; int dataLen; byte[dataLen] data
+ *   int     audioMode       (v2+; NO_AUDIO == no audio clip)
+ *   int     audioLen        (only present when audioMode != NO_AUDIO)
+ *   byte[audioLen] audio    (only present when audioMode != NO_AUDIO)
  * ```
+ *
+ * Version 2 appended the audio trailer. `FIELD_AUDIO` bytes route through here
+ * rather than the `extraFields` Bundle deliberately: that codec only handles
+ * scalars/String/ByteArray and silently `toString()`s anything else, so a
+ * `[mode, bytes]` list marshalled as the literal text `"[16, [B@...]"`. Audio
+ * clips are also binary payloads of the same order as images, and belong on the
+ * same fd-backed channel for the same TransactionTooLargeException reason.
  */
 internal object AttachmentBlob {
     private const val MAGIC = 0x4C584D42 // "LXMB"
-    private const val VERSION = 1
+    private const val VERSION = 2
     private const val NO_IMAGE = -1
+    private const val NO_AUDIO = -1
     private const val TEMP_SUBDIR = "rns-ipc-tx"
 
     /**
@@ -46,8 +57,11 @@ internal object AttachmentBlob {
      * wire and skip temp-file creation entirely, so text-only sends stay
      * zero-overhead.
      */
-    fun isEmpty(imageData: ByteArray?, fileAttachments: List<Pair<String, ByteArray>>?): Boolean =
-        imageData == null && fileAttachments.isNullOrEmpty()
+    fun isEmpty(
+        imageData: ByteArray?,
+        fileAttachments: List<Pair<String, ByteArray>>?,
+        audioData: ByteArray? = null,
+    ): Boolean = imageData == null && fileAttachments.isNullOrEmpty() && audioData == null
 
     /**
      * Serialize [imageData] + [fileAttachments] to a temp file under [cacheDir]
@@ -65,8 +79,10 @@ internal object AttachmentBlob {
         imageData: ByteArray?,
         imageFormat: String?,
         fileAttachments: List<Pair<String, ByteArray>>?,
+        audioMode: Int? = null,
+        audioData: ByteArray? = null,
     ): ParcelFileDescriptor? {
-        if (isEmpty(imageData, fileAttachments)) return null
+        if (isEmpty(imageData, fileAttachments, audioData)) return null
 
         val dir = File(cacheDir, TEMP_SUBDIR).apply { mkdirs() }
         val tempFile = File.createTempFile("lxmf-attach-", ".bin", dir)
@@ -89,6 +105,15 @@ internal object AttachmentBlob {
                     out.writeUTF(name)
                     out.writeInt(data.size)
                     out.write(data)
+                }
+                // v2 audio trailer. Mode and bytes travel together — a mode
+                // without bytes is meaningless, so one guard covers both.
+                if (audioMode != null && audioData != null) {
+                    out.writeInt(audioMode)
+                    out.writeInt(audioData.size)
+                    out.write(audioData)
+                } else {
+                    out.writeInt(NO_AUDIO)
                 }
             }
             return ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -133,7 +158,21 @@ internal object AttachmentBlob {
                 val data = ByteArray(dataLen).also { inp.readFully(it) }
                 files.add(name to data)
             }
-            return Payload(imageData, imageFormat, files)
+
+            val audioMode = inp.readInt()
+            var audioData: ByteArray? = null
+            if (audioMode != NO_AUDIO) {
+                val audioLen = checkLen(inp.readInt(), "audioLen")
+                audioData = ByteArray(audioLen).also { inp.readFully(it) }
+            }
+
+            return Payload(
+                imageData,
+                imageFormat,
+                files,
+                audioMode.takeIf { it != NO_AUDIO },
+                audioData,
+            )
         }
     }
 
@@ -152,6 +191,10 @@ internal object AttachmentBlob {
         val imageData: ByteArray?,
         val imageFormat: String?,
         val fileAttachments: List<Pair<String, ByteArray>>,
+        /** LXMF `AM_*` mode, or null when the message carries no audio. */
+        val audioMode: Int? = null,
+        /** Audio payload bytes, non-null exactly when [audioMode] is non-null. */
+        val audioData: ByteArray? = null,
     ) {
         companion object {
             val EMPTY = Payload(null, null, emptyList())

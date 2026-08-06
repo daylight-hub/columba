@@ -115,12 +115,15 @@ class CallViewModelTest {
         }
 
         // Network IPC actions — default success.
-        coEvery { mockTelephony.initiateCall(any(), any()) } returns Result.success(Unit)
+        coEvery { mockTelephony.initiateCall(any(), any(), any()) } returns Result.success(Unit)
         coEvery { mockTelephony.answerCall() } returns Result.success(Unit)
         coEvery { mockTelephony.hangupCall() } answers { }
         coEvery { mockTelephony.declineCall() } answers { }
         coEvery { mockTelephony.setCallMuted(any()) } answers { }
         coEvery { mockTelephony.setCallSpeaker(any()) } answers { }
+        every { mockTelephony.activeProfileCode } returns MutableStateFlow(0)
+        coEvery { mockTelephony.setCallDuplexMode(any()) } returns Result.success(Unit)
+        coEvery { mockTelephony.setCallPttActive(any()) } returns Result.success(Unit)
 
         // Stub repository methods
         coEvery { mockContactRepository.getContact(any()) } returns null
@@ -193,6 +196,16 @@ class CallViewModelTest {
 
             assertTrue(connectingHashSlot.isCaptured)
             assertEquals(testHash, connectingHashSlot.captured)
+        }
+
+    @Test
+    fun `initiateCall forwards the dial-time duplex mode`() =
+        runTest {
+            val testHash = "abc123def456789012345678901234567890"
+            viewModel.initiateCall(testHash, profileCode = 0x10, halfDuplex = true)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            coVerify { mockTelephony.initiateCall(testHash, 0x10, true) }
         }
 
     @Test
@@ -483,7 +496,7 @@ class CallViewModelTest {
     }
 
     @Test
-    fun `togglePttMode enables PTT and mutes transmit`() =
+    fun `togglePttMode switches the call to half duplex`() =
         runTest {
             isPttModeFlow.value = false
 
@@ -491,13 +504,14 @@ class CallViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             coVerify { mockTelephony.setPttModeLocally(true) }
-            coVerify { mockTelephony.setMutedLocally(true) }
             coVerify { mockTelephony.setPttActiveLocally(false) }
-            coVerify { mockTelephony.setCallMuted(true) }
+            coVerify { mockTelephony.setCallDuplexMode(true) }
+            // Half duplex is a squelch, not a mute — the mute axis is untouched.
+            coVerify(exactly = 0) { mockTelephony.setCallMuted(any()) }
         }
 
     @Test
-    fun `togglePttMode disables PTT and unmutes transmit`() =
+    fun `togglePttMode switches the call back to full duplex`() =
         runTest {
             isPttModeFlow.value = true
 
@@ -505,9 +519,9 @@ class CallViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
 
             coVerify { mockTelephony.setPttModeLocally(false) }
-            coVerify { mockTelephony.setMutedLocally(false) }
             coVerify { mockTelephony.setPttActiveLocally(false) }
-            coVerify { mockTelephony.setCallMuted(false) }
+            coVerify { mockTelephony.setCallDuplexMode(false) }
+            coVerify(exactly = 0) { mockTelephony.setCallMuted(any()) }
         }
 
     @Test
@@ -527,8 +541,8 @@ class CallViewModelTest {
             testDispatcher.scheduler.runCurrent()
 
             coVerify { mockTelephony.setPttActiveLocally(true) }
-            coVerify { mockTelephony.setMutedLocally(false) }
-            coVerify { mockTelephony.setCallMuted(false) }
+            coVerify { mockTelephony.setCallPttActive(true) }
+            coVerify(exactly = 0) { mockTelephony.setCallMuted(any()) }
         }
 
     @Test
@@ -542,8 +556,8 @@ class CallViewModelTest {
             testDispatcher.scheduler.runCurrent()
 
             coVerify { mockTelephony.setPttActiveLocally(false) }
-            coVerify { mockTelephony.setMutedLocally(true) }
-            coVerify { mockTelephony.setCallMuted(true) }
+            coVerify { mockTelephony.setCallPttActive(false) }
+            coVerify(exactly = 0) { mockTelephony.setCallMuted(any()) }
         }
 
     @Test

@@ -23,7 +23,7 @@ desugarJdkLibs = "2.1.5"
 # JitPack-published libraries (formerly git submodules)
 reticulumKt = "v0.0.22"
 lxmfKt = "v0.0.14"
-lxstKt = "v0.0.7"
+lxstKt = "0.0.10-lcs"
 
 [libraries]
 # JitPack-published Reticulum/LXMF/LXST stack (migrated from git submodules)
@@ -33,7 +33,7 @@ rns-core = { module = "com.github.torlando-tech.reticulum-kt:rns-core", version.
 rns-interfaces = { module = "com.github.torlando-tech.reticulum-kt:rns-interfaces", version.ref = "reticulumKt" }
 rns-android = { module = "com.github.torlando-tech.reticulum-kt:rns-android", version.ref = "reticulumKt" }
 lxmf-kt = { module = "com.github.torlando-tech:LXMF-kt", version.ref = "lxmfKt" }
-lxst-kt = { module = "com.github.torlando-tech:LXST-kt", version.ref = "lxstKt" }
+lxst-kt = { module = "com.github.daylight-hub:LXST-kt", version.ref = "lxstKt" }
 
 # Compose
 compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }

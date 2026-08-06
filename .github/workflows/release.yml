@@ -1,70 +1,66 @@
-name: Tagged Release/Prerelease
+name: Release Liberty Chat
 
+# Manual only. Tag pushes no longer trigger a build — run this from the Actions
+# tab (Actions -> Release Liberty Chat -> Run workflow) when you want to cut a
+# signed release. Builds only the no-Sentry / Python-backend variant (4 APKs).
 on:
-  push:
-    tags:
-      - 'v*'  # Trigger on version tags (e.g., v1.0.0, v1.2.3-beta1)
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version, no leading v (e.g. 1.0.0)"
+        required: true
+        default: "1.1.0"
+
+permissions:
+  contents: write # create the release + tag and upload assets
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required to create releases and upload assets
+      contents: write
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # Fetch all history for version tagging
+          fetch-depth: 0 # full history so the Gradle version-from-tag logic works
 
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6.2.0
+        uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: false
 
-      - name: Extract version from tag
+      - name: Resolve version
         id: version
         run: |
-          TAG_NAME=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG_NAME#v}
-          echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          # Base URL for release asset downloads. GitHub serves every asset at a
-          # predictable path, so we can link directly to APKs from the body
-          # instead of making people expand the Assets accordion. Note: these
-          # URLs 404 while the release is a draft (the tag isn't public yet) and
-          # start resolving the moment it's published.
-          echo "dl=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}" >> $GITHUB_OUTPUT
-          echo "Building version: $VERSION from tag: $TAG_NAME"
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}" # tolerate a leading v
+          TAG_NAME="v${VERSION}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "dl=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/download/${TAG_NAME}" >> "$GITHUB_OUTPUT"
+          # Tag this commit locally so getVersionFromTag() in app/build.gradle.kts
+          # reports the exact version (the About screen reads it). Force in case a
+          # tag of the same name was fetched from the remote at an older commit.
+          git tag -f "$TAG_NAME"
+          echo "Building Liberty Chat $VERSION"
 
-      - name: Build Release APK
-        # 40m to match build-prerelease-apk.yml: assembleRelease builds the two
-        # pythonBackend flavors, which bundle a Python runtime per ABI via
-        # Chaquopy and overrun the old 20m budget.
+      - name: Build Release APK (no-Sentry, Python backend)
         timeout-minutes: 40
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
         run: |
-          # Python backend first, then Kotlin backend; each in sentry / noSentry
-          # telemetry variants. Four flavor combos × ABI splits + universal.
-          ./gradlew \
-            :app:assembleSentryPythonBackendRelease \
-            :app:assembleNoSentryPythonBackendRelease \
-            :app:assembleSentryKotlinBackendRelease \
-            :app:assembleNoSentryKotlinBackendRelease \
-            --no-daemon --stacktrace
-          echo "✓ Release APKs built successfully"
+          ./gradlew :app:assembleNoSentryPythonBackendRelease --no-daemon --stacktrace
+          echo "✓ Release APKs built"
 
       - name: Extract signing certificate fingerprints
         id: cert
@@ -77,269 +73,88 @@ jobs:
           SHA256=$(echo "$CERT_INFO" | grep "SHA256:" | awk '{print $2}')
           SHA1=$(echo "$CERT_INFO" | grep "SHA1:" | awk '{print $2}')
           if [ -z "$SHA256" ] || [ -z "$SHA1" ]; then
-            echo "::error::Failed to extract certificate fingerprints"
+            echo "::error::Failed to extract certificate fingerprints — are the KEYSTORE_* secrets set?"
             exit 1
           fi
-          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
-          echo "sha1=$SHA1" >> $GITHUB_OUTPUT
-          echo "✓ Extracted certificate fingerprints"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "sha1=$SHA1" >> "$GITHUB_OUTPUT"
 
-      - name: Rename APKs with version and architecture
+      - name: Rename APKs
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          # Two flavor dimensions (telemetry × rnsImpl) mean Gradle writes to
-          # app/build/outputs/apk/<telemetry><Backend>/release/, e.g.
-          # sentryPythonBackend/release/. Output filenames:
-          #   columba-{version}-{backend}-{abi}[-no-sentry].apk
-          # Backend is python first, then kotlin.
-          APK_DIR="app/build/outputs/apk"
-
-          # "<dir-infix>:<filename-token>"
-          for backend in "Python:official-rns-py" "Kotlin:EXPERIMENTAL-reticulum-kt"; do
-            dir_backend="${backend%%:*}"
-            name_backend="${backend##*:}"
-
-            for telemetry in sentry noSentry; do
-              sentry_suffix=""
-              [ "$telemetry" = "noSentry" ] && sentry_suffix="-no-sentry"
-              variant_dir="${telemetry}${dir_backend}Backend"
-
-              for apk in "$APK_DIR/$variant_dir/release/"*.apk; do
-                [ -e "$apk" ] || continue
-                filename=$(basename "$apk")
-
-                if echo "$filename" | grep -q "armeabi-v7a"; then
-                  cp "$apk" "columba-${VERSION}-${name_backend}-armeabi-v7a${sentry_suffix}.apk"
-                elif echo "$filename" | grep -q "arm64-v8a"; then
-                  cp "$apk" "columba-${VERSION}-${name_backend}-arm64-v8a${sentry_suffix}.apk"
-                elif echo "$filename" | grep -q "x86_64"; then
-                  cp "$apk" "columba-${VERSION}-${name_backend}-x86_64${sentry_suffix}.apk"
-                elif echo "$filename" | grep -q "universal"; then
-                  cp "$apk" "columba-${VERSION}-${name_backend}-universal${sentry_suffix}.apk"
-                fi
-              done
-            done
+          DIR="app/build/outputs/apk/noSentryPythonBackend/release"
+          for apk in "$DIR"/*.apk; do
+            [ -e "$apk" ] || continue
+            f=$(basename "$apk")
+            case "$f" in
+              *armeabi-v7a*) cp "$apk" "libertychat-${VERSION}-official-rns-py-armeabi-v7a.apk" ;;
+              *arm64-v8a*)   cp "$apk" "libertychat-${VERSION}-official-rns-py-arm64-v8a.apk" ;;
+              *x86_64*)      cp "$apk" "libertychat-${VERSION}-official-rns-py-x86_64.apk" ;;
+              *universal*)   cp "$apk" "libertychat-${VERSION}-official-rns-py-universal.apk" ;;
+            esac
           done
-
-          ls -la columba-*.apk
+          ls -la libertychat-*.apk
           echo "✓ Renamed APKs"
 
       - name: Generate SHA256 checksums
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for apk in columba-*.apk; do
-            sha256sum "$apk" > "${apk}.sha256"
-          done
-          echo "✓ Generated SHA256 checksums"
+          for apk in libertychat-*.apk; do sha256sum "$apk" > "${apk}.sha256"; done
 
       - name: Read SHA256 checksums
         id: sha256
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          CHECKSUMS=""
-          for checksum_file in columba-*.apk.sha256; do
-            CHECKSUMS="${CHECKSUMS}$(cat "$checksum_file")\n"
-          done
-          echo "checksums<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$CHECKSUMS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # When this release bumps reticulum-kt / LXMF-kt / LXST-kt vs the previous
-      # tag, fetch the commit log between the old and new lib versions and inject
-      # it into the release notes. Lib repos publish tags but not GitHub Releases,
-      # so we synthesize from `compare` API output instead.
-      - name: Build library-changelog injection
-        id: libchangelog
-        env:
-          TAG_NAME: ${{ steps.version.outputs.tag }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          # Find the tag that immediately precedes this one in semver order.
-          PREV_TAG=$(git tag --sort=-v:refname \
-            | awk -v t="$TAG_NAME" 'BEGIN{found=0} { if (found) { print; exit } if ($0==t) { found=1 } }')
-          echo "previous tag: ${PREV_TAG:-(none — first release)}"
-
-          extract_pin() {
-            # Match `<var> = "<version>"` or `<var>="<version>"`. Allow:
-            # - prereleases like v0.0.16-rc1
-            # - a leading-`v` or no-prefix pin (`"0.0.16"`)
-            # - any whitespace (or none) around `=`
-            git show "$1:gradle/libs.versions.toml" 2>/dev/null \
-              | sed -n -E "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\"([^\"]+)\".*/\\1/p" \
-              | head -1
-          }
-
-          NOTES=""
-          # libdef format: "<libs.versions.toml var>:<github repo>"
-          for libdef in "reticulumKt:reticulum-kt" "lxmfKt:LXMF-kt" "lxstKt:LXST-kt"; do
-            var="${libdef%%:*}"
-            repo="${libdef##*:}"
-            old=""
-            if [ -n "$PREV_TAG" ]; then
-              old=$(extract_pin "$PREV_TAG" "$var" || true)
-            fi
-            new=$(extract_pin "$TAG_NAME" "$var" || true)
-
-            # Skip if not pinned in this release, or if unchanged.
-            if [ -z "$new" ]; then
-              echo "skip $repo: no pin in $TAG_NAME"
-              continue
-            fi
-            if [ "$old" = "$new" ]; then
-              echo "skip $repo: unchanged at $new"
-              continue
-            fi
-
-            echo "$repo: ${old:-(unpinned)} -> $new"
-            NOTES+=$'\n#### `'"$repo"$'` updated: `'"${old:-unpinned}"$'` → `'"$new"$'`\n\n'
-
-            if [ -n "$old" ]; then
-              # Compare link only makes sense when there's a prior version
-              # to diff against — otherwise we'd render a self-compare
-              # (empty diff) which is confusing.
-              NOTES+="See https://github.com/torlando-tech/$repo/compare/$old...$new"$'\n\n'
-
-              # Pull commit messages between old and new lib tags. Filter to
-              # noteworthy commits and drop Conventional-Commit + Sentence-
-              # Case noise (chore/ci/test/review/revert/build/style/refactor/
-              # docs).
-              # The two-stage filter does:
-              #   ALLOW IF subject matches:
-              #     - feat:/fix:/perf: with optional scope and breaking-! prefix
-              #     - leading "BREAKING" marker
-              #     - sentence-case lead with a curated allowlist of action verbs
-              #       (Add, Fix, Improve, Support, Implement, Update, Enable,
-              #       Allow, Avoid, Prevent, Make, Switch, Move, Drop, Remove,
-              #       Replace, Expose, Wire, Bump, Persist, Cache, Stabilize,
-              #       Optimize) — handles subjects with or without a colon
-              #   AND DENY IF the leading word is a sentence-case form of a
-              #   filtered conventional-commit type (Refactor/Test/Build/
-              #   Style/Chore/Revert/Ci/Doc(s)?/Review).
-              # This catches the failure modes from greploop on PR #908:
-              #  1. `Add resource: dedup duplicate RESOURCE_ADV` no longer
-              #     dropped by the colon-rejecting `[^:]+$` of the prior pass.
-              #  2. `Refactor LXMRouter dispatch` no longer slipping through
-              #     the sentence-case fallback that the comment claimed
-              #     filtered it.
-              # Errexit suppression: the `if log=$(...)` test context disables
-              # `set -e` for the inner command. We log stderr instead of
-              # swallowing it so failures surface in the Actions log.
-              if log=$(gh api --paginate "repos/torlando-tech/$repo/compare/$old...$new" \
-                  --jq '.commits[]
-                        | select(.commit.message | test("^Merge ") | not)
-                        | (.commit.message | split("\n")[0]) as $subject
-                        | select(
-                            ($subject | test("^(feat|fix|perf)(\\([^)]+\\))?!?:|^BREAKING"))
-                            or
-                            (
-                              ($subject | test("^(Add|Fix|Improve|Support|Implement|Update|Enable|Allow|Avoid|Prevent|Make|Switch|Move|Drop|Remove|Replace|Expose|Wire|Bump|Persist|Cache|Stabilize|Optimize)\\b"))
-                              and
-                              ($subject | test("^(Refactor|Test|Build|Style|Chore|Revert|Ci|Docs?|Review)\\b") | not)
-                            )
-                          )
-                        | "- " + $subject + " (`" + (.sha[0:7]) + "`)"'); then
-                if [ -n "$log" ]; then
-                  NOTES+="$log"$'\n'
-                else
-                  NOTES+="_(no user-facing feat/fix/perf commits — only chores/tests/reviews; see compare link for the full diff.)_"$'\n'
-                fi
-              else
-                NOTES+="_(failed to fetch compare; see Actions log for the underlying error and the GitHub link above for a manual review)_"$'\n'
-              fi
-            else
-              NOTES+="_First inclusion of this library — no prior version to diff against._"$'\n'
-            fi
-          done
-
-          # If anything got injected, wrap with a section header. Empty otherwise.
-          if [ -n "$NOTES" ]; then
-            FINAL=$'\n### Reticulum / LXMF / LXST updates\n\nThis release picks up the following library updates:'"$NOTES"
-          else
-            FINAL=""
-          fi
-
-          # Use a random per-run delimiter so the heredoc can't be closed
-          # early by a literal line in a fetched commit message. GitHub
-          # Actions docs recommend this pattern:
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
-          delim="LIBCHANGELOG_$(openssl rand -hex 16)"
-          {
-            printf '%s<<%s\n' "notes" "$delim"
-            printf '%s\n' "$FINAL"
-            printf '%s\n' "$delim"
-          } >> "$GITHUB_OUTPUT"
+          echo "checksums<<EOF" >> "$GITHUB_OUTPUT"
+          cat libertychat-*.apk.sha256 >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Liberty Chat ${{ steps.version.outputs.version }}
           files: |
-            columba-*.apk
-            columba-*.apk.sha256
+            libertychat-*.apk
+            libertychat-*.apk.sha256
           draft: true
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
-          generate_release_notes: true
           body: |
-            ## Columba ${{ steps.version.outputs.version }}
+            ## Liberty Chat ${{ steps.version.outputs.version }}
+
+            Messaging and voice over LXMF / Reticulum (Bluetooth LE, TCP, or RNode
+            LoRa), distributed by Liberty Communication Systems, Inc. Built on
+            Columba (MPL 2.0).
 
             ### Installation
-            Pick a **backend**, then download the APK matching your device's CPU architecture.
-
-            - **Python backend, RECOMMENDED** — ships Mark Qvist's official python reference implementations of Reticulum and LXMF via Chaquopy.
-            - **Kotlin backend** — ships Torlando's EXPERIMENTAL, AI-GENERATED native reticulum-kt / lxmf-kt / lxst-kt stack.
-
-            The python version is highly recommended. The kotlin version is a work in progress, and is not yet verified to be completely safe.
-            The kotlin version may yield better battery life depending on your device, and comes in a smaller apk due to not requiring a python runtime.
+            Download the APK matching your phone's CPU. Most modern phones are
+            **arm64-v8a**; if unsure, use **universal**.
 
             #### Python backend (`official-rns-py`)
             | APK | Architecture | Devices |
             |-----|-------------|---------|
-            | [`columba-${{ steps.version.outputs.version }}-official-rns-py-armeabi-v7a.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-official-rns-py-armeabi-v7a.apk) | armeabi-v7a | Older 32-bit ARM phones & tablets |
-            | [`columba-${{ steps.version.outputs.version }}-official-rns-py-arm64-v8a.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-official-rns-py-arm64-v8a.apk) | arm64-v8a | Most modern Android phones & tablets |
-            | [`columba-${{ steps.version.outputs.version }}-official-rns-py-x86_64.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-official-rns-py-x86_64.apk) | x86_64 | Chromebooks, emulators, some tablets |
-            | [`columba-${{ steps.version.outputs.version }}-official-rns-py-universal.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-official-rns-py-universal.apk) | All | Universal fallback (larger download) |
-
-            #### Kotlin backend (`EXPERIMENTAL-reticulum-kt`)
-            | APK | Architecture | Devices |
-            |-----|-------------|---------|
-            | [`columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-armeabi-v7a.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-armeabi-v7a.apk) | armeabi-v7a | Older 32-bit ARM phones & tablets |
-            | [`columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-arm64-v8a.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-arm64-v8a.apk) | arm64-v8a | Most modern Android phones & tablets |
-            | [`columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-x86_64.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-x86_64.apk) | x86_64 | Chromebooks, emulators, some tablets |
-            | [`columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-universal.apk`](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-universal.apk) | All | Universal fallback (larger download) |
-
-            **Telemetry variants:**
-            Each APK above also has a `-no-sentry` variant without crash reporting for maximum privacy — append `-no-sentry` to any download link above (e.g. the most common builds: [Python arm64-v8a no-sentry](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-official-rns-py-arm64-v8a-no-sentry.apk) · [Kotlin arm64-v8a no-sentry](${{ steps.version.outputs.dl }}/columba-${{ steps.version.outputs.version }}-EXPERIMENTAL-reticulum-kt-arm64-v8a-no-sentry.apk)). Sentry collects stack traces when Columba encounters errors
-            and provides helpful information to the developer to improve Columba, but is hosted at sentry.io, and is thus not the maximum privacy option.
-
-            > **Not sure which to pick?** Most Android phones use **arm64-v8a**. If unsure, use the **universal** APK.
+            | [`libertychat-${{ steps.version.outputs.version }}-official-rns-py-arm64-v8a.apk`](${{ steps.version.outputs.dl }}/libertychat-${{ steps.version.outputs.version }}-official-rns-py-arm64-v8a.apk) | arm64-v8a | Most modern Android phones & tablets |
+            | [`libertychat-${{ steps.version.outputs.version }}-official-rns-py-armeabi-v7a.apk`](${{ steps.version.outputs.dl }}/libertychat-${{ steps.version.outputs.version }}-official-rns-py-armeabi-v7a.apk) | armeabi-v7a | Older 32-bit ARM devices |
+            | [`libertychat-${{ steps.version.outputs.version }}-official-rns-py-x86_64.apk`](${{ steps.version.outputs.dl }}/libertychat-${{ steps.version.outputs.version }}-official-rns-py-x86_64.apk) | x86_64 | Chromebooks, emulators, some tablets |
+            | [`libertychat-${{ steps.version.outputs.version }}-official-rns-py-universal.apk`](${{ steps.version.outputs.dl }}/libertychat-${{ steps.version.outputs.version }}-official-rns-py-universal.apk) | All | Universal fallback (larger download) |
 
             ### Verification
-            See [SECURITY.md](https://github.com/torlando-tech/columba/blob/main/SECURITY.md) for verification instructions.
-
-            **Signing Certificate Fingerprints:**
+            **Signing certificate fingerprints:**
             ```
             SHA-256: ${{ steps.cert.outputs.sha256 }}
             SHA-1:   ${{ steps.cert.outputs.sha1 }}
             ```
 
-            **SHA256 Checksums:**
+            **SHA256 checksums:**
             ```
             ${{ steps.sha256.outputs.checksums }}
             ```
-            ${{ steps.libchangelog.outputs.notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload APKs as workflow artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: columba-${{ steps.version.outputs.version }}-apks
-          path: columba-*.apk
-          # Short retention: these duplicate the Release assets (which don't count
-          # toward Actions storage). 1 day keeps them handy for a quick download
-          # (e.g. sideloading to a phone) without piling up against the quota.
+          name: liberty-chat-${{ steps.version.outputs.version }}-apks
+          path: libertychat-*.apk
           retention-days: 1
