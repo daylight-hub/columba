@@ -1231,6 +1231,8 @@ class NativeRnsBackendImpl(
         replyQuotedContent: String?,
         iconAppearance: IconAppearance?,
         extraFields: Map<Int, Any>?,
+        audioMode: Int?,
+        audioData: ByteArray?,
     ): Result<MessageReceipt> =
         messageSender.sendLxmfMessageWithMethod(
             destinationHash = destinationHash,
@@ -1246,6 +1248,8 @@ class NativeRnsBackendImpl(
                     replyQuotedContent = replyQuotedContent,
                     iconAppearance = iconAppearance,
                     extraFields = extraFields,
+                    audioMode = audioMode,
+                    audioData = audioData,
                 ),
         )
 
@@ -2028,6 +2032,7 @@ class NativeRnsBackendImpl(
             transport = callTransport,
             callPrivacyBridge = callPrivacyBridge,
         )
+        manager.profilePublisher = ::publishActiveProfileCode
         manager.setup()
         callManager = manager
         // Wire the AIDL master-toggle hook now that the manager exists.
@@ -2042,13 +2047,14 @@ class NativeRnsBackendImpl(
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
                 val mgr =
                     callManager
                         ?: error("Call manager not initialized")
-                mgr.call(destinationHash, profileCode)
+                mgr.call(destinationHash, profileCode, halfDuplex)
             }
         }
 
@@ -2115,6 +2121,32 @@ class NativeRnsBackendImpl(
     override suspend fun setSpeakerLocally(enabled: Boolean) {
         callCoordinator.setSpeakerLocally(enabled)
     }
+
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot switch codec")
+            mgr.switchProfile(profileCode)
+        }
+
+    private val _activeProfileCode = MutableStateFlow(0)
+    override val activeProfileCode: StateFlow<Int> = _activeProfileCode.asStateFlow()
+
+    /** Set by NativeCallManager whenever the effective profile changes. */
+    fun publishActiveProfileCode(code: Int) {
+        _activeProfileCode.value = code
+    }
+
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot switch duplex mode")
+            mgr.setDuplexMode(halfDuplex)
+        }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        runCatching {
+            val mgr = callManager ?: error("Call manager not initialised; cannot key transmitter")
+            mgr.setPttActive(active)
+        }
 
     override suspend fun setPttModeLocally(enabled: Boolean) {
         callCoordinator.setPttModeLocally(enabled)

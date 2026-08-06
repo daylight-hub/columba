@@ -400,6 +400,14 @@ class OnboardingViewModel
                                             enabled = true,
                                             targetHost = defaultServer.host,
                                             targetPort = defaultServer.port,
+                                            // LCS: carry the server's bootstrap flag through.
+                                            // Onboarding previously dropped it, so a user who
+                                            // chose TCP here got the LCS gateway as a permanent
+                                            // interface while the same server added through the
+                                            // TCP wizard got bootstrap_only. Since LCS no longer
+                                            // seeds a bootstrap interface, this is now the only
+                                            // way one gets configured during first run.
+                                            bootstrapOnly = defaultServer.isBootstrap,
                                         )
                                     } else {
                                         Log.w(TAG, "No default TCP server available")

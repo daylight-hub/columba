@@ -134,6 +134,8 @@ internal class ServerRnsLxmf(
             replyQuotedContent,
             iconAppearance,
             extraFields?.toExtraFieldsMap(),
+            payload.audioMode,
+            payload.audioData,
         ).getOrThrow()
         Bundle().apply { putParcelable(BundleKeys.RECEIPT, receipt) }
     }

@@ -68,10 +68,10 @@ class InterfaceInfoTest {
 
     @Test
     fun `BackboneInterface with user-configured name extracts friendly name`() {
-        val info = getInterfaceInfo("BackboneInterface[Beleth RNS Hub]")
+        val info = getInterfaceInfo("BackboneInterface[LCS Public Node]")
 
         assertEquals(Icons.Default.Public, info.icon)
-        assertEquals("Beleth RNS Hub", info.text)
+        assertEquals("LCS Public Node", info.text)
         assertEquals("BackboneInterface", info.subtitle)
     }
 

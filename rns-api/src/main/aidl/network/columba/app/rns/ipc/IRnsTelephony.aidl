@@ -15,6 +15,7 @@
 package network.columba.app.rns.ipc;
 
 import network.columba.app.rns.ipc.callback.IRnsBoolEventCallback;
+import network.columba.app.rns.ipc.callback.IRnsIntEventCallback;
 import network.columba.app.rns.ipc.callback.IRnsCallStateCallback;
 import network.columba.app.rns.ipc.callback.IRnsNullableStringEventCallback;
 import network.columba.app.rns.ipc.callback.IRnsResultCallback;
@@ -22,7 +23,9 @@ import network.columba.app.rns.ipc.callback.IRnsResultCallback;
 oneway interface IRnsTelephony {
     // ==================== Call control (IPC actions) ====================
 
-    void initiateCall(String destinationHash, int profileCode, boolean hasProfileCode, in IRnsResultCallback cb);
+    // halfDuplex: dial straight into half duplex (LXST >= 0.5.0). The mode
+    // preference is sent to the callee when it starts ringing.
+    void initiateCall(String destinationHash, int profileCode, boolean hasProfileCode, boolean halfDuplex, in IRnsResultCallback cb);
     void answerCall(in IRnsResultCallback cb);
 
     // hangupCall, declineCall, setCallMuted, setCallSpeaker are suspend-Unit on Kotlin.
@@ -31,6 +34,10 @@ oneway interface IRnsTelephony {
     void declineCall(in IRnsResultCallback cb);
     void setCallMuted(boolean muted, in IRnsResultCallback cb);
     void setCallSpeaker(boolean speakerOn, in IRnsResultCallback cb);
+
+    // LCS: mid-call codec change. Reconfigures the local pipeline and signals
+    // the peer, which follows. See RnsTelephony.switchCallProfile.
+    void switchCallProfile(int profileCode, in IRnsResultCallback cb);
 
     // One-shot snapshot of the legacy VoiceCallState shape (Result<VoiceCallState>).
     void getCallState(in IRnsResultCallback cb);
@@ -91,4 +98,28 @@ oneway interface IRnsTelephony {
     //
     // Mirrors RnsTelephony.setIncomingEnabled on the Kotlin side.
     void setIncomingEnabled(boolean enabled, in IRnsResultCallback cb);
+
+    // ==================== Duplex mode / PTT (LXST >= 0.5.0) ====================
+    //
+    // setCallDuplexMode signals the peer with PREFERRED_MODE (0xF1 full /
+    // 0xF2 half) and squelches or opens the local transmitter. The mode is
+    // symmetric: an LXST >= 0.5.0 peer applies it to its own transmitter too.
+    // setCallPttActive keys the transmitter while half duplex.
+    //
+    // Half-duplex state is observed through the existing isPttMode surface —
+    // the host sets it on both local and peer-initiated switches — so no new
+    // observer trio is needed here.
+    //
+    // NOTE: appended at the end on purpose. AIDL transaction ids are
+    // positional; inserting above an existing method renumbers everything
+    // after it and breaks any :reticulum process built from older AIDL.
+    void setCallDuplexMode(boolean halfDuplex, in IRnsResultCallback cb);
+    void setCallPttActive(boolean active, in IRnsResultCallback cb);
+
+    // StateFlow<Int> activeProfileCode — the LXST profile the call is actually
+    // running on (0 = unknown). Needed because a profile switch can originate
+    // at the *peer*, and because the callee never picked one locally.
+    void getCurrentActiveProfileCode(in IRnsIntEventCallback cb);
+    void registerActiveProfileCodeObserver(in IRnsIntEventCallback cb);
+    void unregisterActiveProfileCodeObserver(in IRnsIntEventCallback cb);
 }

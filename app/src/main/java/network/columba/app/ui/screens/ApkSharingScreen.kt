@@ -81,7 +81,7 @@ fun ApkSharingScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Share Columba") },
+                title = { Text("Share Liberty Chat") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
@@ -141,7 +141,7 @@ fun ApkSharingScreen(
                     val intent = viewModel.createShareIntent()
                     if (intent != null) {
                         context.startActivity(
-                            Intent.createChooser(intent, "Share Columba APK"),
+                            Intent.createChooser(intent, "Share Liberty Chat APK"),
                         )
                     }
                 },
@@ -249,7 +249,7 @@ private fun SharingSection(
 
                     // Step 2: Download URL QR code
                     Text(
-                        text = "Step 2: Scan to download Columba",
+                        text = "Step 2: Scan to download Liberty Chat",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(top = 8.dp),

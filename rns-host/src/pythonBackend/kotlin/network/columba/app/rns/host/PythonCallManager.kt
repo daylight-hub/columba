@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import network.columba.app.rns.api.call.DuplexModeController
+import network.columba.app.rns.api.call.DuplexSignalling
 import network.columba.app.rns.api.model.NetworkStatus
 import network.columba.app.rns.backend.py.ChaquopyRnsBackend
 import network.columba.app.rns.backend.py.PyEventCallback
@@ -22,6 +24,7 @@ import tech.torlando.lxst.audio.Signalling
 import tech.torlando.lxst.core.AudioDevice
 import tech.torlando.lxst.core.AudioPacketHandler
 import tech.torlando.lxst.core.CallController
+import tech.torlando.lxst.core.CallState
 import tech.torlando.lxst.core.CallCoordinator
 import tech.torlando.lxst.core.PacketRouter
 import tech.torlando.lxst.telephone.Profile
@@ -76,6 +79,26 @@ class PythonCallManager(
     /** Serialises [disableIncoming] / [enableIncoming] transitions. */
     private val incomingLock = Any()
 
+    /**
+     * LCS: duplex mode + transmit squelch for the active call.
+     *
+     * Owned here rather than in LXST-kt because this manager is the single
+     * choke point for outbound audio — every encoded frame, from both the
+     * Kotlin `Packetizer` and the native Oboe/C++ encode path, arrives at the
+     * [AudioPacketHandler] installed in [setup]. Gating there means squelched
+     * really is zero packets on the air, with no fork of LXST-kt required.
+     */
+    private val duplex = DuplexModeController()
+
+    /**
+     * LCS: this call was dialled half duplex; announce it when the callee rings.
+     *
+     * The preference cannot be sent at dial time — there is no link yet. LXST
+     * sends it on inbound STATUS_RINGING, and consumes it there, so a redial
+     * does not inherit a stale flag.
+     */
+    private val pendingHalfDuplex = java.util.concurrent.atomic.AtomicBoolean(false)
+
     init {
         // Auto-run setup() at backend READY (:rns-backend-py can't reach
         // here, so observe its status flow instead of being called inline
@@ -91,10 +114,34 @@ class PythonCallManager(
                     Log.e(TAG, "Auto-setup on backend READY failed", it)
                 }
             }
-            backend.telephonyImpl.profileAwareCallHook = { destHex, profileCode ->
-                call(destHex, profileCode)
+            backend.telephonyImpl.profileAwareCallHook = { destHex, profileCode, halfDuplex ->
+                call(destHex, profileCode, halfDuplex)
             }
+            backend.telephonyImpl.profileSwitchHook = ::switchProfile
+            backend.telephonyImpl.duplexModeHook = ::setDuplexMode
+            backend.telephonyImpl.pttHook = ::setPttActive
             backend.telephonyImpl.setIncomingEnabledHook = ::setIncomingEnabled
+        }
+
+        // Duplex mode is per-call state, so it has to be cleared on every path
+        // out of a call — including peer hangup and link loss, which never
+        // reach this manager's own hangup(). Resetting in answer() instead
+        // would be wrong: a caller dialling us already in half duplex sends
+        // its mode preference while we are still ringing, and answering must
+        // not discard it.
+        scope.launch {
+            callCoordinator.callState.collect { state ->
+                when (state) {
+                    is CallState.Idle, is CallState.Ended,
+                    is CallState.Busy, is CallState.Rejected,
+                    -> {
+                        duplex.reset()
+                        pendingHalfDuplex.set(false)
+                        backend.telephonyImpl.publishActiveProfileCode(0)
+                    }
+                    else -> Unit
+                }
+            }
         }
     }
 
@@ -134,11 +181,19 @@ class PythonCallManager(
         transport.setLocalIdentity(localIdentity)
         packetRouter.setPacketHandler(
             object : AudioPacketHandler {
-                override fun receiveAudioPacket(packet: ByteArray) = transport.sendPacket(packet)
+                override fun receiveAudioPacket(packet: ByteArray) {
+                    // Half-duplex squelch. Dropping here rather than muting the
+                    // mic is the whole point: a mute still transmits encoded
+                    // silence at full frame rate, which costs the same airtime
+                    // as speech on a 700-3200 bps link.
+                    if (duplex.shouldTransmit()) transport.sendPacket(packet)
+                }
+
                 override fun receiveSignal(signal: Int) = transport.sendSignal(signal)
             },
         )
         transport.setPacketCallback { data -> packetRouter.onInboundPacket(data) }
+        transport.inboundSignalTap = ::onInboundSignal
         telephone = Telephone(
             context = context,
             networkTransport = transport,
@@ -344,8 +399,126 @@ class PythonCallManager(
         call(destinationHash, null)
     }
 
+    /**
+     * LCS: change codec on an established call.
+     *
+     * Goes straight to [Telephone.switchProfile] rather than through
+     * CallCoordinator, which holds no Telephone reference — the same reason
+     * [profileAwareCallHook] exists for placing profile-aware calls.
+     *
+     * LXST reconfigures the transmit pipeline and signals the peer, whose own
+     * LXST follows in `switchProfileFromRemote`. It already no-ops if the call
+     * is not established or the profile is unchanged, so no guard is needed
+     * here; an unknown code is the only real error and is worth surfacing.
+     */
+    fun switchProfile(profileCode: Int) {
+        val profile =
+            Profile.fromId(profileCode)
+                ?: error("Unknown codec profile 0x${profileCode.toString(16)}")
+        // LXST-kt's switchProfile() returns silently when the call is not
+        // established, which used to surface as a success the UI acted on —
+        // the local codec label changed while nothing went over the link.
+        // Fail loudly instead so the ViewModel can report it.
+        if (telephone.callStatus != Signalling.STATUS_ESTABLISHED) {
+            error("Call not established; cannot switch codec (status=${telephone.callStatus})")
+        }
+
+        Log.i(TAG, "Switching call codec to ${profile.abbreviation}")
+        // Use LXST-kt's built-in switchProfile: reconfigures our transmit AND
+        // signals the peer (PREFERRED_PROFILE), exactly as Sideband/MeshChat do
+        // when they switch. This is the mechanism dial-time already uses.
+        telephone.switchProfile(profile)
+        backend.telephonyImpl.publishActiveProfileCode(profile.id)
+    }
+
+    /**
+     * LCS: switch the call between full and half duplex (LXST >= 0.5.0).
+     *
+     * Applies the mode locally (entering half duplex squelches immediately, so
+     * the mic is dead until the first PTT press) and announces it to the peer
+     * as `PREFERRED_MODE + mode`. An LXST >= 0.5.0 peer applies the same mode
+     * to its own transmitter and does not echo the signal back; older peers
+     * ignore it and stay full duplex, which is harmless.
+     *
+     * `isPttMode` is host-side call state, so updating it here drives the UI
+     * through the existing observer for both local and peer-initiated switches.
+     */
+    fun setDuplexMode(halfDuplex: Boolean) {
+        Log.i(TAG, "Switching call to ${if (halfDuplex) "half" else "full"} duplex")
+        duplex.applyMode(halfDuplex)
+        syncTransmitSquelch()
+        callCoordinator.setPttModeLocally(halfDuplex)
+        callCoordinator.setPttActiveLocally(false)
+        transport.sendSignal(DuplexSignalling.signalFor(halfDuplex))
+    }
+
+    /** LCS: key (true) / unkey (false) the transmitter. No-op in full duplex. */
+    fun setPttActive(active: Boolean) {
+        duplex.setPttActive(active)
+        syncTransmitSquelch()
+    }
+
+    /**
+     * LCS battery saver: keep the native encoder skip in lockstep with the
+     * squelch gate. When squelched (HDX, PTT released) the capture callback
+     * skips the Opus/Codec2 encode entirely, so no codec work runs while
+     * listening. shouldTransmit() is the single source of truth; !it is squelch.
+     *
+     * Requires LXST-kt >= 0.0.9-lcs (Telephone.setTransmitSquelch). Safe no-op
+     * before a call is established — the flag is re-synced on every mode/PTT
+     * change and on call setup.
+     */
+    private fun syncTransmitSquelch() {
+        runCatching { telephone.setTransmitSquelch(!duplex.shouldTransmit()) }
+            .onFailure { Log.w(TAG, "setTransmitSquelch failed", it) }
+    }
+
+    /**
+     * LCS: peer-initiated duplex switch, tapped off the inbound signal stream.
+     *
+     * Not echoed back — matching LXST's `switch_mode(from_signalling=True)`.
+     */
+    private fun onInboundSignal(signal: Int) {
+        // Caller side: the callee is ringing, so the link is up and the mode
+        // preference can go out. LXST batches this with the profile preference
+        // in one packet; two packets are equivalent, since the receiver
+        // dispatches each signal in the array independently.
+        if (signal == Signalling.STATUS_RINGING && pendingHalfDuplex.compareAndSet(true, false)) {
+            Log.i(TAG, "Dialling half duplex; announcing mode to callee")
+            setDuplexMode(true)
+            return
+        }
+
+        // The effective profile can change without any local action: the caller
+        // announces its choice while we are ringing, and either side can switch
+        // mid-call. Publishing here is what lets the UI show the truth on the
+        // receiving end of both — otherwise it shows whatever this device
+        // last picked, which for a callee is simply the default.
+        if (signal >= DuplexSignalling.PREFERRED_PROFILE) {
+            val code = signal - DuplexSignalling.PREFERRED_PROFILE
+            Log.i(TAG, "Peer profile signal: 0x${code.toString(16)}")
+            backend.telephonyImpl.publishActiveProfileCode(code)
+            return
+        }
+
+        if (!DuplexSignalling.isModeSignal(signal)) return
+        val halfDuplex = DuplexSignalling.isHalfDuplexSignal(signal)
+        Log.i(TAG, "Peer switched call to ${if (halfDuplex) "half" else "full"} duplex")
+        duplex.applyMode(halfDuplex)
+        syncTransmitSquelch()
+        callCoordinator.setPttModeLocally(halfDuplex)
+        callCoordinator.setPttActiveLocally(false)
+    }
+
     /** Profile-aware overload — invoked from PythonRnsTelephony via the hook. */
-    fun call(destinationHash: String, profileCode: Int?) {
+    fun call(
+        destinationHash: String,
+        profileCode: Int?,
+        halfDuplex: Boolean = false,
+    ) {
+        duplex.reset()
+        pendingHalfDuplex.set(halfDuplex)
+        backend.telephonyImpl.publishActiveProfileCode(profileCode ?: 0)
         scope.launch {
             val destBytes = destinationHash.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val profile = profileCode?.let { code ->
@@ -363,6 +536,7 @@ class PythonCallManager(
     }
 
     override fun hangup() {
+        duplex.reset()
         telephone.hangup()
     }
 

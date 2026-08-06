@@ -27,8 +27,11 @@ internal class BoundRnsTelephony(
 ) : RnsTelephony {
     private suspend fun awaitBound(): RnsBackend = backendFlow.filterNotNull().first()
 
-    override suspend fun initiateCall(destinationHash: String, profileCode: Int?): Result<Unit> =
-        awaitBound().telephony.initiateCall(destinationHash, profileCode)
+    override suspend fun initiateCall(
+        destinationHash: String,
+        profileCode: Int?,
+        halfDuplex: Boolean,
+    ): Result<Unit> = awaitBound().telephony.initiateCall(destinationHash, profileCode, halfDuplex)
 
     override suspend fun answerCall(): Result<Unit> = awaitBound().telephony.answerCall()
 
@@ -47,6 +50,15 @@ internal class BoundRnsTelephony(
     override suspend fun setCallSpeaker(speakerOn: Boolean) {
         awaitBound().telephony.setCallSpeaker(speakerOn)
     }
+
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        awaitBound().telephony.switchCallProfile(profileCode)
+
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        awaitBound().telephony.setCallDuplexMode(halfDuplex)
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        awaitBound().telephony.setCallPttActive(active)
 
     override suspend fun getCallState(): Result<VoiceCallState> =
         awaitBound().telephony.getCallState()
@@ -85,6 +97,13 @@ internal class BoundRnsTelephony(
             .filterNotNull()
             .flatMapLatest { it.telephony.isPttMode }
             .stateIn(scope, SharingStarted.Eagerly, false)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override val activeProfileCode: StateFlow<Int> =
+        backendFlow
+            .filterNotNull()
+            .flatMapLatest { it.telephony.activeProfileCode }
+            .stateIn(scope, SharingStarted.Eagerly, 0)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override val isPttActive: StateFlow<Boolean> =

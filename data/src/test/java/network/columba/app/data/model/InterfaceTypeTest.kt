@@ -43,7 +43,7 @@ class InterfaceTypeTest {
     @Test
     fun `fromName returns TCP_CLIENT for BackboneInterface names`() {
         assertEquals(InterfaceType.TCP_CLIENT, InterfaceType.fromName("BackboneInterface[noDNS2/193.26.158.230:4965]"))
-        assertEquals(InterfaceType.TCP_CLIENT, InterfaceType.fromName("BackboneClientInterface[Beleth RNS Hub]"))
+        assertEquals(InterfaceType.TCP_CLIENT, InterfaceType.fromName("BackboneClientInterface[LCS Public Node]"))
         assertEquals(InterfaceType.TCP_CLIENT, InterfaceType.fromName("BackboneInterface"))
     }
 

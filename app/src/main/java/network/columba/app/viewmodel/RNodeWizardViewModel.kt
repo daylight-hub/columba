@@ -185,11 +185,16 @@ data class RNodeWizardState(
     val spreadingFactor: String = "11",
     // Long Fast default (4/5)
     val codingRate: String = "5",
-    // Safe default for all devices
-    val txPower: String = "17",
+    // LCS: 22 dBm — the SX127x hardware maximum, and the LCS default for
+    // RNode links. Note this is still overridden by the regional preset's
+    // defaultTxPower when a region is picked and the user has not edited the
+    // field (see applyRegion below), so regulatory limits per band still win.
+    val txPower: String = "22",
     val stAlock: String = "",
     val ltAlock: String = "",
-    val interfaceMode: String = "boundary",
+    // LCS: "full" rather than upstream's "boundary" — LCS RNodes are expected
+    // to participate fully in transport rather than sit at the network edge.
+    val interfaceMode: String = "full",
     val showAdvancedSettings: Boolean = false,
     // Display logo on RNode screen
     val enableFramebuffer: Boolean = true,

@@ -126,6 +126,32 @@ import network.columba.app.rns.api.model.CallState
 import javax.inject.Inject
 
 /**
+ * LCS: true once the system splash has been removed from the window.
+ *
+ * File-level rather than a MainActivity property because the consumer,
+ * [ColumbaNavigation], is a top-level composable rather than a method of the
+ * Activity — an Activity-private field is simply not in scope there.
+ *
+ * Process-scoped, which is the correct lifetime: the splash belongs to a cold
+ * start, and a fresh process is exactly when it should play again. The overlay
+ * keeps its own `rememberSaveable` latch so an Activity recreation (rotation,
+ * "don't keep activities") does not replay it.
+ */
+private val splashDismissed = mutableStateOf(false)
+
+/**
+ * LCS: true once the branded splash overlay has fully finished — dwell plus
+ * fade-out, not merely the system splash lifting.
+ *
+ * Permission sheets (Bluetooth, precise location) are gated on this. They fire
+ * from LaunchedEffects that otherwise run the instant the app composes, i.e.
+ * behind the splash — which is why the Bluetooth sheet was popping up over
+ * the logo as the wordmark faded in. Holding them until the branding is gone
+ * means: splash, then app, then any prompt — never a prompt over the splash.
+ */
+private val splashFinished = mutableStateOf(false)
+
+/**
  * Main activity for the Columba LXMF Messenger application.
  */
 @AndroidEntryPoint
@@ -150,6 +176,7 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var crashReportManager: CrashReportManager
+
 
     @Inject
     lateinit var transportAdmin: RnsTransportAdmin
@@ -253,6 +280,27 @@ class MainActivity : ComponentActivity() {
         var isThemeReady = false
         var isOnboardingReady = false
         splashScreen.setKeepOnScreenCondition { !isThemeReady || !isOnboardingReady }
+
+        // LCS: fire once the system splash actually leaves the screen.
+        //
+        // setContent below composes the whole tree immediately, while the splash
+        // is still covering it. Anything that starts a timer on composition —
+        // like the branded wordmark overlay — would run and expire underneath,
+        // which is exactly what happened in 1.2.0: the wordmark rendered behind
+        // the splash and removed itself before the splash lifted. Gating on this
+        // flag is the only way to know the user can actually see the screen.
+        // LCS: reset per launch. splashDismissed / splashFinished are file-level
+        // (process-scoped), so on a warm start they would still read true from
+        // the previous launch — the overlay would think it had already finished
+        // and skip straight to opening the permission gate. Clear them here so
+        // every onCreate runs the splash from scratch.
+        splashDismissed.value = false
+        splashFinished.value = false
+
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.remove()
+            splashDismissed.value = true
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -639,9 +687,6 @@ fun ColumbaNavigation(
     // Collect settings state (includes theme preference)
     val settingsState by settingsViewModel.state.collectAsState()
 
-    // One-time anonymous crash-reporting opt-in prompt for existing users (sentry flavor).
-    val showCrashReportingOptIn by settingsViewModel.shouldShowCrashReportingPrompt.collectAsState()
-
     // Access MapViewModel at navigation level so "Locate on Map" can set pending focus
     val mapViewModel: MapViewModel = hiltViewModel()
 
@@ -928,10 +973,18 @@ fun ColumbaNavigation(
     val hasEnabledBluetoothInterface by interfaceRepository.hasEnabledBluetoothInterface.collectAsState(
         initial = false,
     )
-    LaunchedEffect(onboardingState.hasCompletedOnboarding, hasEnabledBluetoothInterface) {
+    LaunchedEffect(
+        onboardingState.hasCompletedOnboarding,
+        hasEnabledBluetoothInterface,
+        splashFinished.value,
+    ) {
         // Only show permission sheet if activity is still active (at least STARTED)
         // to prevent BadTokenException when showing ModalBottomSheet
         if (!LifecycleGuard.isActiveForWindows(lifecycleOwner)) return@LaunchedEffect
+        // LCS: hold until the branded splash has fully finished, so this sheet
+        // never appears over it. splashFinished is a LaunchedEffect key, so this
+        // re-runs and fires the moment the splash completes.
+        if (!splashFinished.value) return@LaunchedEffect
         if (!onboardingState.hasCompletedOnboarding) return@LaunchedEffect
         if (!hasEnabledBluetoothInterface) return@LaunchedEffect
         if (BlePermissionManager.hasAllPermissions(context)) return@LaunchedEffect
@@ -968,7 +1021,14 @@ fun ColumbaNavigation(
     }
     val callState by telephony.callState.collectAsState()
 
-    LaunchedEffect(callState) {
+    LaunchedEffect(callState, navBackStackEntry) {
+        // On a cold start triggered by the incoming call itself, this effect can
+        // run before the NavHost attaches its graph, and navigate() throws
+        // "Navigation graph has not been set". navBackStackEntry is null until
+        // then; re-running when it lands means the call screen appears a beat
+        // later instead of crashing the process.
+        if (navBackStackEntry == null) return@LaunchedEffect
+
         when (val state = callState) {
             is CallState.Incoming -> {
                 val identityHash = state.identityHash
@@ -1071,7 +1131,12 @@ fun ColumbaNavigation(
         network.columba.app.ui.components.PreciseLocationPermissionPrompt(
             locationSharingEnabled = settingsState.locationSharingEnabled,
             locationPrecisionRadius = settingsState.locationPrecisionRadius,
-            enabled = !settingsState.isLoading && onboardingState.hasCompletedOnboarding,
+            // LCS: also hold until the branded splash finishes, so the sheet
+            // never appears over it.
+            enabled =
+                !settingsState.isLoading &&
+                    onboardingState.hasCompletedOnboarding &&
+                    splashFinished.value,
             dismissed = settingsState.preciseLocationPromptDismissed,
             onDismiss = { settingsViewModel.dismissPreciseLocationPrompt() },
         )
@@ -2052,9 +2117,14 @@ fun ColumbaNavigation(
                                         val encodedId = Uri.encode(messageId)
                                         navController.navigate("message_detail/$encodedId")
                                     },
-                                    onVoiceCall = { profileCode ->
+                                    onVoiceCall = { profileCode, linkSpeedBps, halfDuplex ->
                                         val encodedHash = Uri.encode(destinationHash)
-                                        navController.navigate("voice_call/$encodedHash?profileCode=$profileCode")
+                                        // -1 means "not measured"; NavType.LongType has no nullable form.
+                                        val speedArg = linkSpeedBps ?: -1L
+                                        navController.navigate(
+                                            "voice_call/$encodedHash?profileCode=$profileCode" +
+                                                "&linkSpeedBps=$speedArg&halfDuplex=$halfDuplex",
+                                        )
                                     },
                                     onLocateOnMap = { peerHash ->
                                         mapViewModel.focusOnContact(peerHash)
@@ -2178,7 +2248,10 @@ fun ColumbaNavigation(
 
                             // Voice Call Screen (outgoing/active call)
                             composable(
-                                route = "voice_call/{destinationHash}?autoAnswer={autoAnswer}&profileCode={profileCode}",
+                                route =
+                                    "voice_call/{destinationHash}?autoAnswer={autoAnswer}" +
+                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}" +
+                                        "&halfDuplex={halfDuplex}",
                                 arguments =
                                     listOf(
                                         navArgument("destinationHash") { type = NavType.StringType },
@@ -2190,18 +2263,30 @@ fun ColumbaNavigation(
                                             type = NavType.IntType
                                             defaultValue = -1 // -1 means use default
                                         },
+                                        navArgument("linkSpeedBps") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L // -1 means not measured
+                                        },
+                                        navArgument("halfDuplex") {
+                                            type = NavType.BoolType
+                                            defaultValue = false // LCS: full duplex unless asked
+                                        },
                                     ),
                             ) { backStackEntry ->
                                 val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
                                 val autoAnswer = backStackEntry.arguments?.getBoolean("autoAnswer") ?: false
                                 val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
                                 val profileCode = if (profileCodeArg == -1) null else profileCodeArg
+                                val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
+                                val halfDuplex = backStackEntry.arguments?.getBoolean("halfDuplex") ?: false
 
                                 VoiceCallScreen(
                                     destinationHash = destinationHash,
                                     onEndCall = exitCallFlow,
                                     autoAnswer = autoAnswer,
                                     profileCode = profileCode,
+                                    linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
+                                    halfDuplex = halfDuplex,
                                 )
                             }
 
@@ -2270,16 +2355,30 @@ fun ColumbaNavigation(
                     )
                 }
 
-                // One-time anonymous crash-reporting opt-in for existing users. The
-                // ViewModel gates visibility (sentry flavor, onboarding complete, prompt
-                // not yet seen, not already opted in) and marks it seen on either choice.
-                if (showCrashReportingOptIn) {
-                    network.columba.app.ui.screens.settings.dialogs.CrashReportingOptInDialog(
-                        onEnable = { settingsViewModel.enableCrashReportingFromPrompt() },
-                        onDismiss = { settingsViewModel.dismissCrashReportingPrompt() },
-                    )
-                }
+                // LCS: the one-time crash-reporting opt-in popup is removed.
+                // LCS ships the noSentry flavor, so the prompt could only ever
+                // appear as a dead end — and an unprompted dialog asking to send
+                // data off-device is not something Liberty Chat should show. The
+                // toggle remains available in Settings -> Advanced for anyone
+                // building the sentry flavor deliberately.
             }
         }
+
+        // LCS: the branded splash — logo and wordmark on white.
+        //
+        // Declared LAST inside ColumbaTheme, AFTER the Surface. That
+        // ordering is the whole fix: siblings in the same window paint in
+        // declaration order, so while this sat above the Surface it was
+        // drawn first and the app's own background painted straight over
+        // it — the splash was rendering every launch, just underneath
+        // everything, which is why the screen came up blank white.
+        //
+        // Still not a Dialog: a Dialog needs its own window, and the frame
+        // or two that takes to attach lets the app show through as the
+        // system splash lifts.
+        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+            onFinished = { splashFinished.value = true },
+        )
     }
 }

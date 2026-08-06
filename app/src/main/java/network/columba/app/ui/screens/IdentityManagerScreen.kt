@@ -443,7 +443,7 @@ private fun EmptyState(
                 style = MaterialTheme.typography.headlineSmall,
             )
             Text(
-                "Create your first identity to start using Columba, or import an existing identity from a backup file.",
+                "Create your first identity to start using Liberty Chat, or import an existing identity from a backup file.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -790,7 +790,7 @@ private fun ExportTextDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "This key can be imported in Sideband or another Columba instance.",
+                    "This key can be imported in Sideband or another Liberty Chat instance.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

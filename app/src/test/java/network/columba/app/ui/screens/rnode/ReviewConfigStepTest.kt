@@ -49,7 +49,6 @@ class ReviewConfigStepTest {
             frequencyStart = 902_000_000,
             frequencyEnd = 928_000_000,
             maxTxPower = 30,
-            defaultTxPower = 17,
             dutyCycle = 100,
             description = "902-928 MHz ISM band",
         )
@@ -61,7 +60,6 @@ class ReviewConfigStepTest {
             frequencyStart = 868_000_000,
             frequencyEnd = 868_600_000,
             maxTxPower = 14,
-            defaultTxPower = 14,
             dutyCycle = 1,
             description = "Sub-band M: 1% duty cycle, 25 mW (LoRaWAN default)",
         )

@@ -168,12 +168,12 @@ android {
             // app_name lives on the flavor (not the release buildType) so each
             // backend gets its own label. The debug buildType still overrides
             // this with "columbatest" for instrumentation.
-            resValue("string", "app_name", "Columba (Kotlin)")
+            resValue("string", "app_name", "Liberty Chat (Kotlin)")
             buildConfigField("String", "RNS_IMPL", "\"kotlin\"")
         }
         create("pythonBackend") {
             dimension = "rnsImpl"
-            resValue("string", "app_name", "Columba")
+            resValue("string", "app_name", "Liberty Chat")
             buildConfigField("String", "RNS_IMPL", "\"python\"")
         }
     }

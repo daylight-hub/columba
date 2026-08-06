@@ -45,6 +45,7 @@ fun SearchableTopAppBar(
     onSearchQueryChange: (String) -> Unit,
     onSearchToggle: () -> Unit,
     searchPlaceholder: String = "Search...",
+    leadingActions: @Composable (RowScope.() -> Unit)? = null,
     additionalActions: @Composable (RowScope.() -> Unit)? = null,
 ) {
     Column {
@@ -66,6 +67,7 @@ fun SearchableTopAppBar(
                 }
             },
             actions = {
+                leadingActions?.invoke(this)
                 IconButton(onClick = onSearchToggle) {
                     Icon(
                         imageVector = if (isSearching) Icons.Default.Close else Icons.Default.Search,

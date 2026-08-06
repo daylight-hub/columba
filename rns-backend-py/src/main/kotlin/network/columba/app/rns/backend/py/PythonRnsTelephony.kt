@@ -108,14 +108,39 @@ class PythonRnsTelephony(
 
     /** Set by PythonCallManager — bypasses CallCoordinator which drops profileCode. */
     @Volatile
-    var profileAwareCallHook: ((String, Int?) -> Unit)? = null
+    var profileAwareCallHook: ((String, Int?, Boolean) -> Unit)? = null
+
+    /**
+     * LCS: set by PythonCallManager. Same reason as [profileAwareCallHook] —
+     * CallCoordinator holds no Telephone reference, so mid-call codec changes
+     * have to reach the call manager that owns it.
+     */
+    @Volatile
+    var profileSwitchHook: ((Int) -> Unit)? = null
+
+    /** LCS: set by PythonCallManager. Duplex-mode switch — same rationale as [profileSwitchHook]. */
+    private val _activeProfileCode = MutableStateFlow(0)
+    override val activeProfileCode: StateFlow<Int> = _activeProfileCode.asStateFlow()
+
+    /** Set by PythonCallManager whenever the effective profile changes. */
+    fun publishActiveProfileCode(code: Int) {
+        _activeProfileCode.value = code
+    }
+
+    @Volatile
+    var duplexModeHook: ((Boolean) -> Unit)? = null
+
+    /** LCS: set by PythonCallManager. PTT key/unkey — squelches the transmitter. */
+    @Volatile
+    var pttHook: ((Boolean) -> Unit)? = null
 
     override suspend fun initiateCall(
         destinationHash: String,
         profileCode: Int?,
+        halfDuplex: Boolean,
     ): Result<Unit> =
         runCatching {
-            profileAwareCallHook?.invoke(destinationHash, profileCode)
+            profileAwareCallHook?.invoke(destinationHash, profileCode, halfDuplex)
                 ?: callCoordinator.initiateCall(destinationHash)
         }
 
@@ -155,6 +180,30 @@ class PythonRnsTelephony(
             Log.w(TAG, "Ignored error setting speaker=$speakerOn: $e")
         }
     }
+
+    override suspend fun switchCallProfile(profileCode: Int): Result<Unit> =
+        runCatching {
+            val hook =
+                profileSwitchHook
+                    ?: error("Call manager not attached; cannot switch codec")
+            hook(profileCode)
+        }
+
+    override suspend fun setCallDuplexMode(halfDuplex: Boolean): Result<Unit> =
+        runCatching {
+            val hook =
+                duplexModeHook
+                    ?: error("Call manager not attached; cannot switch duplex mode")
+            hook(halfDuplex)
+        }
+
+    override suspend fun setCallPttActive(active: Boolean): Result<Unit> =
+        runCatching {
+            val hook =
+                pttHook
+                    ?: error("Call manager not attached; cannot key transmitter")
+            hook(active)
+        }
 
     // ==================== Host-side local-state mutators ====================
     //

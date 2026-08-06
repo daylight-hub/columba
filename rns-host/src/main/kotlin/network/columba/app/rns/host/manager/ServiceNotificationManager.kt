@@ -125,7 +125,7 @@ class ServiceNotificationManager(
 
         return NotificationCompat
             .Builder(context, CHANNEL_ID)
-            .setContentTitle("Columba Mesh Network")
+            .setContentTitle("Liberty Chat Mesh Network")
             .setContentText(statusText)
             .setStyle(
                 NotificationCompat

@@ -448,6 +448,13 @@ fun ReviewConfigStep(viewModel: RNodeWizardViewModel) {
                     )
                 }
 
+                // LCS: TX-power ceilings by RNode hardware
+                Text(
+                    "Heltec V4 radio — max 28 dBm · RAK or LILYGO — max 22 dBm",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
                 // Airtime limits, interface mode, and framebuffer are not relevant for transport mode
                 if (!state.transportMode) {
                     Spacer(Modifier.height(16.dp))
@@ -552,31 +559,6 @@ fun ReviewConfigStep(viewModel: RNodeWizardViewModel) {
                                 "matching credentials can communicate.",
                     )
 
-                    Spacer(Modifier.height(16.dp))
-
-                    // Display logo on RNode toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Display Logo on RNode",
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                            Text(
-                                "Show Columba logo on RNode's display when connected",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Switch(
-                            checked = state.enableFramebuffer,
-                            onCheckedChange = { viewModel.updateEnableFramebuffer(it) },
-                        )
-                    }
                 }
             }
         }
