@@ -528,6 +528,133 @@ class MainActivity : ComponentActivity() {
         return usbClassificationJob
     }
 
+    /**
+     * Handle USB device attachment - check if it's already configured as an RNode interface.
+     */
+    private fun handleUsbDeviceAttached(usbDevice: UsbDevice) {
+        Log.d(TAG, "handleUsbDeviceAttached called for device: ${usbDevice.deviceName}")
+
+        if (bootloaderFlashModeActive) {
+            Log.d(TAG, "Bootloader flash mode active - skipping auto-navigation")
+            return
+        }
+
+        val now = System.currentTimeMillis()
+        if (shouldIgnoreDuplicateUsbEvent(usbDevice.deviceId, now)) {
+            Log.d(TAG, "Ignoring duplicate USB event for device ${usbDevice.deviceId} (debounce)")
+            return
+        }
+
+        val previousClassificationJob = beginUsbClassification(usbDevice.deviceId, now)
+        usbClassificationJob = lifecycleScope.launch {
+            try {
+                previousClassificationJob?.cancelAndJoin()
+                val classification = classifyAttachedUsbDevice(usbDevice)
+                val existingInterface = classification.configuredRNode
+
+                if (!isUsbDeviceAttached(usbDevice.deviceId)) {
+                    Log.d(TAG, "Device detached during classification; skipping navigation")
+                    return@launch
+                }
+
+                if (existingInterface != null) {
+                    Log.d(TAG, "USB device is configured interface: ${existingInterface.name} (id=${existingInterface.id})")
+                    InterfaceReconnectSignal.triggerReconnect()
+                    pendingNavigation.value = PendingNavigation.InterfaceStats(existingInterface.id)
+
+                    val usbManager = getSystemService(UsbManager::class.java)
+                    if (usbManager.hasPermission(usbDevice)) {
+                        lastUsbReconnectAttempted = true
+                        try {
+                            transportAdmin.reconnectRNodeInterface()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error triggering RNode reconnect", e)
+                        }
+                    }
+                } else {
+                    Log.d(TAG, "USB device is not configured - launching action screen")
+                    pendingNavigation.value =
+                        PendingNavigation.UsbDeviceAction(
+                            usbDeviceId = usbDevice.deviceId,
+                            vendorId = usbDevice.vendorId,
+                            productId = usbDevice.productId,
+                            deviceName = usbDevice.deviceName,
+                        )
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error handling USB device attachment", e)
+            } finally {
+                if (usbClassificationDeviceId == usbDevice.deviceId) {
+                    usbClassificationJob = null
+                    usbClassificationDeviceId = -1
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Represents a pending navigation action from an intent.
+ */
+sealed class PendingNavigation {
+    data class AnnounceDetail(
+        val destinationHash: String,
+    ) : PendingNavigation()
+
+    data class Conversation(
+        val destinationHash: String,
+        val peerName: String,
+        val fromNotification: Boolean = false,
+        val notificationEventId: Long = 0L,
+    ) : PendingNavigation()
+
+    data class AddContact(
+        val lxmaUrl: String,
+    ) : PendingNavigation()
+
+    data class SharedText(
+        val text: String,
+    ) : PendingNavigation()
+
+    data class SharedImage(
+        val uris: List<Uri>,
+    ) : PendingNavigation()
+
+    data class IncomingCall(
+        val identityHash: String,
+    ) : PendingNavigation()
+
+    data class AnswerCall(
+        val identityHash: String,
+    ) : PendingNavigation()
+
+    /** Navigate to Identity Manager with a pre-filled Base32 identity key (from Sideband share) */
+    data class ImportIdentityFromText(
+        val base32Text: String,
+    ) : PendingNavigation()
+
+    /** Navigate to interface stats screen for an existing configured interface */
+    data class InterfaceStats(
+        val interfaceId: Long,
+    ) : PendingNavigation()
+
+    /** Navigate to USB device action screen to choose between flash or configure */
+    data class UsbDeviceAction(
+        val usbDeviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val deviceName: String,
+    ) : PendingNavigation()
+
+    /** Navigate to RNode wizard with USB device pre-selected */
+    data class RNodeWizardWithUsb(
+        val usbDeviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val deviceName: String,
+    ) : PendingNavigation()
 
     /** Navigate to NomadNet browser with a specific node and path */
     data class NomadNetBrowser(

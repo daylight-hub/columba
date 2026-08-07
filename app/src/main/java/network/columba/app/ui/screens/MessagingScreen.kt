@@ -344,7 +344,7 @@ fun MessagingScreen(
     onBackClick: () -> Unit,
     onPeerClick: () -> Unit = {},
     onViewMessageDetails: (messageId: String) -> Unit = {},
-    onVoiceCall: (profileCode: Int) -> Unit = {},
+    onVoiceCall: (profileCode: Int, linkSpeedBps: Long?, halfDuplex: Boolean) -> Unit = { _, _, _ -> },
     onLocateOnMap: (peerHash: String) -> Unit = {},
     fromNotification: Boolean = false,
     notificationEventId: Long = 0L,
