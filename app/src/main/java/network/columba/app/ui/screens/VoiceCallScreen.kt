@@ -450,6 +450,18 @@ fun VoiceCallScreen(
         }
     }
 
+
+    if (showCodecDialog) {
+        InCallCodecDialog(
+            currentProfile = activeProfile,
+            recommendedProfile = recommendedProfile,
+            onDismiss = { showCodecDialog = false },
+            onProfileSelected = { profile ->
+                showCodecDialog = false
+                viewModel.switchCodec(profile)
+            },
+        )
+    }
 }
 
 /**
@@ -568,18 +580,6 @@ private fun PttButton(
         }
     }
 }
-
-    if (showCodecDialog) {
-        InCallCodecDialog(
-            currentProfile = activeProfile,
-            recommendedProfile = recommendedProfile,
-            onDismiss = { showCodecDialog = false },
-            onProfileSelected = { profile ->
-                showCodecDialog = false
-                viewModel.switchCodec(profile)
-            },
-        )
-    }
 
 @Composable
 private fun CallControlButton(
