@@ -69,6 +69,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -144,6 +146,14 @@ fun InterfaceManagementScreen(
         }
 
     // Check BLE permissions on composition and when returning to screen
+    // LCS: re-check for pending interface changes set by wizard VMs when
+    // this screen becomes visible. The ViewModel survives navigation so its
+    // init{} only fires once; without this the Apply & Restart button stays
+    // hidden after returning from an interface wizard.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onScreenResumed()
+    }
+
     LaunchedEffect(key1 = Unit, key2 = state.showBlePermissionRequest) {
         val hasPermissions = BlePermissionManager.hasAllPermissions(context)
         viewModel.updateBlePermissions(hasPermissions)

@@ -241,6 +241,23 @@ class InterfaceManagementViewModel
         }
 
         /**
+         * LCS: Called when the InterfaceManagement screen resumes (ON_RESUME).
+         *
+         * The ViewModel survives navigation — its init{} only runs once. After
+         * returning from an interface wizard that called
+         * configManager.setPendingChanges(true), the init-time check has already
+         * fired and won't run again, so hasPendingChanges stays false and the
+         * "Apply & Restart" button never appears.
+         *
+         * Calling checkExternalPendingChanges() on resume ensures the flag is
+         * read every time the management screen becomes visible, matching the
+         * behaviour the user experienced in prior Liberty Chat releases.
+         */
+        fun onScreenResumed() {
+            checkExternalPendingChanges()
+        }
+
+        /**
          * Seed `currentTransport` synchronously from the observer's snapshot so the chip is
          * correct on the very first composition (no `NONE` frame), then collect the StateFlow
          * for live transitions. The observer seeds its StateFlow from the real transport at

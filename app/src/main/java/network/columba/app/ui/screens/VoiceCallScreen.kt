@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Person
@@ -58,6 +59,7 @@ import network.columba.app.call.PttMediaSessionManager
 import network.columba.app.rns.api.model.CallState
 import kotlinx.coroutines.delay
 import network.columba.app.ui.components.CallQualityAdvisory
+import network.columba.app.ui.components.InCallCodecDialog
 import network.columba.app.ui.model.CodecProfile
 import network.columba.app.viewmodel.CallViewModel
 
@@ -405,6 +407,17 @@ fun VoiceCallScreen(
                     )
                 }
 
+                // LCS: in-call codec switcher. Restored after LXST-kt v0.0.8+
+                // fixed NativePlaybackEngine recreation on switchProfile.
+                CallControlButton(
+                    icon = Icons.Default.GraphicEq,
+                    label = "Codec",
+                    isActive = false,
+                    onClick = { showCodecDialog = true },
+                    enabled = callState is CallState.Active,
+                    testTag = "codecButton",
+                )
+
                 // End call button
                 FilledIconButton(
                     onClick = { viewModel.endCall() },
@@ -555,6 +568,18 @@ private fun PttButton(
         }
     }
 }
+
+    if (showCodecDialog) {
+        InCallCodecDialog(
+            currentProfile = activeProfile,
+            recommendedProfile = recommendedProfile,
+            onDismiss = { showCodecDialog = false },
+            onProfileSelected = { profile ->
+                showCodecDialog = false
+                viewModel.switchCodec(profile)
+            },
+        )
+    }
 
 @Composable
 private fun CallControlButton(
