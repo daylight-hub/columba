@@ -979,7 +979,7 @@ fun ColumbaNavigation(
                                     "?usbDeviceId=${navigation.usbDeviceId}" +
                                     "&usbVendorId=${navigation.vendorId}" +
                                     "&usbProductId=${navigation.productId}" +
-                                    "&usbDeviceName=${Uri.encode(navigation.deviceName)}" +
+                                    "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
                             navController.navigateToEntity(
                                 destination = AppDestination.USB_DEVICE_ACTION,
                                 route = route,

@@ -203,13 +203,12 @@ class MessageCollector
                             if (!existingMessage.isRead) {
                                 try {
                                     notificationHelper.notifyMessageReceived(
-
-                                    maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
                                         destinationHash = sourceHash,
                                         peerName = peerName,
                                         messagePreview = receivedMessage.content.take(100),
                                         isFavorite = isFavorite,
                                     )
+                                    maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
                                     Log.d(TAG, "Posted notification for already-persisted unread message")
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to post notification for already-persisted message", e)

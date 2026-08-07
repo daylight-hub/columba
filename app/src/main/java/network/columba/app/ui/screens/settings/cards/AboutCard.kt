@@ -38,6 +38,8 @@ import network.columba.app.ui.theme.ShinyRedButton
 import network.columba.app.util.SystemInfo
 import network.columba.app.util.safeOpenUrl
 import java.util.Locale
+import android.content.Intent
+import androidx.core.net.toUri
 
 @Composable
 fun AboutCard(

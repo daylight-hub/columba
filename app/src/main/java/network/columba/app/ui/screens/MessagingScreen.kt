@@ -345,6 +345,10 @@ fun MessagingScreen(
     onPeerClick: () -> Unit = {},
     onViewMessageDetails: (messageId: String) -> Unit = {},
     onVoiceCall: (profileCode: Int, linkSpeedBps: Long?, halfDuplex: Boolean) -> Unit = { _, _, _ -> },
+<<<<<<< ours
+=======
+    settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
+>>>>>>> theirs
     onLocateOnMap: (peerHash: String) -> Unit = {},
     fromNotification: Boolean = false,
     notificationEventId: Long = 0L,
