@@ -110,6 +110,7 @@ fun VoiceCallScreen(
     val advisoryDismissed by viewModel.advisoryDismissed.collectAsStateWithLifecycle()
 
     // LCS: in-call codec picker + peer-initiated duplex notice.
+    var showCodecDialog by remember { mutableStateOf(false) }
     var duplexNotice by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
