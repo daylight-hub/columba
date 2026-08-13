@@ -201,7 +201,7 @@ class NotificationHelper
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID_MESSAGES)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle(peerName)
                     .setContentText(messagePreview)
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -309,7 +309,7 @@ class NotificationHelper
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID_ANNOUNCES)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle("Announce from $peerName")
                     .setContentText(contentText)
                     .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -355,7 +355,7 @@ class NotificationHelper
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID_BLE_EVENTS)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle("BLE Peer Connected")
                     .setContentText("Connected to $displayName")
                     .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -400,7 +400,7 @@ class NotificationHelper
             val notification =
                 NotificationCompat
                     .Builder(context, CHANNEL_ID_BLE_EVENTS)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle("BLE Peer Disconnected")
                     .setContentText("Disconnected from $displayName")
                     .setPriority(NotificationCompat.PRIORITY_LOW)

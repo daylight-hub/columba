@@ -191,7 +191,7 @@ fun AboutCard(
                 )
                 TextButton(
                     onClick = {
-                        openExternalUrl(context, "https://github.com/torlando-tech/columba/blob/main/LICENSE.md")
+                        openExternalUrl(context, "https://github.com/daylight-hub/libertychat/blob/liberty-chat/LICENSE.md")
                     },
                 ) {
                     Text("View License", style = MaterialTheme.typography.bodySmall)
