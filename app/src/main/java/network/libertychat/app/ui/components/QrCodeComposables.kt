@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.app.Activity
 import android.content.Context

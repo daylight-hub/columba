@@ -1,4 +1,4 @@
-package network.columba.app.startup
+package network.libertychat.app.startup
 
 import android.content.Context
 import android.content.SharedPreferences

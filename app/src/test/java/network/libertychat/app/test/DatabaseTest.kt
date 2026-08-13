@@ -1,21 +1,21 @@
 // Abstract prevents JUnit from trying to instantiate this base class directly
 @file:Suppress("UnnecessaryAbstractClass")
 
-package network.columba.app.test
+package network.libertychat.app.test
 
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.dao.AnnounceDao
-import network.columba.app.data.db.dao.ContactDao
-import network.columba.app.data.db.dao.ConversationDao
-import network.columba.app.data.db.dao.DraftDao
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.dao.MessageDao
-import network.columba.app.data.db.dao.PeerIdentityDao
-import network.columba.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.dao.AnnounceDao
+import network.libertychat.app.data.db.dao.ContactDao
+import network.libertychat.app.data.db.dao.ConversationDao
+import network.libertychat.app.data.db.dao.DraftDao
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.dao.MessageDao
+import network.libertychat.app.data.db.dao.PeerIdentityDao
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
 import org.junit.After
 import org.junit.Before
 import org.junit.runner.RunWith

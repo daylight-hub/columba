@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.content.Context
 import android.content.Intent
@@ -38,8 +38,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.viewmodel.ContactMarker
-import network.columba.app.viewmodel.MarkerState
+import network.libertychat.app.viewmodel.ContactMarker
+import network.libertychat.app.viewmodel.MarkerState
 
 /**
  * Bottom sheet displayed when tapping a contact's location marker on the map.

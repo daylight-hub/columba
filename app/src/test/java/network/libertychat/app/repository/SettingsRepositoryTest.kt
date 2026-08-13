@@ -1,10 +1,10 @@
-package network.columba.app.repository
+package network.libertychat.app.repository
 
 import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
-import network.columba.app.data.repository.CustomThemeRepository
+import network.libertychat.app.data.repository.CustomThemeRepository
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -905,7 +905,7 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "notifications_enabled",
                         type = "boolean",
                         value = "false",
@@ -924,7 +924,7 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "auto_announce_interval_hours",
                         type = "int",
                         value = "6",
@@ -943,7 +943,7 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "last_sync_timestamp",
                         type = "long",
                         value = "1700000000000",
@@ -962,7 +962,7 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "default_delivery_method",
                         type = "string",
                         value = "PROPAGATED",
@@ -981,12 +981,12 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "unknown_future_setting",
                         type = "boolean",
                         value = "true",
                     ),
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "notifications_enabled",
                         type = "boolean",
                         value = "true",
@@ -1007,7 +1007,7 @@ class SettingsRepositoryTest {
         runTest {
             val entries =
                 listOf(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = "auto_announce_interval_minutes",
                         type = "int",
                         value = "not_a_number",

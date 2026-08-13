@@ -1,6 +1,6 @@
 @file:Suppress("VarCouldBeVal")
 
-package network.columba.app.util
+package network.libertychat.app.util
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

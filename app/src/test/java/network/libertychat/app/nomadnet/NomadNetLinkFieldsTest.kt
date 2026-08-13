@@ -1,4 +1,4 @@
-package network.columba.app.nomadnet
+package network.libertychat.app.nomadnet
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

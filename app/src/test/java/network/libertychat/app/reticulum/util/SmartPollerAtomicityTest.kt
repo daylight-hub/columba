@@ -1,5 +1,5 @@
 @file:Suppress("InjectDispatcher", "NoNameShadowing")
-package network.columba.app.reticulum.util
+package network.libertychat.app.reticulum.util
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

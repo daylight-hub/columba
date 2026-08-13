@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
@@ -6,9 +6,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.service.ConversationLinkManager
-import network.columba.app.test.RegisterComponentActivityRule
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.service.ConversationLinkManager
+import network.libertychat.app.test.RegisterComponentActivityRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

@@ -1,4 +1,4 @@
-package network.columba.app.util.validation
+package network.libertychat.app.util.validation
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

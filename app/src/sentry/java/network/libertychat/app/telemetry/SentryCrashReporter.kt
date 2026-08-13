@@ -1,4 +1,4 @@
-package network.columba.app.telemetry
+package network.libertychat.app.telemetry
 
 import android.content.Context
 import android.util.Log
@@ -6,7 +6,7 @@ import io.sentry.Breadcrumb
 import io.sentry.Sentry
 import io.sentry.SentryLevel
 import io.sentry.android.core.SentryAndroid
-import network.columba.app.BuildConfig
+import network.libertychat.app.BuildConfig
 
 /**
  * Sentry-backed [CrashReporter] used by the `sentry` product flavor.

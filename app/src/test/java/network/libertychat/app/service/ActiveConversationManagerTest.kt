@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest

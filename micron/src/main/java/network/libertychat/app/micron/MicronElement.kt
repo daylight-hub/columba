@@ -1,4 +1,4 @@
-package network.columba.app.micron
+package network.libertychat.app.micron
 
 sealed class MicronElement {
     data class Text(

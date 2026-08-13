@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,8 +51,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.repository.CustomThemeData
-import network.columba.app.viewmodel.ThemeManagementViewModel
+import network.libertychat.app.data.repository.CustomThemeData
+import network.libertychat.app.viewmodel.ThemeManagementViewModel
 
 /**
  * Screen for managing custom themes.

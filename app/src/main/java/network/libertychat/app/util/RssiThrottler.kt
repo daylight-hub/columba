@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 /**
  * Throttles RSSI updates for discovered Bluetooth devices to prevent excessive UI updates.

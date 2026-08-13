@@ -1,4 +1,4 @@
-package network.columba.app.data.db
+package network.libertychat.app.data.db
 
 import android.app.Application
 import android.content.Context

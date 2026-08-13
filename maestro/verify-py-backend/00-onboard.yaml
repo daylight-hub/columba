@@ -44,14 +44,14 @@
 # take several seconds while the Python wrapper initializes; we use
 # extendedWaitUntil with a 20s timeout to absorb that.
 
-appId: network.columba.app.debug
+appId: network.libertychat.app.debug
 name: 00-onboard
 tags:
   - py-backend
   - setup
 ---
 - launchApp:
-    appId: network.columba.app.debug
+    appId: network.libertychat.app.debug
     clearState: true
     clearKeychain: true
     stopApp: true

@@ -1,6 +1,6 @@
-package network.columba.app
+package network.libertychat.app
 
-import network.columba.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsLxmf
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -60,7 +60,7 @@ class ColumbaApplicationTest {
     fun `withTimeoutOrNull for getLxmfIdentity returns identity when fast`() =
         runTest {
             // Arrange
-            val mockIdentity = mockk<network.columba.app.rns.api.model.Identity>()
+            val mockIdentity = mockk<network.libertychat.app.rns.api.model.Identity>()
             coEvery { mockRnsLxmf.getLxmfIdentity() } coAnswers {
                 delay(100)
                 Result.success(mockIdentity)
@@ -82,7 +82,7 @@ class ColumbaApplicationTest {
     fun `getLxmfIdentity returns identity when mock succeeds`() =
         runTest {
             // Arrange
-            val mockIdentity = mockk<network.columba.app.rns.api.model.Identity>()
+            val mockIdentity = mockk<network.libertychat.app.rns.api.model.Identity>()
             coEvery { mockRnsLxmf.getLxmfIdentity() } returns Result.success(mockIdentity)
 
             // Act

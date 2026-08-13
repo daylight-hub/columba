@@ -1,12 +1,12 @@
-package network.columba.app.data.db.dao
+package network.libertychat.app.data.db.dao
 
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import app.cash.turbine.test
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.BlockedPeerEntity
-import network.columba.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.BlockedPeerEntity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals

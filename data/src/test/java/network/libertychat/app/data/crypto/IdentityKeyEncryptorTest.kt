@@ -1,4 +1,4 @@
-package network.columba.app.data.crypto
+package network.libertychat.app.data.crypto
 
 import android.os.Build
 import org.junit.Assert.assertArrayEquals

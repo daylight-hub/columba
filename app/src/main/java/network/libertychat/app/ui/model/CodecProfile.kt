@@ -1,6 +1,6 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
-import network.columba.app.rns.api.model.LinkSpeedProbeResult
+import network.libertychat.app.rns.api.model.LinkSpeedProbeResult
 
 /**
  * Audio codec profiles for voice calls.

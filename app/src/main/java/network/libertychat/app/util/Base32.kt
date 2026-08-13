@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 /**
  * Minimal Base32 encoder/decoder (RFC 4648).

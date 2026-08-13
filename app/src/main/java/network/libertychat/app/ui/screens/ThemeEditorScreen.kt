@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,10 +53,10 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.ColorPickerDialog
-import network.columba.app.util.ThemeColorGenerator
-import network.columba.app.viewmodel.ColorRole
-import network.columba.app.viewmodel.ThemeEditorViewModel
+import network.libertychat.app.ui.components.ColorPickerDialog
+import network.libertychat.app.util.ThemeColorGenerator
+import network.libertychat.app.viewmodel.ColorRole
+import network.libertychat.app.viewmodel.ThemeEditorViewModel
 
 /**
  * Screen for creating and editing custom themes.

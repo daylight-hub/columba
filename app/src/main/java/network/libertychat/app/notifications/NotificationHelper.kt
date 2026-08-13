@@ -1,4 +1,4 @@
-package network.columba.app.notifications
+package network.libertychat.app.notifications
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -15,10 +15,10 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
-import network.columba.app.MainActivity
-import network.columba.app.R
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.repository.SettingsRepository
+import network.libertychat.app.MainActivity
+import network.libertychat.app.R
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
@@ -34,7 +34,7 @@ class NotificationHelper
     constructor(
         @ApplicationContext private val context: Context,
         private val settingsRepository: SettingsRepository,
-        private val activeConversationManager: network.columba.app.service.ActiveConversationManager,
+        private val activeConversationManager: network.libertychat.app.service.ActiveConversationManager,
     ) {
         companion object {
             // Notification channel IDs
@@ -50,10 +50,10 @@ class NotificationHelper
             private const val NOTIFICATION_TAG_MESSAGE_PREFIX = "message:"
 
             // Intent actions
-            const val ACTION_OPEN_ANNOUNCE = "network.columba.app.ACTION_OPEN_ANNOUNCE"
-            const val ACTION_OPEN_CONVERSATION = "network.columba.app.ACTION_OPEN_CONVERSATION"
-            private const val ACTION_REPLY = "network.columba.app.ACTION_REPLY"
-            private const val ACTION_MARK_READ = "network.columba.app.ACTION_MARK_READ"
+            const val ACTION_OPEN_ANNOUNCE = "network.libertychat.app.ACTION_OPEN_ANNOUNCE"
+            const val ACTION_OPEN_CONVERSATION = "network.libertychat.app.ACTION_OPEN_CONVERSATION"
+            private const val ACTION_REPLY = "network.libertychat.app.ACTION_REPLY"
+            private const val ACTION_MARK_READ = "network.libertychat.app.ACTION_MARK_READ"
 
             // Intent extras
             const val EXTRA_DESTINATION_HASH = "destination_hash"

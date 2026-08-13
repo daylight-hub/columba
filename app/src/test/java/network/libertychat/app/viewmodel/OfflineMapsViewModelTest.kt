@@ -1,13 +1,13 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.app.Application
 import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.data.repository.OfflineMapRegion
-import network.columba.app.data.repository.OfflineMapRegionRepository
-import network.columba.app.map.MapLibreOfflineManager
-import network.columba.app.map.TileDownloadManager
+import network.libertychat.app.data.repository.OfflineMapRegion
+import network.libertychat.app.data.repository.OfflineMapRegionRepository
+import network.libertychat.app.map.MapLibreOfflineManager
+import network.libertychat.app.map.TileDownloadManager
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

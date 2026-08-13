@@ -1,4 +1,4 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.content.Context
 import android.content.Intent
@@ -24,16 +24,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import network.columba.app.notifications.CallNotificationHelper
-import network.columba.app.ui.screens.IncomingCallActivityScreen
+import network.libertychat.app.notifications.CallNotificationHelper
+import network.libertychat.app.ui.screens.IncomingCallActivityScreen
 import kotlinx.coroutines.Job
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import network.columba.app.di.RnsTelephonyEntryPoint
-import network.columba.app.rns.api.RnsTelephony
-import network.columba.app.rns.api.model.CallState
+import network.libertychat.app.di.RnsTelephonyEntryPoint
+import network.libertychat.app.rns.api.RnsTelephony
+import network.libertychat.app.rns.api.model.CallState
 
 /**
  * Lightweight Activity that displays the incoming call screen over the lock screen.

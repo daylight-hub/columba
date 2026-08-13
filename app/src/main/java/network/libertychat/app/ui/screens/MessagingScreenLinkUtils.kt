@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.net.Uri
 import android.util.Patterns

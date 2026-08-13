@@ -1,6 +1,6 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
-import network.columba.app.data.model.FrequencyRegion
+import network.libertychat.app.data.model.FrequencyRegion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

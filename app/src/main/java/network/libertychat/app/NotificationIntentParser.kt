@@ -1,7 +1,7 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.content.Intent
-import network.columba.app.notifications.NotificationHelper
+import network.libertychat.app.notifications.NotificationHelper
 import java.util.concurrent.atomic.AtomicLong
 
 /**

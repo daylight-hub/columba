@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.material3.MaterialTheme
@@ -8,10 +8,10 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import network.columba.app.test.MessageDetailTestFixtures
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.model.MessageUi
-import network.columba.app.viewmodel.MessageDetailViewModel
+import network.libertychat.app.test.MessageDetailTestFixtures
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.model.MessageUi
+import network.libertychat.app.viewmodel.MessageDetailViewModel
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

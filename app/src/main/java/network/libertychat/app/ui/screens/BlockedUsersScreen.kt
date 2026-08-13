@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +39,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.db.entity.BlockedPeerEntity
-import network.columba.app.viewmodel.BlockedUsersViewModel
+import network.libertychat.app.data.db.entity.BlockedPeerEntity
+import network.libertychat.app.viewmodel.BlockedUsersViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

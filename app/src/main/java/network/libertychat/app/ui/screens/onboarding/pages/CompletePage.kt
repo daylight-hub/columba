@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding.pages
+package network.libertychat.app.ui.screens.onboarding.pages
 
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
@@ -38,8 +38,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.ui.screens.onboarding.OnboardingInterfaceType
-import network.columba.app.ui.screens.settings.dialogs.IdentityQrCodeDialog
+import network.libertychat.app.ui.screens.onboarding.OnboardingInterfaceType
+import network.libertychat.app.ui.screens.settings.dialogs.IdentityQrCodeDialog
 
 /**
  * Complete page - shows summary and starts messaging.

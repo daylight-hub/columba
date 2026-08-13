@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -73,18 +73,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.model.SignalQuality
-import network.columba.app.ui.components.BluetoothPermissionController
-import network.columba.app.ui.components.QrCodeImage
-import network.columba.app.ui.components.ServiceRestartBanner
-import network.columba.app.ui.components.rememberBluetoothPermissionController
-import network.columba.app.ui.util.rememberLifecycleTickerMillis
-import network.columba.app.util.IdentityQrCodeUtils
-import network.columba.app.viewmodel.BleConnectionsUiState
-import network.columba.app.viewmodel.DebugInfo
-import network.columba.app.viewmodel.DebugViewModel
-import network.columba.app.viewmodel.InterfaceInfo
-import network.columba.app.viewmodel.TestAnnounceResult
+import network.libertychat.app.data.model.SignalQuality
+import network.libertychat.app.ui.components.BluetoothPermissionController
+import network.libertychat.app.ui.components.QrCodeImage
+import network.libertychat.app.ui.components.ServiceRestartBanner
+import network.libertychat.app.ui.components.rememberBluetoothPermissionController
+import network.libertychat.app.ui.util.rememberLifecycleTickerMillis
+import network.libertychat.app.util.IdentityQrCodeUtils
+import network.libertychat.app.viewmodel.BleConnectionsUiState
+import network.libertychat.app.viewmodel.DebugInfo
+import network.libertychat.app.viewmodel.DebugViewModel
+import network.libertychat.app.viewmodel.InterfaceInfo
+import network.libertychat.app.viewmodel.TestAnnounceResult
 import kotlinx.coroutines.launch
 
 /**
@@ -96,9 +96,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun IdentityScreen(
     onBackClick: () -> Unit = {},
-    settingsViewModel: network.columba.app.viewmodel.SettingsViewModel,
+    settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel,
     viewModel: DebugViewModel = hiltViewModel(),
-    bleConnectionsViewModel: network.columba.app.viewmodel.BleConnectionsViewModel = hiltViewModel(),
+    bleConnectionsViewModel: network.libertychat.app.viewmodel.BleConnectionsViewModel = hiltViewModel(),
     onNavigateToBleStatus: () -> Unit = {},
     onNavigateToInterfaceStats: (Long) -> Unit = {},
     onNavigateToInterfaceManagement: () -> Unit = {},
@@ -473,8 +473,8 @@ fun InterfacesCard(
                     // observed RNode variant (RNodeInterface,
                     // RNodeMultiInterface, ColumbaRNodeInterface, KISS-framed
                     // RNode, ...) — see `InterfaceType.fromName`.
-                    val isRNode = network.columba.app.data.model.InterfaceType.fromName(iface.type) ==
-                        network.columba.app.data.model.InterfaceType.RNODE
+                    val isRNode = network.libertychat.app.data.model.InterfaceType.fromName(iface.type) ==
+                        network.libertychat.app.data.model.InterfaceType.RNODE
                     InterfaceRow(
                         iface = iface,
                         onClick =

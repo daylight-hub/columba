@@ -1,18 +1,18 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.ContentResolver
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import network.columba.app.migration.ExportResult
-import network.columba.app.migration.ImportResult
-import network.columba.app.migration.MigrationExporter
-import network.columba.app.migration.MigrationImporter
-import network.columba.app.migration.MigrationPreview
-import network.columba.app.migration.PasswordRequiredException
-import network.columba.app.migration.WrongPasswordException
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.migration.ExportResult
+import network.libertychat.app.migration.ImportResult
+import network.libertychat.app.migration.MigrationExporter
+import network.libertychat.app.migration.MigrationImporter
+import network.libertychat.app.migration.MigrationPreview
+import network.libertychat.app.migration.PasswordRequiredException
+import network.libertychat.app.migration.WrongPasswordException
+import network.libertychat.app.service.InterfaceConfigManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

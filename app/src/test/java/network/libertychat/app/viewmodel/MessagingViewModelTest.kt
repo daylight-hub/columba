@@ -3,36 +3,36 @@
 // UnnecessarySafeCall: MockK match { it?.size } and nullable StateFlow.value patterns are defensive
 @file:Suppress("SleepInsteadOfDelay", "IgnoredReturnValue", "UnnecessarySafeCall")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.paging.PagingData
-import network.columba.app.data.db.entity.MessageEntity
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.data.repository.ReceivedLocationRepository
-import network.columba.app.data.repository.ReplyPreview
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.Identity
-import network.columba.app.rns.api.model.DeliveryStatusUpdate
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.model.Direction
-import network.columba.app.rns.api.model.MessageReceipt
-import network.columba.app.rns.api.model.TransferPhase
-import network.columba.app.rns.api.model.TransferProgressUpdate
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.ActiveConversationManager
-import network.columba.app.service.ConversationLinkManager
-import network.columba.app.notifications.NotificationHelper
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.util.FileAttachment
+import network.libertychat.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.data.repository.ReceivedLocationRepository
+import network.libertychat.app.data.repository.ReplyPreview
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.rns.api.model.DeliveryStatusUpdate
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.MessageReceipt
+import network.libertychat.app.rns.api.model.TransferPhase
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.ActiveConversationManager
+import network.libertychat.app.service.ConversationLinkManager
+import network.libertychat.app.notifications.NotificationHelper
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.util.FileAttachment
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -69,7 +69,7 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.io.ByteArrayOutputStream
-import network.columba.app.data.repository.Message as DataMessage
+import network.libertychat.app.data.repository.Message as DataMessage
 
 /**
  * Unit tests for MessagingViewModel.
@@ -97,7 +97,7 @@ class MessagingViewModelTest {
     private lateinit var identityRepository: IdentityRepository
     private lateinit var conversationLinkManager: ConversationLinkManager
     private lateinit var receivedLocationRepository: ReceivedLocationRepository
-    private lateinit var blockedPeerRepository: network.columba.app.data.repository.BlockedPeerRepository
+    private lateinit var blockedPeerRepository: network.libertychat.app.data.repository.BlockedPeerRepository
     private lateinit var identityResolutionManager: IdentityResolutionManager
     private lateinit var notificationHelper: NotificationHelper
     private lateinit var viewModel: MessagingViewModel
@@ -175,7 +175,7 @@ class MessagingViewModelTest {
         every { propagationNodeManager.isSyncing } returns MutableStateFlow(false)
         every { propagationNodeManager.manualSyncResult } returns MutableSharedFlow()
         every { propagationNodeManager.syncProgress } returns
-            MutableStateFlow(network.columba.app.service.SyncProgress.Idle)
+            MutableStateFlow(network.libertychat.app.service.SyncProgress.Idle)
         every { propagationNodeManager.currentRelay } returns MutableStateFlow(null)
         coEvery { propagationNodeManager.triggerSync() } just Runs
         coEvery { propagationNodeManager.triggerSync(silent = any()) } just Runs
@@ -296,10 +296,10 @@ class MessagingViewModelTest {
     fun `peerActivity exposes durable timestamp for current conversation`() =
         runTest {
             val expected =
-                network.columba.app.data.db.entity.PeerActivityEntity(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
                     destinationHash = testPeerHash,
                     lastReceivedAt = 12_345L,
-                    activityType = network.columba.app.data.db.entity.PeerActivityType.TELEMETRY,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.TELEMETRY,
                 )
             every { conversationLinkManager.observePeerActivity(testPeerHash) } returns flowOf(expected)
             val localViewModel = createTestViewModel()
@@ -605,7 +605,7 @@ class MessagingViewModelTest {
             every { failingPropagationNodeManager.isSyncing } returns MutableStateFlow(false)
             every { failingPropagationNodeManager.manualSyncResult } returns MutableSharedFlow()
             every { failingPropagationNodeManager.syncProgress } returns
-                MutableStateFlow(network.columba.app.service.SyncProgress.Idle)
+                MutableStateFlow(network.libertychat.app.service.SyncProgress.Idle)
             every { failingPropagationNodeManager.currentRelay } returns MutableStateFlow(null)
             coEvery { failingPropagationNodeManager.triggerSync() } just Runs
             coEvery { failingPropagationNodeManager.triggerSync(silent = any()) } just Runs
@@ -2493,7 +2493,7 @@ class MessagingViewModelTest {
             val mockUri = mockk<android.net.Uri>()
 
             every { context.cacheDir } returns cacheDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
@@ -2536,7 +2536,7 @@ class MessagingViewModelTest {
             val mockUri = mockk<android.net.Uri>()
 
             every { context.cacheDir } returns cacheDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
@@ -3076,14 +3076,14 @@ class MessagingViewModelTest {
 
             val context = mockk<android.content.Context>()
             every { context.cacheDir } returns tempDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             val mockUri = mockk<android.net.Uri>()
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
                 androidx.core.content.FileProvider.getUriForFile(
                     any(),
-                    eq("network.columba.app.fileprovider"),
+                    eq("network.libertychat.app.fileprovider"),
                     any(),
                 )
             } returns mockUri
@@ -3122,14 +3122,14 @@ class MessagingViewModelTest {
 
             val context = mockk<android.content.Context>()
             every { context.cacheDir } returns tempDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             val mockUri = mockk<android.net.Uri>()
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
                 androidx.core.content.FileProvider.getUriForFile(
                     any(),
-                    eq("network.columba.app.fileprovider"),
+                    eq("network.libertychat.app.fileprovider"),
                     any(),
                 )
             } returns mockUri
@@ -3165,14 +3165,14 @@ class MessagingViewModelTest {
 
             val context = mockk<android.content.Context>()
             every { context.cacheDir } returns tempDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             val mockUri = mockk<android.net.Uri>()
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
                 androidx.core.content.FileProvider.getUriForFile(
                     any(),
-                    eq("network.columba.app.fileprovider"),
+                    eq("network.libertychat.app.fileprovider"),
                     any(),
                 )
             } returns mockUri
@@ -3215,14 +3215,14 @@ class MessagingViewModelTest {
 
             val context = mockk<android.content.Context>()
             every { context.cacheDir } returns tempDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             val mockUri = mockk<android.net.Uri>()
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
                 androidx.core.content.FileProvider.getUriForFile(
                     any(),
-                    eq("network.columba.app.fileprovider"),
+                    eq("network.libertychat.app.fileprovider"),
                     any(),
                 )
             } returns mockUri
@@ -3257,14 +3257,14 @@ class MessagingViewModelTest {
 
             val context = mockk<android.content.Context>()
             every { context.cacheDir } returns tempDir
-            every { context.packageName } returns "network.columba.app"
+            every { context.packageName } returns "network.libertychat.app"
 
             val mockUri = mockk<android.net.Uri>()
             mockkStatic(androidx.core.content.FileProvider::class)
             every {
                 androidx.core.content.FileProvider.getUriForFile(
                     any(),
-                    eq("network.columba.app.fileprovider"),
+                    eq("network.libertychat.app.fileprovider"),
                     any(),
                 )
             } returns mockUri
@@ -4475,7 +4475,7 @@ class MessagingViewModelTest {
     @Test
     fun `startSharingWithPeer calls location sharing manager`() =
         runViewModelTest {
-            val duration = network.columba.app.ui.model.SharingDuration.FIFTEEN_MINUTES
+            val duration = network.libertychat.app.ui.model.SharingDuration.FIFTEEN_MINUTES
 
             val result = runCatching { viewModel.startSharingWithPeer(testPeerHash, testPeerName, duration) }
             advanceUntilIdle()
@@ -4817,20 +4817,20 @@ class MessagingViewModelTest {
         runTest {
             // Setup custom mock BEFORE ViewModel creation
             val progressFlow =
-                MutableStateFlow<network.columba.app.service.SyncProgress>(
-                    network.columba.app.service.SyncProgress.Idle,
+                MutableStateFlow<network.libertychat.app.service.SyncProgress>(
+                    network.libertychat.app.service.SyncProgress.Idle,
                 )
             every { propagationNodeManager.syncProgress } returns progressFlow
 
             val viewModel = createTestViewModel()
             advanceUntilIdle()
 
-            assertEquals(network.columba.app.service.SyncProgress.Idle, viewModel.syncProgress.value)
+            assertEquals(network.libertychat.app.service.SyncProgress.Idle, viewModel.syncProgress.value)
 
-            progressFlow.value = network.columba.app.service.SyncProgress.Starting
+            progressFlow.value = network.libertychat.app.service.SyncProgress.Starting
             advanceUntilIdle()
 
-            assertEquals(network.columba.app.service.SyncProgress.Starting, viewModel.syncProgress.value)
+            assertEquals(network.libertychat.app.service.SyncProgress.Starting, viewModel.syncProgress.value)
         }
 
     // Note: onCleared() tests removed - method is protected and cannot be called directly
@@ -4969,7 +4969,7 @@ class MessagingViewModelTest {
             coEvery {
                 conversationRepository.getReplyPreview("test-message-id", any())
             } returns
-                network.columba.app.data.repository.ReplyPreview(
+                network.libertychat.app.data.repository.ReplyPreview(
                     messageId = "test-message-id",
                     senderName = "Test Peer",
                     contentPreview = "Hello world",

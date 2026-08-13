@@ -1,8 +1,8 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import kotlinx.coroutines.flow.Flow
-import network.columba.app.data.db.dao.PeerActivityDao
-import network.columba.app.data.db.entity.PeerActivityEntity
+import network.libertychat.app.data.db.dao.PeerActivityDao
+import network.libertychat.app.data.db.entity.PeerActivityEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 

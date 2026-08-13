@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.content.Intent
 import android.webkit.MimeTypeMap
@@ -84,11 +84,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.MicronPageContent
-import network.columba.app.viewmodel.NomadNetBrowserViewModel
-import network.columba.app.viewmodel.NomadNetBrowserViewModel.BrowserState
-import network.columba.app.viewmodel.NomadNetBrowserViewModel.NavigationEvent
-import network.columba.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
+import network.libertychat.app.ui.components.MicronPageContent
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel.BrowserState
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel.NavigationEvent
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
 import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -542,7 +542,7 @@ fun NomadNetBrowserScreen(
                             ) { index ->
                                 MicronPageContent(
                                     document =
-                                        network.columba.app.micron
+                                        network.libertychat.app.micron
                                             .MicronDocument(
                                                 lines = listOf(lines[index]),
                                                 pageBackground = state.document.pageBackground,

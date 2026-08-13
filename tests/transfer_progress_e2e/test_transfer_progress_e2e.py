@@ -18,9 +18,9 @@ import pytest
 from ui_driver import AdbUiDriver, UiSnapshot
 
 
-PKG = "network.columba.app.debug"
-ACTIVITY = f"{PKG}/network.columba.app.MainActivity"
-RECEIVER = f"{PKG}/network.columba.app.test.TestReceiver"
+PKG = "network.libertychat.app.debug"
+ACTIVITY = f"{PKG}/network.libertychat.app.MainActivity"
+RECEIVER = f"{PKG}/network.libertychat.app.test.TestReceiver"
 FILE_NAME = "columba-progress-e2e.bin"
 FILE_SIZE = 1024 * 1024
 
@@ -56,7 +56,7 @@ def logcat(driver: AdbUiDriver) -> str:
 
 
 def broadcast(driver: AdbUiDriver, action: str, **extras: str) -> None:
-    args = ["shell", "am", "broadcast", "-n", RECEIVER, "-a", f"network.columba.test.{action}"]
+    args = ["shell", "am", "broadcast", "-n", RECEIVER, "-a", f"network.libertychat.test.{action}"]
     for key, value in extras.items():
         args.extend(("--es", key, value))
     driver.adb(*args)

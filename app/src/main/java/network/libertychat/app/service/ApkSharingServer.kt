@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.util.Log
 import kotlinx.coroutines.CompletableDeferred

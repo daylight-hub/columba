@@ -1,7 +1,7 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
-import network.columba.app.data.db.dao.CustomThemeDao
-import network.columba.app.data.db.entity.CustomThemeEntity
+import network.libertychat.app.data.db.dao.CustomThemeDao
+import network.libertychat.app.data.db.entity.CustomThemeEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

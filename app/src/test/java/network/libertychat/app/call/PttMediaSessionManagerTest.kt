@@ -1,4 +1,4 @@
-package network.columba.app.call
+package network.libertychat.app.call
 
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After

@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.Manifest
 import android.app.Application
@@ -24,12 +24,12 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.ui.screens.onboarding.OnboardingInterfaceType
-import network.columba.app.util.BatteryOptimizationManager
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.ui.screens.onboarding.OnboardingInterfaceType
+import network.libertychat.app.util.BatteryOptimizationManager
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,7 +60,7 @@ class OnboardingViewModelPermissionsTest {
     private lateinit var mockIdentityRepository: IdentityRepository
     private lateinit var mockInterfaceRepository: InterfaceRepository
     private lateinit var mockInterfaceConfigManager: InterfaceConfigManager
-    private lateinit var mockCrashReportManager: network.columba.app.util.CrashReportManager
+    private lateinit var mockCrashReportManager: network.libertychat.app.util.CrashReportManager
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var context: Context
 

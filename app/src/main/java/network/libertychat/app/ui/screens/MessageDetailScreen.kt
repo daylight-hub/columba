@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,10 +44,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.util.getInterfaceInfo
-import network.columba.app.ui.util.getRssiInfo
-import network.columba.app.ui.util.getSnrInfo
-import network.columba.app.viewmodel.MessageDetailViewModel
+import network.libertychat.app.ui.util.getInterfaceInfo
+import network.libertychat.app.ui.util.getRssiInfo
+import network.libertychat.app.ui.util.getSnrInfo
+import network.libertychat.app.viewmodel.MessageDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

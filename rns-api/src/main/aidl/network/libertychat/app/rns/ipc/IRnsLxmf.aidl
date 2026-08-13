@@ -18,17 +18,17 @@
 // the field accepts (typically byte[] or String) and are expected to stay small
 // — large binary fields must go through attachmentsBlob, not here. See the
 // per-call documentation for which fields each method writes.
-package network.columba.app.rns.ipc;
+package network.libertychat.app.rns.ipc;
 
-import network.columba.app.rns.api.model.DeliveryMethod;
-import network.columba.app.rns.api.model.IconAppearance;
-import network.columba.app.rns.api.model.Identity;
-import network.columba.app.rns.ipc.callback.IRnsDeliveryStatusCallback;
-import network.columba.app.rns.ipc.callback.IRnsMessageCallback;
-import network.columba.app.rns.ipc.callback.IRnsPropagationStateCallback;
-import network.columba.app.rns.ipc.callback.IRnsResultCallback;
-import network.columba.app.rns.ipc.callback.IRnsStringCallback;
-import network.columba.app.rns.ipc.callback.IRnsTransferProgressCallback;
+import network.libertychat.app.rns.api.model.DeliveryMethod;
+import network.libertychat.app.rns.api.model.IconAppearance;
+import network.libertychat.app.rns.api.model.Identity;
+import network.libertychat.app.rns.ipc.callback.IRnsDeliveryStatusCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsMessageCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsPropagationStateCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsResultCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsTransferProgressCallback;
 
 oneway interface IRnsLxmf {
     // ==================== Send ====================

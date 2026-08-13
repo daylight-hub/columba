@@ -1,4 +1,4 @@
-package network.columba.app.map
+package network.libertychat.app.map
 
 import android.content.Context
 import android.util.Log

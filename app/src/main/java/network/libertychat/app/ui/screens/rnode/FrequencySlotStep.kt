@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
@@ -45,11 +45,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.CommunitySlot
-import network.columba.app.data.model.CommunitySlots
-import network.columba.app.data.model.FrequencySlotCalculator
-import network.columba.app.data.model.RNodeRegionalPreset
-import network.columba.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.data.model.CommunitySlot
+import network.libertychat.app.data.model.CommunitySlots
+import network.libertychat.app.data.model.FrequencySlotCalculator
+import network.libertychat.app.data.model.RNodeRegionalPreset
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
 
 /**
  * Step 4: Frequency Slot Selection

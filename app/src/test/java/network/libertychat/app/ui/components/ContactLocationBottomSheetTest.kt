@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.app.Application
 import android.location.Location
@@ -8,9 +8,9 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.ContactMarker
-import network.columba.app.viewmodel.MarkerState
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.ContactMarker
+import network.libertychat.app.viewmodel.MarkerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

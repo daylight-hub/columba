@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.Context
 import android.hardware.usb.UsbDevice
@@ -6,10 +6,10 @@ import android.hardware.usb.UsbManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.InterfaceConfigManager
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.every

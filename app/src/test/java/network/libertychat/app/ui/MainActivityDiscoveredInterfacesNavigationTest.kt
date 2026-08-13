@@ -1,4 +1,4 @@
-package network.columba.app.ui
+package network.libertychat.app.ui
 
 import android.app.Application
 import androidx.compose.material3.Text
@@ -10,9 +10,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.screens.buildFocusInterfaceDetails
-import network.columba.app.ui.screens.isValidCoordinate
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.screens.buildFocusInterfaceDetails
+import network.libertychat.app.ui.screens.isValidCoordinate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

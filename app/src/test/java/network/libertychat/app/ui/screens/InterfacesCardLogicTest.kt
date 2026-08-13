@@ -1,10 +1,10 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
-import network.columba.app.viewmodel.InterfaceIconType
-import network.columba.app.viewmodel.InterfaceInfo
-import network.columba.app.viewmodel.getDialogTitle
-import network.columba.app.viewmodel.getIconType
-import network.columba.app.viewmodel.isClickable
+import network.libertychat.app.viewmodel.InterfaceIconType
+import network.libertychat.app.viewmodel.InterfaceInfo
+import network.libertychat.app.viewmodel.getDialogTitle
+import network.libertychat.app.viewmodel.getIconType
+import network.libertychat.app.viewmodel.isClickable
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.Context
 import android.net.Uri
@@ -15,10 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
 import javax.inject.Inject
 
 private const val TAG = "IdentityUnlockVM"
@@ -183,7 +183,7 @@ class IdentityUnlockViewModel
             // roughly half the time otherwise.
             val launchIntent =
                 android.content.Intent().apply {
-                    setClassName(context, "network.columba.app.MainActivity")
+                    setClassName(context, "network.libertychat.app.MainActivity")
                     addFlags(
                         android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
                             android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK,

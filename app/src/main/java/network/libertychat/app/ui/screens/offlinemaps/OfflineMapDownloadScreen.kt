@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.offlinemaps
+package network.libertychat.app.ui.screens.offlinemaps
 
 import android.Manifest
 import android.location.Location
@@ -72,13 +72,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import network.columba.app.map.TileDownloadManager
-import network.columba.app.util.LocationCompat
-import network.columba.app.viewmodel.AddressSearchResult
-import network.columba.app.viewmodel.DownloadProgress
-import network.columba.app.viewmodel.DownloadWizardStep
-import network.columba.app.viewmodel.OfflineMapDownloadViewModel
-import network.columba.app.viewmodel.RadiusOption
+import network.libertychat.app.map.TileDownloadManager
+import network.libertychat.app.util.LocationCompat
+import network.libertychat.app.viewmodel.AddressSearchResult
+import network.libertychat.app.viewmodel.DownloadProgress
+import network.libertychat.app.viewmodel.DownloadWizardStep
+import network.libertychat.app.viewmodel.OfflineMapDownloadViewModel
+import network.libertychat.app.viewmodel.RadiusOption
 import java.util.Locale
 
 private const val TAG = "OfflineMapDownload"

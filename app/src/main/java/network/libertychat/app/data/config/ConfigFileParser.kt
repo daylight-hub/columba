@@ -1,10 +1,10 @@
-package network.columba.app.data.config
+package network.libertychat.app.data.config
 
 import android.util.Log
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.util.validation.InputValidator
-import network.columba.app.util.validation.ValidationConstants
-import network.columba.app.util.validation.ValidationResult
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.util.validation.InputValidator
+import network.libertychat.app.util.validation.ValidationConstants
+import network.libertychat.app.util.validation.ValidationResult
 import java.io.File
 
 /**

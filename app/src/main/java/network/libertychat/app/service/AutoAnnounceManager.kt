@@ -1,10 +1,10 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.util.Log
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.di.ApplicationScope
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.di.ApplicationScope
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow

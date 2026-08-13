@@ -1,4 +1,4 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.junit4.ComposeTestRule

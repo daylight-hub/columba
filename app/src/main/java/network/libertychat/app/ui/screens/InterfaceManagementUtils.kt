@@ -1,10 +1,10 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.bluetooth.BluetoothAdapter
 import android.util.Log
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.host.manager.CurrentTransport
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.host.manager.CurrentTransport
 import org.json.JSONException
 import org.json.JSONObject
 

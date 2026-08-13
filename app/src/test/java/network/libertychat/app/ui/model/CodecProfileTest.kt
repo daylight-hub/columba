@@ -1,7 +1,7 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import android.app.Application
-import network.columba.app.rns.api.model.LinkSpeedProbeResult
+import network.libertychat.app.rns.api.model.LinkSpeedProbeResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

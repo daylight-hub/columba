@@ -1,6 +1,6 @@
 @file:Suppress("TooManyFunctions", "SwallowedException")
 
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -86,17 +86,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
-import network.columba.app.R
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.host.ble.util.BlePermissionManager
-import network.columba.app.rns.host.manager.CurrentTransport
-import network.columba.app.ui.components.BlePermissionBottomSheet
-import network.columba.app.ui.components.InterfaceConfigDialog
-import network.columba.app.ui.components.LocalCapabilities
-import network.columba.app.ui.components.interfaceTypeIconData
-import network.columba.app.viewmodel.InterfaceManagementViewModel
+import network.libertychat.app.R
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.host.ble.util.BlePermissionManager
+import network.libertychat.app.rns.host.manager.CurrentTransport
+import network.libertychat.app.ui.components.BlePermissionBottomSheet
+import network.libertychat.app.ui.components.InterfaceConfigDialog
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.ui.components.interfaceTypeIconData
+import network.libertychat.app.viewmodel.InterfaceManagementViewModel
 
 /**
  * Screen for managing Reticulum network interfaces.
@@ -767,7 +767,7 @@ fun InterfaceCard(
  * Indented to show hierarchy under the parent interface.
  */
 @Composable
-fun SpawnedPeerCard(info: network.columba.app.viewmodel.TransportInterfaceInfo) {
+fun SpawnedPeerCard(info: network.libertychat.app.viewmodel.TransportInterfaceInfo) {
     val statusColor = if (info.isOnline) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
 
     Card(
@@ -813,7 +813,7 @@ fun SpawnedPeerCard(info: network.columba.app.viewmodel.TransportInterfaceInfo) 
  */
 @Composable
 fun SharedInstanceHostCard(
-    host: network.columba.app.viewmodel.TransportInterfaceInfo,
+    host: network.libertychat.app.viewmodel.TransportInterfaceInfo,
     clientCount: Int,
 ) {
     val statusColor =

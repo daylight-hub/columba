@@ -1,9 +1,9 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import network.columba.app.data.repository.Message
+import network.libertychat.app.data.repository.Message
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

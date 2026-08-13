@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.Context
 import android.net.Uri
@@ -10,38 +10,38 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.data.repository.ReceivedLocationRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.Identity
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.ConversationLinkManager
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.SyncProgress
-import network.columba.app.service.SyncResult
-import network.columba.app.ui.model.CodecProfile
-import network.columba.app.ui.model.DecodedImageResult
-import network.columba.app.ui.model.ImageCache
-import network.columba.app.ui.model.LocationSharingState
-import network.columba.app.ui.model.MessageUi
-import network.columba.app.ui.model.SharingDuration
-import network.columba.app.ui.model.decodeImageWithAnimation
-import network.columba.app.ui.model.getImageMetadata
-import network.columba.app.ui.model.loadFileAttachmentData
-import network.columba.app.ui.model.loadFileAttachmentMetadata
-import network.columba.app.ui.model.loadImageData
-import network.columba.app.ui.model.toMessageUi
-import network.columba.app.util.FileAttachment
-import network.columba.app.util.FileUtils
-import network.columba.app.util.ImageUtils
-import network.columba.app.util.streamHexToFile
-import network.columba.app.util.validation.InputValidator
-import network.columba.app.util.validation.ValidationResult
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.repository.ReceivedLocationRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.ConversationLinkManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.service.SyncResult
+import network.libertychat.app.ui.model.CodecProfile
+import network.libertychat.app.ui.model.DecodedImageResult
+import network.libertychat.app.ui.model.ImageCache
+import network.libertychat.app.ui.model.LocationSharingState
+import network.libertychat.app.ui.model.MessageUi
+import network.libertychat.app.ui.model.SharingDuration
+import network.libertychat.app.ui.model.decodeImageWithAnimation
+import network.libertychat.app.ui.model.getImageMetadata
+import network.libertychat.app.ui.model.loadFileAttachmentData
+import network.libertychat.app.ui.model.loadFileAttachmentMetadata
+import network.libertychat.app.ui.model.loadImageData
+import network.libertychat.app.ui.model.toMessageUi
+import network.libertychat.app.util.FileAttachment
+import network.libertychat.app.util.FileUtils
+import network.libertychat.app.util.ImageUtils
+import network.libertychat.app.util.streamHexToFile
+import network.libertychat.app.util.validation.InputValidator
+import network.libertychat.app.util.validation.ValidationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,8 +70,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
-import network.columba.app.data.repository.Message as DataMessage
-import network.columba.app.rns.api.model.Message as ReticulumMessage
+import network.libertychat.app.data.repository.Message as DataMessage
+import network.libertychat.app.rns.api.model.Message as ReticulumMessage
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -83,19 +83,19 @@ class MessagingViewModel
         private val rnsCore: RnsCore,
         private val rnsLxmf: RnsLxmf,
         private val rnsTransportAdmin: RnsTransportAdmin,
-        private val conversationRepository: network.columba.app.data.repository.ConversationRepository,
-        private val announceRepository: network.columba.app.data.repository.AnnounceRepository,
-        private val contactRepository: network.columba.app.data.repository.ContactRepository,
-        private val activeConversationManager: network.columba.app.service.ActiveConversationManager,
+        private val conversationRepository: network.libertychat.app.data.repository.ConversationRepository,
+        private val announceRepository: network.libertychat.app.data.repository.AnnounceRepository,
+        private val contactRepository: network.libertychat.app.data.repository.ContactRepository,
+        private val activeConversationManager: network.libertychat.app.service.ActiveConversationManager,
         private val settingsRepository: SettingsRepository,
         private val propagationNodeManager: PropagationNodeManager,
         private val locationSharingManager: LocationSharingManager,
-        private val identityRepository: network.columba.app.data.repository.IdentityRepository,
+        private val identityRepository: network.libertychat.app.data.repository.IdentityRepository,
         private val conversationLinkManager: ConversationLinkManager,
         private val receivedLocationRepository: ReceivedLocationRepository,
-        private val blockedPeerRepository: network.columba.app.data.repository.BlockedPeerRepository,
-        private val identityResolutionManager: network.columba.app.service.IdentityResolutionManager,
-        private val notificationHelper: network.columba.app.notifications.NotificationHelper,
+        private val blockedPeerRepository: network.libertychat.app.data.repository.BlockedPeerRepository,
+        private val identityResolutionManager: network.libertychat.app.service.IdentityResolutionManager,
+        private val notificationHelper: network.libertychat.app.notifications.NotificationHelper,
     ) : ViewModel() {
         companion object {
             private const val TAG = "MessagingViewModel"
@@ -154,7 +154,7 @@ class MessagingViewModel
                 }.cachedIn(viewModelScope)
 
         // Announce info for online status - updates in real-time when new announces arrive
-        val announceInfo: StateFlow<network.columba.app.data.repository.Announce?> =
+        val announceInfo: StateFlow<network.libertychat.app.data.repository.Announce?> =
             _currentConversation
                 .flatMapLatest { peerHash ->
                     if (peerHash != null) {
@@ -169,11 +169,11 @@ class MessagingViewModel
                 )
 
         // Durable last verified packet received from the current peer.
-        val peerActivity: StateFlow<network.columba.app.data.db.entity.PeerActivityEntity?> =
+        val peerActivity: StateFlow<network.libertychat.app.data.db.entity.PeerActivityEntity?> =
             _currentConversation
                 .flatMapLatest { peerHash ->
                     if (peerHash != null) {
-                        flow<network.columba.app.data.db.entity.PeerActivityEntity?> {
+                        flow<network.libertychat.app.data.db.entity.PeerActivityEntity?> {
                             emit(null)
                             conversationLinkManager.observePeerActivity(peerHash).collect { emit(it) }
                         }
@@ -187,11 +187,11 @@ class MessagingViewModel
                 )
 
         // Link state for current conversation - provides real-time connectivity status
-        val conversationLinkState: StateFlow<network.columba.app.service.ConversationLinkManager.LinkState?> =
+        val conversationLinkState: StateFlow<network.libertychat.app.service.ConversationLinkManager.LinkState?> =
             _currentConversation
                 .flatMapLatest { peerHash ->
                     if (peerHash != null) {
-                        flow<network.columba.app.service.ConversationLinkManager.LinkState?> {
+                        flow<network.libertychat.app.service.ConversationLinkManager.LinkState?> {
                             emit(null)
                             conversationLinkManager.linkStates
                                 .map { states -> states[peerHash] }
@@ -257,14 +257,14 @@ class MessagingViewModel
         fun toggleVoiceMessagePlayback(messageId: String) {
             if (_playingVoiceMessageId.value == messageId) {
                 voicePlaybackJob?.cancel()
-                network.columba.app.util.VoiceMessagePlayer.stop()
+                network.libertychat.app.util.VoiceMessagePlayer.stop()
                 _playingVoiceMessageId.value = null
                 return
             }
 
             // Starting a different clip supersedes whatever was playing.
             voicePlaybackJob?.cancel()
-            network.columba.app.util.VoiceMessagePlayer.stop()
+            network.libertychat.app.util.VoiceMessagePlayer.stop()
 
             voicePlaybackJob =
                 viewModelScope.launch {
@@ -276,20 +276,20 @@ class MessagingViewModel
                             }
                         val parsed =
                             withContext(Dispatchers.IO) {
-                                network.columba.app.ui.model.parseAudioField(fieldsJson)
+                                network.libertychat.app.ui.model.parseAudioField(fieldsJson)
                             }
                         if (parsed == null) {
                             Log.w(TAG, "No playable audio payload on message ${messageId.take(16)}")
                             return@launch
                         }
                         val (mode, payload) = parsed
-                        if (!network.columba.app.util.VoiceMessagePlayer.canPlay(mode)) {
+                        if (!network.libertychat.app.util.VoiceMessagePlayer.canPlay(mode)) {
                             Log.i(TAG, "Voice message in unplayable mode $mode")
                             return@launch
                         }
                         _loadingVoiceMessageId.value = null
                         _playingVoiceMessageId.value = messageId
-                        network.columba.app.util.VoiceMessagePlayer.play(applicationContext, mode, payload)
+                        network.libertychat.app.util.VoiceMessagePlayer.play(applicationContext, mode, payload)
                     } catch (e: Exception) {
                         Log.e(TAG, "Voice message replay failed", e)
                     } finally {
@@ -348,7 +348,7 @@ class MessagingViewModel
             loadPhotosJob =
                 viewModelScope.launch(Dispatchers.IO) {
                     val photos =
-                        network.columba.app.util.MediaStoreUtils
+                        network.libertychat.app.util.MediaStoreUtils
                             .getRecentPhotos(context.applicationContext)
                     _recentPhotos.value = photos
                 }
@@ -395,8 +395,8 @@ class MessagingViewModel
         val syncProgress: StateFlow<SyncProgress> = propagationNodeManager.syncProgress
 
         private val _transferProgress =
-            MutableStateFlow<Map<String, network.columba.app.rns.api.model.TransferProgressUpdate>>(emptyMap())
-        val transferProgress: StateFlow<Map<String, network.columba.app.rns.api.model.TransferProgressUpdate>> =
+            MutableStateFlow<Map<String, network.libertychat.app.rns.api.model.TransferProgressUpdate>>(emptyMap())
+        val transferProgress: StateFlow<Map<String, network.libertychat.app.rns.api.model.TransferProgressUpdate>> =
             _transferProgress.asStateFlow()
 
         // Track which images have been decoded - used to trigger recomposition
@@ -409,8 +409,8 @@ class MessagingViewModel
         val decodedImages: StateFlow<Map<String, DecodedImageResult>> = _decodedImages.asStateFlow()
 
         // Cache for loaded reply previews - maps message ID to its reply preview
-        private val _replyPreviewCache = MutableStateFlow<Map<String, network.columba.app.ui.model.ReplyPreviewUi>>(emptyMap())
-        val replyPreviewCache: StateFlow<Map<String, network.columba.app.ui.model.ReplyPreviewUi>> = _replyPreviewCache.asStateFlow()
+        private val _replyPreviewCache = MutableStateFlow<Map<String, network.libertychat.app.ui.model.ReplyPreviewUi>>(emptyMap())
+        val replyPreviewCache: StateFlow<Map<String, network.libertychat.app.ui.model.ReplyPreviewUi>> = _replyPreviewCache.asStateFlow()
 
         // Contact status for current conversation - updates reactively
         val isContactSaved: StateFlow<Boolean> =
@@ -494,8 +494,8 @@ class MessagingViewModel
         private var lastDraftText: String = ""
 
         // Reply state - tracks which message is being replied to
-        private val _pendingReplyTo = MutableStateFlow<network.columba.app.ui.model.ReplyPreviewUi?>(null)
-        val pendingReplyTo: StateFlow<network.columba.app.ui.model.ReplyPreviewUi?> = _pendingReplyTo.asStateFlow()
+        private val _pendingReplyTo = MutableStateFlow<network.libertychat.app.ui.model.ReplyPreviewUi?>(null)
+        val pendingReplyTo: StateFlow<network.libertychat.app.ui.model.ReplyPreviewUi?> = _pendingReplyTo.asStateFlow()
 
         // Reaction state - tracks which message is selected for adding a reaction
         private val _pendingReactionMessageId = MutableStateFlow<String?>(null)
@@ -599,7 +599,7 @@ class MessagingViewModel
                     val replyPreview = conversationRepository.getReplyPreview(messageId, currentPeerName)
                     if (replyPreview != null) {
                         _pendingReplyTo.value =
-                            network.columba.app.ui.model.ReplyPreviewUi(
+                            network.libertychat.app.ui.model.ReplyPreviewUi(
                                 messageId = replyPreview.messageId,
                                 senderName = replyPreview.senderName,
                                 contentPreview = replyPreview.contentPreview,
@@ -796,7 +796,7 @@ class MessagingViewModel
                     val publicKey = resolvePeerPublicKey(peerHash)
                     val peerIdentityHash =
                         publicKey?.let {
-                            network.columba.app.data.util.HashUtils
+                            network.libertychat.app.data.util.HashUtils
                                 .computeIdentityHash(it)
                         }
                     blockedPeerRepository.blockPeer(peerHash, peerIdentityHash, currentPeerName, blackholeEnabled)
@@ -862,7 +862,7 @@ class MessagingViewModel
             viewModelScope.launch {
                 locationSharingManager.sharingEvents.collect { event ->
                     when (event) {
-                        is network.columba.app.service.SharingEvent.Blocked ->
+                        is network.libertychat.app.service.SharingEvent.Blocked ->
                             _locationSharingMessage.emit(
                                 "Location sharing is off. Enable it in Settings → Location Sharing.",
                             )
@@ -874,7 +874,7 @@ class MessagingViewModel
             // NOTE: Message collection has been moved to MessageCollector service
             // which runs at application level to ensure messages are collected
             // even when no conversations are open.
-            // See: network.columba.app.service.MessageCollector
+            // See: network.libertychat.app.service.MessageCollector
 
             // NOTE: Identity loading moved to loadIdentityIfNeeded() and called lazily
             // when sending messages, to avoid crashes during init when LXMF router
@@ -970,7 +970,7 @@ class MessagingViewModel
             }
         }
 
-        private suspend fun handleDeliveryStatusUpdate(update: network.columba.app.rns.api.model.DeliveryStatusUpdate) {
+        private suspend fun handleDeliveryStatusUpdate(update: network.libertychat.app.rns.api.model.DeliveryStatusUpdate) {
             try {
                 // Retry mechanism to handle race condition where delivery proof arrives
                 // before database transaction completes
@@ -1062,7 +1062,7 @@ class MessagingViewModel
          * methods query the recipient (conversationHash) as usual.
          */
         private suspend fun enrichSentInterfaceOnDelivery(
-            message: network.columba.app.data.db.entity.MessageEntity,
+            message: network.libertychat.app.data.db.entity.MessageEntity,
             messageHash: String,
         ) {
             if (!message.isFromMe || message.sentInterface != null) return
@@ -1379,7 +1379,7 @@ class MessagingViewModel
                             val fg = activeId.iconForegroundColor
                             val bg = activeId.iconBackgroundColor
                             if (name != null && fg != null && bg != null) {
-                                network.columba.app.rns.api.model.IconAppearance(
+                                network.libertychat.app.rns.api.model.IconAppearance(
                                     iconName = name,
                                     foregroundColor = fg,
                                     backgroundColor = bg,
@@ -1440,7 +1440,7 @@ class MessagingViewModel
 
         @Suppress("LongParameterList") // Refactoring to data class would add unnecessary complexity
         private suspend fun handleSendSuccess(
-            receipt: network.columba.app.rns.api.model.MessageReceipt,
+            receipt: network.libertychat.app.rns.api.model.MessageReceipt,
             sanitized: String,
             destinationHash: String,
             imageData: ByteArray?,
@@ -1929,7 +1929,7 @@ class MessagingViewModel
                     val replyPreview = conversationRepository.getReplyPreview(replyToMessageId, currentPeerName)
                     if (replyPreview != null) {
                         val uiPreview =
-                            network.columba.app.ui.model.ReplyPreviewUi(
+                            network.libertychat.app.ui.model.ReplyPreviewUi(
                                 messageId = replyPreview.messageId,
                                 senderName = replyPreview.senderName,
                                 contentPreview = replyPreview.contentPreview,
@@ -1949,18 +1949,18 @@ class MessagingViewModel
                         // instead of "Message deleted".
                         val replyingMessage = conversationRepository.getMessageById(messageId)
                         val inlineQuote =
-                            network.columba.app.ui.model.parseReplyQuoteFromFields(
+                            network.libertychat.app.ui.model.parseReplyQuoteFromFields(
                                 replyingMessage?.fieldsJson,
                             )
                         val fallbackPreview =
                             if (inlineQuote != null && inlineQuote.isNotEmpty()) {
-                                network.columba.app.ui.model.ReplyPreviewUi(
+                                network.libertychat.app.ui.model.ReplyPreviewUi(
                                     messageId = replyToMessageId,
                                     senderName = "",
                                     contentPreview = inlineQuote,
                                 )
                             } else {
-                                network.columba.app.ui.model.ReplyPreviewUi(
+                                network.libertychat.app.ui.model.ReplyPreviewUi(
                                     messageId = replyToMessageId,
                                     senderName = "",
                                     contentPreview = "Message deleted",
@@ -2238,7 +2238,7 @@ class MessagingViewModel
                         val fg = activeId.iconForegroundColor
                         val bg = activeId.iconBackgroundColor
                         if (name != null && fg != null && bg != null) {
-                            network.columba.app.rns.api.model.IconAppearance(
+                            network.libertychat.app.rns.api.model.IconAppearance(
                                 iconName = name,
                                 foregroundColor = fg,
                                 backgroundColor = bg,
@@ -2559,7 +2559,7 @@ class MessagingViewModel
 
                     // Invalidate reply preview cache entries that reference the deleted message
                     val deletedPlaceholder =
-                        network.columba.app.ui.model.ReplyPreviewUi(
+                        network.libertychat.app.ui.model.ReplyPreviewUi(
                             messageId = messageId,
                             senderName = "",
                             contentPreview = "Message deleted",
@@ -2872,7 +2872,7 @@ private fun ByteArray.toHexString(): String {
 private val HEX_CHARS = "0123456789abcdef".toCharArray()
 
 private fun resolveActualDestHash(
-    receipt: network.columba.app.rns.api.model.MessageReceipt,
+    receipt: network.libertychat.app.rns.api.model.MessageReceipt,
     fallbackHash: String,
 ): String =
     if (receipt.destinationHash.isNotEmpty()) {

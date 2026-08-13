@@ -1,6 +1,6 @@
-package network.columba.app.rns.ipc.callback;
+package network.libertychat.app.rns.ipc.callback;
 
-import network.columba.app.rns.api.model.TransferProgressUpdate;
+import network.libertychat.app.rns.api.model.TransferProgressUpdate;
 
 oneway interface IRnsTransferProgressCallback {
     void onTransferProgress(in TransferProgressUpdate update);

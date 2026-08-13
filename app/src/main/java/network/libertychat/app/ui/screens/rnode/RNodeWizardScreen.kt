@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -24,9 +24,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.WizardBottomBar
-import network.columba.app.viewmodel.RNodeWizardViewModel
-import network.columba.app.viewmodel.WizardStep
+import network.libertychat.app.ui.components.WizardBottomBar
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.viewmodel.WizardStep
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

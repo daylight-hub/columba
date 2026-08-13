@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -44,8 +44,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.util.InterfaceFormattingUtils
-import network.columba.app.viewmodel.InterfaceStatsViewModel
+import network.libertychat.app.util.InterfaceFormattingUtils
+import network.libertychat.app.viewmodel.InterfaceStatsViewModel
 import tech.torlando.rns.stats.ui.TrafficSpeedChart
 import java.util.Locale
 
@@ -145,7 +145,7 @@ private fun ErrorContent(
 
 @Composable
 private fun StatsContent(
-    state: network.columba.app.viewmodel.InterfaceStatsState,
+    state: network.libertychat.app.viewmodel.InterfaceStatsState,
     onToggleEnabled: () -> Unit,
     onEdit: () -> Unit,
     onRequestUsbPermission: () -> Unit,

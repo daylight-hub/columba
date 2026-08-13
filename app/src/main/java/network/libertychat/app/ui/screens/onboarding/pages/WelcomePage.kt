@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding.pages
+package network.libertychat.app.ui.screens.onboarding.pages
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +28,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.R
+import network.libertychat.app.R
 
 /**
  * Welcome page - introduces privacy-first messaging.

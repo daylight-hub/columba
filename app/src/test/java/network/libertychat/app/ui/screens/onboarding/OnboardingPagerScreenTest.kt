@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding
+package network.libertychat.app.ui.screens.onboarding
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
@@ -7,9 +7,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.DebugViewModel
-import network.columba.app.viewmodel.OnboardingViewModel
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.DebugViewModel
+import network.libertychat.app.viewmodel.OnboardingViewModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -42,7 +42,7 @@ class OnboardingPagerScreenTest {
     // Index of the CompletePage for the current build flavor. The crash-reporting opt-in
     // page is inserted before CompletePage in the sentry flavor, so this is not a constant.
     private val completePageIndex =
-        onboardingPages(network.columba.app.BuildConfig.CRASH_REPORTING_AVAILABLE)
+        onboardingPages(network.libertychat.app.BuildConfig.CRASH_REPORTING_AVAILABLE)
             .indexOf(OnboardingPage.COMPLETE)
 
     // ========== Test 1: Initial render shows welcome page (page 0) ==========

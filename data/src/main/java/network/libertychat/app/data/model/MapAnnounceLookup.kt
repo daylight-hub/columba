@@ -1,4 +1,4 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
 /**
  * Lightweight announce lookup for map marker display.

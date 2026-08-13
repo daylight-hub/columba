@@ -1,4 +1,4 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.Manifest
 import android.content.BroadcastReceiver
@@ -76,65 +76,65 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.di.RnsTelephonyEntryPoint
-import network.columba.app.navigation.AppDestination
-import network.columba.app.navigation.ConversationNavigation
-import network.columba.app.navigation.appComposable
-import network.columba.app.navigation.completeCurrentFlow
-import network.columba.app.navigation.navigateToAnsweredCall
-import network.columba.app.navigation.navigateToEntity
-import network.columba.app.navigation.navigateToIncomingCall
-import network.columba.app.notifications.CallNotificationHelper
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.host.ble.util.BlePermissionManager
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.host.ReticulumService
-import network.columba.app.ui.components.BlePermissionBottomSheet
-import network.columba.app.ui.components.LocalCapabilities
-import network.columba.app.ui.components.LocalWindowSize
-import network.columba.app.ui.components.OfflineModeBanner
-import network.columba.app.ui.screens.AnnounceDetailScreen
-import network.columba.app.ui.screens.AnnounceStreamScreen
-import network.columba.app.ui.screens.ApkSharingScreen
-import network.columba.app.ui.screens.BleConnectionStatusScreen
-import network.columba.app.ui.screens.BlockedUsersScreen
-import network.columba.app.ui.screens.ChatsScreen
-import network.columba.app.ui.screens.ContactsScreen
-import network.columba.app.ui.screens.DiscoveredInterfacesScreen
-import network.columba.app.ui.screens.IdentityManagerScreen
-import network.columba.app.ui.screens.IdentityScreen
-import network.columba.app.ui.screens.IncomingCallScreen
-import network.columba.app.ui.screens.InterfaceManagementScreen
-import network.columba.app.ui.screens.MapScreen
-import network.columba.app.ui.screens.MessageDetailScreen
-import network.columba.app.ui.screens.MessagingScreen
-import network.columba.app.ui.screens.MigrationScreen
-import network.columba.app.ui.screens.MyIdentityScreen
-import network.columba.app.ui.screens.NomadNetBrowserScreen
-import network.columba.app.ui.screens.NotificationSettingsScreen
-import network.columba.app.ui.screens.QrScannerScreen
-import network.columba.app.ui.screens.SettingsScreen
-import network.columba.app.ui.screens.ThemeEditorScreen
-import network.columba.app.ui.screens.ThemeManagementScreen
-import network.columba.app.ui.screens.VoiceCallScreen
-import network.columba.app.ui.screens.buildFocusInterfaceDetails
-import network.columba.app.ui.screens.offlinemaps.OfflineMapDownloadScreen
-import network.columba.app.ui.screens.offlinemaps.OfflineMapsScreen
-import network.columba.app.ui.screens.onboarding.OnboardingPagerScreen
-import network.columba.app.ui.screens.tcpclient.TcpClientWizardScreen
-import network.columba.app.ui.theme.ColumbaTheme
-import network.columba.app.ui.util.LifecycleGuard
-import network.columba.app.util.CrashReportManager
-import network.columba.app.util.InterfaceReconnectSignal
-import network.columba.app.viewmodel.ContactsViewModel
-import network.columba.app.viewmodel.MapViewModel
-import network.columba.app.viewmodel.OnboardingViewModel
-import network.columba.app.viewmodel.SettingsViewModel
-import network.columba.app.viewmodel.SharedImageViewModel
-import network.columba.app.viewmodel.SharedTextViewModel
-import network.columba.app.rns.api.model.CallState
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.di.RnsTelephonyEntryPoint
+import network.libertychat.app.navigation.AppDestination
+import network.libertychat.app.navigation.ConversationNavigation
+import network.libertychat.app.navigation.appComposable
+import network.libertychat.app.navigation.completeCurrentFlow
+import network.libertychat.app.navigation.navigateToAnsweredCall
+import network.libertychat.app.navigation.navigateToEntity
+import network.libertychat.app.navigation.navigateToIncomingCall
+import network.libertychat.app.notifications.CallNotificationHelper
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.host.ble.util.BlePermissionManager
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.host.ReticulumService
+import network.libertychat.app.ui.components.BlePermissionBottomSheet
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.ui.components.LocalWindowSize
+import network.libertychat.app.ui.components.OfflineModeBanner
+import network.libertychat.app.ui.screens.AnnounceDetailScreen
+import network.libertychat.app.ui.screens.AnnounceStreamScreen
+import network.libertychat.app.ui.screens.ApkSharingScreen
+import network.libertychat.app.ui.screens.BleConnectionStatusScreen
+import network.libertychat.app.ui.screens.BlockedUsersScreen
+import network.libertychat.app.ui.screens.ChatsScreen
+import network.libertychat.app.ui.screens.ContactsScreen
+import network.libertychat.app.ui.screens.DiscoveredInterfacesScreen
+import network.libertychat.app.ui.screens.IdentityManagerScreen
+import network.libertychat.app.ui.screens.IdentityScreen
+import network.libertychat.app.ui.screens.IncomingCallScreen
+import network.libertychat.app.ui.screens.InterfaceManagementScreen
+import network.libertychat.app.ui.screens.MapScreen
+import network.libertychat.app.ui.screens.MessageDetailScreen
+import network.libertychat.app.ui.screens.MessagingScreen
+import network.libertychat.app.ui.screens.MigrationScreen
+import network.libertychat.app.ui.screens.MyIdentityScreen
+import network.libertychat.app.ui.screens.NomadNetBrowserScreen
+import network.libertychat.app.ui.screens.NotificationSettingsScreen
+import network.libertychat.app.ui.screens.QrScannerScreen
+import network.libertychat.app.ui.screens.SettingsScreen
+import network.libertychat.app.ui.screens.ThemeEditorScreen
+import network.libertychat.app.ui.screens.ThemeManagementScreen
+import network.libertychat.app.ui.screens.VoiceCallScreen
+import network.libertychat.app.ui.screens.buildFocusInterfaceDetails
+import network.libertychat.app.ui.screens.offlinemaps.OfflineMapDownloadScreen
+import network.libertychat.app.ui.screens.offlinemaps.OfflineMapsScreen
+import network.libertychat.app.ui.screens.onboarding.OnboardingPagerScreen
+import network.libertychat.app.ui.screens.tcpclient.TcpClientWizardScreen
+import network.libertychat.app.ui.theme.ColumbaTheme
+import network.libertychat.app.ui.util.LifecycleGuard
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.InterfaceReconnectSignal
+import network.libertychat.app.viewmodel.ContactsViewModel
+import network.libertychat.app.viewmodel.MapViewModel
+import network.libertychat.app.viewmodel.OnboardingViewModel
+import network.libertychat.app.viewmodel.SettingsViewModel
+import network.libertychat.app.viewmodel.SharedImageViewModel
+import network.libertychat.app.viewmodel.SharedTextViewModel
+import network.libertychat.app.rns.api.model.CallState
 import javax.inject.Inject
 
 /**
@@ -198,8 +198,8 @@ class MainActivity : ComponentActivity() {
 
     // Build-time-swappable crash reporter (no-op in the noSentry flavor). Breadcrumbs are
     // recorded against the global reporting hub initialized by ColumbaApplication.
-    private val crashReporter: network.columba.app.telemetry.CrashReporter =
-        network.columba.app.telemetry.CrashReporterProvider.create()
+    private val crashReporter: network.libertychat.app.telemetry.CrashReporter =
+        network.libertychat.app.telemetry.CrashReporterProvider.create()
 
     // JankStats for performance monitoring (Phase 1 Plan 01-03)
     private lateinit var jankStats: androidx.metrics.performance.JankStats
@@ -210,14 +210,14 @@ class MainActivity : ComponentActivity() {
             if (frameData.isJank) {
                 val durationMs = frameData.frameDurationUiNanos / 1_000_000
                 crashReporter.addBreadcrumb(
-                    network.columba.app.telemetry.CrashBreadcrumb(
+                    network.libertychat.app.telemetry.CrashBreadcrumb(
                         category = "performance",
                         message = "Janky frame: ${durationMs}ms",
                         level =
                             if (durationMs > 100) {
-                                network.columba.app.telemetry.CrashReportLevel.WARNING
+                                network.libertychat.app.telemetry.CrashReportLevel.WARNING
                             } else {
-                                network.columba.app.telemetry.CrashReportLevel.INFO
+                                network.libertychat.app.telemetry.CrashReportLevel.INFO
                             },
                         data =
                             mapOf(
@@ -357,7 +357,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             // Signal splash screen dismissal once theme loads
-            val settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel()
+            val settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel = hiltViewModel()
             val settingsState by settingsViewModel.state.collectAsState()
 
             // Dismiss splash screen once theme is loaded (non-default theme or after timeout)
@@ -478,14 +478,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isEsp32S3Candidate(usbDevice: UsbDevice): Boolean =
-        network.columba.app.rns.host.flasher.ESPToolFlasher.isNativeUsbDevice(
+        network.libertychat.app.rns.host.flasher.ESPToolFlasher.isNativeUsbDevice(
             usbDevice.vendorId,
             usbDevice.productId,
         )
 
 
     private suspend fun detectConnectedRNode(usbDevice: UsbDevice): Boolean {
-        val flasher = network.columba.app.rns.host.flasher.RNodeFlasher(this)
+        val flasher = network.libertychat.app.rns.host.flasher.RNodeFlasher(this)
         if (!flasher.hasPermission(usbDevice.deviceId)) return false
         return flasher.isRNodeDevice(usbDevice.deviceId)
     }
@@ -742,7 +742,7 @@ fun ColumbaNavigation(
     var mapPermissionCardDismissed by remember { mutableStateOf(false) }
 
     // Access SettingsViewModel to get theme preference
-    val settingsViewModel: network.columba.app.viewmodel.SettingsViewModel =
+    val settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel =
         androidx.hilt.navigation.compose
             .hiltViewModel()
 
@@ -1070,7 +1070,7 @@ fun ColumbaNavigation(
                 Log.d("ColumbaNavigation", "BLE permissions granted, restarting BLE interface")
                 val restartIntent =
                     Intent(context, ReticulumService::class.java).apply {
-                        action = "network.columba.app.RESTART_BLE"
+                        action = "network.libertychat.app.RESTART_BLE"
                     }
                 context.startService(restartIntent)
             }
@@ -1245,7 +1245,7 @@ fun ColumbaNavigation(
         // Gated on locationSharingEnabled so users who never opted into sharing
         // aren't nagged (issue #991). Hosted inside ColumbaTheme so the sheet
         // matches the app's light/dark theme.
-        network.columba.app.ui.components.PreciseLocationPermissionPrompt(
+        network.libertychat.app.ui.components.PreciseLocationPermissionPrompt(
             locationSharingEnabled = settingsState.locationSharingEnabled,
             locationPrecisionRadius = settingsState.locationPrecisionRadius,
             // LCS: also hold until the branded splash finishes, so the sheet
@@ -1328,7 +1328,7 @@ fun ColumbaNavigation(
                             }
 
                             appComposable(AppDestination.IDENTITY_UNLOCK) {
-                                network.columba.app.ui.screens.IdentityUnlockScreen(
+                                network.libertychat.app.ui.screens.IdentityUnlockScreen(
                                     onResolved = {
                                         // ColumbaApplication bailed out of Reticulum init when
                                         // the key decrypt failed at cold-start. Now that the
@@ -1711,10 +1711,10 @@ fun ColumbaNavigation(
                                     androidx.compose.runtime.mutableStateOf(null)
                                 }
 
-                                network.columba.app.ui.screens.UsbDeviceActionScreen(
+                                network.libertychat.app.ui.screens.UsbDeviceActionScreen(
                                     deviceName = usbDeviceName,
                                     isEsp32S3Candidate =
-                                        network.columba.app.rns.host.flasher.ESPToolFlasher.isNativeUsbDevice(
+                                        network.libertychat.app.rns.host.flasher.ESPToolFlasher.isNativeUsbDevice(
                                             usbVendorId,
                                             usbProductId,
                                         ),
@@ -1746,7 +1746,7 @@ fun ColumbaNavigation(
                                         isDisablingTransport = true
                                         coroutineScope.launch {
                                             val flasher =
-                                                network.columba.app.rns.host.flasher
+                                                network.libertychat.app.rns.host.flasher
                                                     .RNodeFlasher(context)
                                             val success = flasher.tncModeController.disableTncMode(usbDeviceId)
                                             isDisablingTransport = false
@@ -1943,7 +1943,7 @@ fun ColumbaNavigation(
                                 val loraBandwidth = backStackEntry.arguments?.getInt("loraBandwidth") ?: -1
                                 val loraSf = backStackEntry.arguments?.getInt("loraSf") ?: -1
                                 val loraCr = backStackEntry.arguments?.getInt("loraCr") ?: -1
-                                network.columba.app.ui.screens.rnode.RNodeWizardScreen(
+                                network.libertychat.app.ui.screens.rnode.RNodeWizardScreen(
                                     editingInterfaceId = if (interfaceId >= 0) interfaceId else null,
                                     preselectedConnectionType = connectionType,
                                     preselectedUsbDeviceId = if (usbDeviceId >= 0) usbDeviceId else null,
@@ -1975,7 +1975,7 @@ fun ColumbaNavigation(
                                         },
                                     ),
                             ) { backStackEntry ->
-                                network.columba.app.ui.screens.InterfaceStatsScreen(
+                                network.libertychat.app.ui.screens.InterfaceStatsScreen(
                                     onNavigateBack = { navController.popBackStack() },
                                     onNavigateToEdit = { interfaceId, interfaceType ->
                                         // Route to appropriate wizard based on interface type
@@ -2434,7 +2434,7 @@ fun ColumbaNavigation(
         // Still not a Dialog: a Dialog needs its own window, and the frame
         // or two that takes to attach lets the app show through as the
         // system splash lifts.
-        network.columba.app.ui.components.LcsBrandedSplashOverlay(
+        network.libertychat.app.ui.components.LcsBrandedSplashOverlay(
             show = splashDismissed.value,
             onFinished = { splashFinished.value = true },
         )

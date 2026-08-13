@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.app.ActivityManager
 import android.content.Context
@@ -24,17 +24,17 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.dao.AnnounceDao
-import network.columba.app.data.db.entity.AnnounceEntity
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.host.persistence.ReticulumConfigSnapshot
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.dao.AnnounceDao
+import network.libertychat.app.data.db.entity.AnnounceEntity
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.host.persistence.ReticulumConfigSnapshot
 import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -57,7 +57,7 @@ class InterfaceConfigManagerTest {
     private lateinit var rnsTransportAdmin: RnsTransportAdmin
     private lateinit var interfaceRepository: InterfaceRepository
     private lateinit var identityRepository: IdentityRepository
-    private lateinit var identityKeyProvider: network.columba.app.data.crypto.IdentityKeyProvider
+    private lateinit var identityKeyProvider: network.libertychat.app.data.crypto.IdentityKeyProvider
     private lateinit var conversationRepository: ConversationRepository
     private lateinit var messageCollector: MessageCollector
     private lateinit var database: ColumbaDatabase
@@ -65,7 +65,7 @@ class InterfaceConfigManagerTest {
     private lateinit var autoAnnounceManager: AutoAnnounceManager
     private lateinit var identityResolutionManager: IdentityResolutionManager
     private lateinit var propagationNodeManager: PropagationNodeManager
-    private lateinit var transportObserver: network.columba.app.service.manager.InterfaceTransportObserver
+    private lateinit var transportObserver: network.libertychat.app.service.manager.InterfaceTransportObserver
     private lateinit var applicationScope: CoroutineScope
 
     private lateinit var manager: InterfaceConfigManager
@@ -95,7 +95,7 @@ class InterfaceConfigManagerTest {
         propagationNodeManager = mockk()
         transportObserver = mockk()
         every { transportObserver.snapshotTransport() } returns
-            network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE
+            network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE
         applicationScope = testScope.backgroundScope
 
         // Setup SharedPreferences mock
@@ -109,9 +109,9 @@ class InterfaceConfigManagerTest {
         // Setup context mocks
         every { context.filesDir } returns
             mockk {
-                every { absolutePath } returns "/data/data/network.columba.app/files"
+                every { absolutePath } returns "/data/data/network.libertychat.app/files"
             }
-        every { context.packageName } returns "network.columba.app"
+        every { context.packageName } returns "network.libertychat.app"
 
         // Setup ActivityManager mock - no running processes by default
         val activityManager = mockk<ActivityManager>()
@@ -200,7 +200,7 @@ class InterfaceConfigManagerTest {
     fun `applyInterfaceChanges - bails when active identity is password-protected`() =
         runTest {
             val identity =
-                network.columba.app.data.db.entity.LocalIdentityEntity(
+                network.libertychat.app.data.db.entity.LocalIdentityEntity(
                     identityHash = "aabbccdd",
                     displayName = "Test",
                     destinationHash = "11223344",
@@ -226,7 +226,7 @@ class InterfaceConfigManagerTest {
     fun `applyInterfaceChanges - bails when active identity key cannot be decrypted`() =
         runTest {
             val identity =
-                network.columba.app.data.db.entity.LocalIdentityEntity(
+                network.libertychat.app.data.db.entity.LocalIdentityEntity(
                     identityHash = "aabbccdd",
                     displayName = "Test",
                     destinationHash = "11223344",

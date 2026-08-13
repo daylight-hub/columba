@@ -1,8 +1,8 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.content.Context
 import android.os.Build
-import network.columba.app.BuildConfig
+import network.libertychat.app.BuildConfig
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

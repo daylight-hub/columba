@@ -1,15 +1,15 @@
-package network.columba.app.data.database
+package network.libertychat.app.data.database
 
 import android.content.Context
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.CoroutineScope
-import network.columba.app.data.config.ConfigFileParser
-import network.columba.app.data.database.dao.InterfaceDao
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.toJsonString
+import network.libertychat.app.data.config.ConfigFileParser
+import network.libertychat.app.data.database.dao.InterfaceDao
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.toJsonString
 import java.io.File
 import javax.inject.Provider
 

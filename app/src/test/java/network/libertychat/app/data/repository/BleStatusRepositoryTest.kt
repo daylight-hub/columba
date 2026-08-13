@@ -1,15 +1,15 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
-import network.columba.app.data.model.BleConnectionsState
-import network.columba.app.data.model.ConnectionType
-import network.columba.app.rns.host.ble.bridge.KotlinBLEBridge
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.test.BleTestFixtures
+import network.libertychat.app.data.model.BleConnectionsState
+import network.libertychat.app.data.model.ConnectionType
+import network.libertychat.app.rns.host.ble.bridge.KotlinBLEBridge
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.test.BleTestFixtures
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

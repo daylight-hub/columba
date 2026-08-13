@@ -1,17 +1,17 @@
 @file:Suppress("InjectDispatcher")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.net.Uri
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.migration.ExportResult
-import network.columba.app.migration.ImportResult
-import network.columba.app.migration.MigrationExporter
-import network.columba.app.migration.MigrationImporter
-import network.columba.app.migration.MigrationPreview
-import network.columba.app.migration.PreviewWithData
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.migration.ExportResult
+import network.libertychat.app.migration.ImportResult
+import network.libertychat.app.migration.MigrationExporter
+import network.libertychat.app.migration.MigrationImporter
+import network.libertychat.app.migration.MigrationPreview
+import network.libertychat.app.migration.PreviewWithData
+import network.libertychat.app.service.InterfaceConfigManager
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -227,7 +227,7 @@ class MigrationViewModelTest {
             coEvery { migrationImporter.isEncryptedExport(mockUri) } returns Result.success(false)
             coEvery { migrationImporter.previewMigration(mockUri, any()) } returns
                 Result.success(
-                    network.columba.app.migration
+                    network.libertychat.app.migration
                         .PreviewWithData(testImportPreview, ByteArray(0)),
                 )
 

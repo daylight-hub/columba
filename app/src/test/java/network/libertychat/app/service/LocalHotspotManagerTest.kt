@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.app.Application
 import android.os.Build

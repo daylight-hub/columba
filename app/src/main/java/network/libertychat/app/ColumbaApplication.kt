@@ -1,4 +1,4 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.app.Application
 import android.os.StrictMode
@@ -10,26 +10,26 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.LogLevel
-import network.columba.app.rns.api.model.ReticulumConfig
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.MessageCollector
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.TelemetryCollectorManager
-import network.columba.app.startup.ConfigApplyFlagManager
-import network.columba.app.startup.ServiceIdentityVerifier
-import network.columba.app.startup.StartupConfigLoader
-import network.columba.app.telemetry.CrashReporter
-import network.columba.app.telemetry.CrashReporterProvider
-import network.columba.app.util.CrashReportManager
-import network.columba.app.util.HexUtils.hexStringToByteArray
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.LogLevel
+import network.libertychat.app.rns.api.model.ReticulumConfig
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.MessageCollector
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.startup.ConfigApplyFlagManager
+import network.libertychat.app.startup.ServiceIdentityVerifier
+import network.libertychat.app.startup.StartupConfigLoader
+import network.libertychat.app.telemetry.CrashReporter
+import network.libertychat.app.telemetry.CrashReporterProvider
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.HexUtils.hexStringToByteArray
 import javax.inject.Inject
 
 /**
@@ -51,13 +51,13 @@ class ColumbaApplication : Application() {
     lateinit var rnsLxmf: RnsLxmf
 
     @Inject
-    lateinit var rnsTelephony: network.columba.app.rns.api.RnsTelephony
+    lateinit var rnsTelephony: network.libertychat.app.rns.api.RnsTelephony
 
     // Cross-process SharedPreferences wrapper shared with the :reticulum process.
     // Constructed lazily rather than via Hilt because it only needs a Context and has
     // no other dependencies — this avoids adding a module binding for a single call site.
     private val serviceSettingsAccessor by lazy {
-        network.columba.app.rns.host.persistence
+        network.libertychat.app.rns.host.persistence
             .ServiceSettingsAccessor(this)
     }
 
@@ -83,13 +83,13 @@ class ColumbaApplication : Application() {
     lateinit var interfaceRepository: InterfaceRepository
 
     @Inject
-    lateinit var autoAnnounceManager: network.columba.app.service.AutoAnnounceManager
+    lateinit var autoAnnounceManager: network.libertychat.app.service.AutoAnnounceManager
 
     @Inject
     lateinit var identityRepository: IdentityRepository
 
     @Inject
-    lateinit var identityKeyProvider: network.columba.app.data.crypto.IdentityKeyProvider
+    lateinit var identityKeyProvider: network.libertychat.app.data.crypto.IdentityKeyProvider
 
     @Inject
     lateinit var settingsRepository: SettingsRepository
@@ -107,7 +107,7 @@ class ColumbaApplication : Application() {
     lateinit var telemetryCollectorManager: TelemetryCollectorManager
 
     @Inject
-    lateinit var interfaceTransportObserver: network.columba.app.service.manager.InterfaceTransportObserver
+    lateinit var interfaceTransportObserver: network.libertychat.app.service.manager.InterfaceTransportObserver
 
     // Application-level coroutine scope for app-wide operations
     // Uses Dispatchers.Default for background initialization (no main-thread work needed)
@@ -185,7 +185,7 @@ class ColumbaApplication : Application() {
         // Clean up old temp files from previous sessions (attachments, share_images)
         // Run on IO dispatcher to avoid blocking main thread with file operations
         applicationScope.launch(Dispatchers.IO) {
-            network.columba.app.util.FileUtils
+            network.libertychat.app.util.FileUtils
                 .cleanupAllTempFiles(this@ColumbaApplication)
         }
 
@@ -509,7 +509,7 @@ class ColumbaApplication : Application() {
                         // self-init after OOM/force-stop restart when UI isn't around to
                         // drive initialize(). Identity key is intentionally stripped — the
                         // reader decrypts it on demand via Keystore + IdentityKeyProvider.
-                        network.columba.app.rns.host.persistence.ReticulumConfigSnapshot.write(
+                        network.libertychat.app.rns.host.persistence.ReticulumConfigSnapshot.write(
                             context = this@ColumbaApplication,
                             config = config,
                             identityHashHex = activeIdentity?.identityHash,
@@ -621,13 +621,13 @@ class ColumbaApplication : Application() {
      * Map the protocol's sealed NetworkStatus to the string vocabulary that
      * ServiceNotificationManager.getStatusTexts already branches on.
      */
-    private fun networkStatusToServiceString(status: network.columba.app.rns.api.model.NetworkStatus): String =
+    private fun networkStatusToServiceString(status: network.libertychat.app.rns.api.model.NetworkStatus): String =
         when (status) {
-            is network.columba.app.rns.api.model.NetworkStatus.READY -> "READY"
-            is network.columba.app.rns.api.model.NetworkStatus.INITIALIZING -> "INITIALIZING"
-            is network.columba.app.rns.api.model.NetworkStatus.CONNECTING -> "CONNECTING"
-            is network.columba.app.rns.api.model.NetworkStatus.SHUTDOWN -> "SHUTDOWN"
-            is network.columba.app.rns.api.model.NetworkStatus.ERROR -> "ERROR:${status.message}"
+            is network.libertychat.app.rns.api.model.NetworkStatus.READY -> "READY"
+            is network.libertychat.app.rns.api.model.NetworkStatus.INITIALIZING -> "INITIALIZING"
+            is network.libertychat.app.rns.api.model.NetworkStatus.CONNECTING -> "CONNECTING"
+            is network.libertychat.app.rns.api.model.NetworkStatus.SHUTDOWN -> "SHUTDOWN"
+            is network.libertychat.app.rns.api.model.NetworkStatus.ERROR -> "ERROR:${status.message}"
         }
 
     /**
@@ -637,9 +637,9 @@ class ColumbaApplication : Application() {
     private fun updateServiceNotification(status: String) {
         try {
             val intent =
-                android.content.Intent(this, network.columba.app.rns.host.ReticulumService::class.java).apply {
-                    action = network.columba.app.rns.host.ReticulumService.ACTION_UPDATE_NOTIFICATION
-                    putExtra(network.columba.app.rns.host.ReticulumService.EXTRA_NETWORK_STATUS, status)
+                android.content.Intent(this, network.libertychat.app.rns.host.ReticulumService::class.java).apply {
+                    action = network.libertychat.app.rns.host.ReticulumService.ACTION_UPDATE_NOTIFICATION
+                    putExtra(network.libertychat.app.rns.host.ReticulumService.EXTRA_NETWORK_STATUS, status)
                 }
             // startForegroundService also spins up the :reticulum process if it isn't running.
             // ReticulumService.onStartCommand guards on ::managers.isInitialized and returns
@@ -764,7 +764,7 @@ class ColumbaApplication : Application() {
      * when no active identity exists (native stack will create a fresh one) or
      * when decryption fails (caller falls back to the same path).
      */
-    private suspend fun decryptDeliveryKey(activeIdentity: network.columba.app.data.db.entity.LocalIdentityEntity?): ByteArray? {
+    private suspend fun decryptDeliveryKey(activeIdentity: network.libertychat.app.data.db.entity.LocalIdentityEntity?): ByteArray? {
         if (activeIdentity == null) {
             android.util.Log.d(
                 "ColumbaApplication",

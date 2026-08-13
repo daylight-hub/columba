@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import android.Manifest
 import android.app.Activity
@@ -57,13 +57,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import network.columba.app.data.model.BluetoothType
-import network.columba.app.data.model.DiscoveredRNode
-import network.columba.app.data.model.DiscoveredUsbDevice
-import network.columba.app.rns.host.ble.util.BlePermissionManager
-import network.columba.app.viewmodel.RNodeConnectionType
-import network.columba.app.viewmodel.RNodeWizardState
-import network.columba.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.data.model.BluetoothType
+import network.libertychat.app.data.model.DiscoveredRNode
+import network.libertychat.app.data.model.DiscoveredUsbDevice
+import network.libertychat.app.rns.host.ble.util.BlePermissionManager
+import network.libertychat.app.viewmodel.RNodeConnectionType
+import network.libertychat.app.viewmodel.RNodeWizardState
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
 
 @Composable
 fun DeviceDiscoveryStep(viewModel: RNodeWizardViewModel) {

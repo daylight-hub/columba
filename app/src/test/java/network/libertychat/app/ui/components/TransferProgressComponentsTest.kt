@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.app.Application
 import androidx.compose.material3.MaterialTheme
@@ -6,12 +6,12 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.model.Direction
-import network.columba.app.rns.api.model.TransferPhase
-import network.columba.app.rns.api.model.TransferProgressUpdate
-import network.columba.app.service.SyncProgress
-import network.columba.app.test.RegisterComponentActivityRule
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.TransferPhase
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.test.RegisterComponentActivityRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain

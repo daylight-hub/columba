@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,9 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import network.columba.app.ui.model.FileAttachmentUi
-import network.columba.app.ui.theme.ColumbaTheme
-import network.columba.app.util.FileUtils
+import network.libertychat.app.ui.model.FileAttachmentUi
+import network.libertychat.app.ui.theme.ColumbaTheme
+import network.libertychat.app.util.FileUtils
 
 /**
  * Card component for displaying file attachments in messages.

@@ -1,4 +1,4 @@
-package network.columba.app.telemetry
+package network.libertychat.app.telemetry
 
 /**
  * Flavor-bound factory. The `sentry` flavor returns the Sentry-backed reporter.

@@ -1,6 +1,6 @@
 @file:Suppress("MatchingDeclarationName")
 
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
@@ -49,7 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.service.ConversationLinkManager
+import network.libertychat.app.service.ConversationLinkManager
 import java.util.Locale
 
 /**

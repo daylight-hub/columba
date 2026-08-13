@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.content.Context
 import android.util.Log
@@ -10,26 +10,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import network.columba.app.data.db.dao.PeerIconDao
-import network.columba.app.data.db.entity.ContactStatus
-import network.columba.app.data.db.entity.PeerIconEntity
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.notifications.NotificationHelper
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.host.util.PeerNameResolver
-import network.columba.app.ui.model.parseAudioField
-import network.columba.app.util.Codec2Codec
-import network.columba.app.util.VoiceMessagePlayer
+import network.libertychat.app.data.db.dao.PeerIconDao
+import network.libertychat.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.db.entity.PeerIconEntity
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.notifications.NotificationHelper
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.host.util.PeerNameResolver
+import network.libertychat.app.ui.model.parseAudioField
+import network.libertychat.app.util.Codec2Codec
+import network.libertychat.app.util.VoiceMessagePlayer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
-import network.columba.app.data.repository.Message as DataMessage
+import network.libertychat.app.data.repository.Message as DataMessage
 
 /**
  * Application-level service that continuously collects messages and announces from the Reticulum protocol
@@ -387,7 +387,7 @@ class MessageCollector
                         // Prefers displayName from Python's LXMF.display_name_from_app_data()
                         val appData = announce.appData
                         val peerName =
-                            network.columba.app.reticulum.util.AppDataParser.extractPeerName(
+                            network.libertychat.app.reticulum.util.AppDataParser.extractPeerName(
                                 appData,
                                 peerHash,
                                 announce.displayName,
@@ -411,7 +411,7 @@ class MessageCollector
                             val propagationTransferLimitKb =
                                 if (announce.nodeType.name == "PROPAGATION_NODE") {
                                     val metadata =
-                                        network.columba.app.reticulum.util.AppDataParser
+                                        network.libertychat.app.reticulum.util.AppDataParser
                                             .extractPropagationNodeMetadata(appData)
                                     metadata.transferLimitKb
                                 } else {

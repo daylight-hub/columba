@@ -1,15 +1,15 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import app.cash.turbine.test
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.model.PropagationState
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.test.TestFactories
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.PropagationState
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.test.TestFactories
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -956,7 +956,7 @@ class PropagationNodeManagerTest {
 
             // Mock the sync protocol call to return success
             val mockSyncState =
-                network.columba.app.rns.api.model.PropagationState(
+                network.libertychat.app.rns.api.model.PropagationState(
                     state = 0,
                     stateName = "IDLE",
                     progress = 0.0f,
@@ -1208,7 +1208,7 @@ class PropagationNodeManagerTest {
                 )
 
             val mockSyncState =
-                network.columba.app.rns.api.model.PropagationState(
+                network.libertychat.app.rns.api.model.PropagationState(
                     state = 0,
                     stateName = "IDLE",
                     progress = 0.0f,
@@ -1262,7 +1262,7 @@ class PropagationNodeManagerTest {
                 )
 
             val mockSyncState =
-                network.columba.app.rns.api.model.PropagationState(
+                network.libertychat.app.rns.api.model.PropagationState(
                     state = 0,
                     stateName = "IDLE",
                     progress = 0.0f,
@@ -1366,7 +1366,7 @@ class PropagationNodeManagerTest {
                 )
 
             val mockSyncState =
-                network.columba.app.rns.api.model.PropagationState(
+                network.libertychat.app.rns.api.model.PropagationState(
                     state = 0,
                     stateName = "IDLE",
                     progress = 0.0f,
@@ -1535,7 +1535,7 @@ class PropagationNodeManagerTest {
             coEvery { rnsLxmf.requestMessagesFromPropagationNode() } coAnswers {
                 syncCompletion.await() // Wait until we explicitly complete it
                 Result.success(
-                    network.columba.app.rns.api.model.PropagationState(
+                    network.libertychat.app.rns.api.model.PropagationState(
                         state = 0,
                         stateName = "IDLE",
                         progress = 0.0f,
@@ -2064,7 +2064,7 @@ class PropagationNodeManagerTest {
             // Given: Mock addPendingContact for when contact doesn't exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, "My Relay") }
@@ -2081,7 +2081,7 @@ class PropagationNodeManagerTest {
             // Given: Mock addPendingContact for when contact doesn't exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, "My Relay") }
@@ -2098,7 +2098,7 @@ class PropagationNodeManagerTest {
             // Given: Contact does not exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, "My Relay") }
@@ -2133,7 +2133,7 @@ class PropagationNodeManagerTest {
             // Given: Mock addPendingContact for when contact doesn't exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, "My Relay") }
@@ -2150,7 +2150,7 @@ class PropagationNodeManagerTest {
             // Given: Contact does not exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, "Custom Nickname") }
@@ -2167,7 +2167,7 @@ class PropagationNodeManagerTest {
             // Given: Contact does not exist
             coEvery { contactRepository.hasContact(testDestHash) } returns false
             coEvery { contactRepository.addPendingContact(any(), any()) } returns
-                Result.success(network.columba.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
+                Result.success(network.libertychat.app.data.repository.ContactRepository.AddPendingResult.AddedAsPending)
 
             // When
             val result = runCatching { manager.setManualRelayByHash(testDestHash, null) }

@@ -201,7 +201,7 @@ run_smoke_tests() {
     fi
 
     # Run specific smoke test if it exists, otherwise run all androidTests
-    TEST_CLASS="network.columba.app.smoke.SmokeTest"
+    TEST_CLASS="network.libertychat.app.smoke.SmokeTest"
 
     log_info "Running instrumented tests..."
     if ./gradlew :app:connectedNoSentryDebugAndroidTest \
@@ -228,7 +228,7 @@ capture_debug_info() {
     # Logcat (last 1000 lines, filtered for our app)
     log_info "Capturing logcat..."
     adb -s "$DEVICE_SERIAL" logcat -d -t 1000 \
-        --pid=$(adb -s "$DEVICE_SERIAL" shell pidof network.columba.app 2>/dev/null || echo "0") \
+        --pid=$(adb -s "$DEVICE_SERIAL" shell pidof network.libertychat.app 2>/dev/null || echo "0") \
         > "$OUTPUT_DIR/logcat_${timestamp}.log" 2>/dev/null || true
 
     # Full logcat for comprehensive debugging

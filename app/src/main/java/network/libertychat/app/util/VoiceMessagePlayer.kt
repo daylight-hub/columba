@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.content.Context
 import android.media.AudioAttributes
@@ -12,7 +12,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import network.columba.app.rns.api.util.LxmfFields
+import network.libertychat.app.rns.api.util.LxmfFields
 import java.io.File
 import kotlin.coroutines.resume
 

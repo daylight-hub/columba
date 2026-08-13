@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 /**
  * Formats a timestamp into a human-readable relative time string.

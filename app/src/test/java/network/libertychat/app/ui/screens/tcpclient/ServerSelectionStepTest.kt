@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.tcpclient
+package network.libertychat.app.ui.screens.tcpclient
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
@@ -6,10 +6,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.data.model.TcpCommunityServer
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.test.TcpClientWizardTestFixtures
-import network.columba.app.viewmodel.TcpClientWizardViewModel
+import network.libertychat.app.data.model.TcpCommunityServer
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.test.TcpClientWizardTestFixtures
+import network.libertychat.app.viewmodel.TcpClientWizardViewModel
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

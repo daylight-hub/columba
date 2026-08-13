@@ -1,10 +1,10 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.DebugInfo
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.DebugInfo
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain

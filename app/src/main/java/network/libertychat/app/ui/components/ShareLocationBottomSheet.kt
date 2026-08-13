@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,8 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.ui.model.SharingDuration
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.ui.model.SharingDuration
 
 /**
  * Bottom sheet for configuring location sharing with contacts.

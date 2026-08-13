@@ -1,4 +1,4 @@
-package network.columba.app.data.util
+package network.libertychat.app.data.util
 
 import java.security.MessageDigest
 

@@ -1,11 +1,11 @@
-package network.columba.app.notifications
+package network.libertychat.app.notifications
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import network.columba.app.ColumbaApplication
-import network.columba.app.MainActivity
+import network.libertychat.app.ColumbaApplication
+import network.libertychat.app.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

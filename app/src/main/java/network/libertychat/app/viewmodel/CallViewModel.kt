@@ -1,13 +1,13 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.rns.api.RnsTelephony
-import network.columba.app.rns.api.model.CallState
-import network.columba.app.ui.model.CodecProfile
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.rns.api.RnsTelephony
+import network.libertychat.app.rns.api.model.CallState
+import network.libertychat.app.ui.model.CodecProfile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow

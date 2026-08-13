@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -47,12 +47,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.repository.Announce
-import network.columba.app.ui.theme.MeshConnected
-import network.columba.app.ui.theme.MeshLimited
-import network.columba.app.ui.theme.MeshOffline
-import network.columba.app.util.formatTimeSince
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.ui.theme.MeshConnected
+import network.libertychat.app.ui.theme.MeshLimited
+import network.libertychat.app.ui.theme.MeshOffline
+import network.libertychat.app.util.formatTimeSince
 
 /**
  * Shared peer card component used by both AnnounceStreamScreen and SavedPeersScreen.

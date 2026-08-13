@@ -1,6 +1,6 @@
 @file:Suppress("TooManyFunctions") // Composable UI file with multiple small components
 
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -53,12 +53,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.service.SharingSession
-import network.columba.app.ui.components.CollapsibleSettingsCard
-import network.columba.app.ui.components.ProfileIcon
-import network.columba.app.ui.model.SharingDuration
-import network.columba.app.ui.util.rememberLifecycleTickerMillis
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.service.SharingSession
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.ui.components.ProfileIcon
+import network.libertychat.app.ui.model.SharingDuration
+import network.libertychat.app.ui.util.rememberLifecycleTickerMillis
 
 /**
  * Settings card for managing location sharing preferences and active sessions.

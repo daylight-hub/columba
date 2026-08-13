@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.content.Intent
 import android.graphics.BitmapFactory
@@ -171,58 +171,58 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import network.columba.app.R
-import network.columba.app.service.SyncProgress
-import network.columba.app.service.SyncResult
-import network.columba.app.rns.api.BackendCapabilities.Support
-import network.columba.app.rns.api.model.Direction
-import network.columba.app.rns.api.model.TransferProgressUpdate
-import network.columba.app.ui.components.AttachmentPanel
-import network.columba.app.ui.components.CodecSelectionDialog
-import network.columba.app.ui.components.FileAttachmentCard
-import network.columba.app.ui.components.FileAttachmentOptionsSheet
-import network.columba.app.ui.components.FileAttachmentPreviewRow
-import network.columba.app.ui.components.FullEmojiPickerDialog
-import network.columba.app.ui.components.ImageOptionsSheet
-import network.columba.app.ui.components.ImageQualitySelectionDialog
-import network.columba.app.ui.components.LocationPermissionBottomSheet
-import network.columba.app.ui.components.LocalCapabilities
-import network.columba.app.ui.components.MarkdownMessageText
-import network.columba.app.ui.components.MessageTransferProgress
-import network.columba.app.ui.components.QuickShareLocationBottomSheet
-import network.columba.app.ui.components.ReactionDisplayRow
-import network.columba.app.ui.components.ReactionModeOverlay
-import network.columba.app.ui.components.ReplyInputBar
-import network.columba.app.ui.components.ReplyPreviewBubble
-import network.columba.app.ui.components.SelectableTextDialog
-import network.columba.app.ui.components.StarToggleButton
-import network.columba.app.ui.components.SwipeableMessageBubble
-import network.columba.app.ui.components.SyncStatusBottomSheet
-import network.columba.app.ui.components.ConversationTransferTray
-import network.columba.app.ui.components.simpleVerticalScrollbar
-import network.columba.app.ui.model.CodecProfile
-import network.columba.app.ui.model.LocationSharingState
-import network.columba.app.ui.model.MessageRenderer
-import network.columba.app.ui.theme.MeshConnected
-import network.columba.app.ui.theme.MeshOffline
-import network.columba.app.ui.util.rememberLifecycleTickerMillis
-import network.columba.app.util.AnimatedImageLoader
-import network.columba.app.util.FileAttachment
-import network.columba.app.util.FileUtils
-import network.columba.app.util.ImageUtils
-import network.columba.app.util.LocationPermissionManager
-import network.columba.app.util.MediaPermissionManager
-import network.columba.app.util.formatRelativeTime
-import network.columba.app.util.formatTimeSince
-import network.columba.app.util.validation.ValidationConstants
-import network.columba.app.viewmodel.ContactToggleResult
-import network.columba.app.viewmodel.MessagingViewModel
-import network.columba.app.viewmodel.SharedImageViewModel
-import network.columba.app.viewmodel.SharedTextViewModel
+import network.libertychat.app.R
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.service.SyncResult
+import network.libertychat.app.rns.api.BackendCapabilities.Support
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.ui.components.AttachmentPanel
+import network.libertychat.app.ui.components.CodecSelectionDialog
+import network.libertychat.app.ui.components.FileAttachmentCard
+import network.libertychat.app.ui.components.FileAttachmentOptionsSheet
+import network.libertychat.app.ui.components.FileAttachmentPreviewRow
+import network.libertychat.app.ui.components.FullEmojiPickerDialog
+import network.libertychat.app.ui.components.ImageOptionsSheet
+import network.libertychat.app.ui.components.ImageQualitySelectionDialog
+import network.libertychat.app.ui.components.LocationPermissionBottomSheet
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.ui.components.MarkdownMessageText
+import network.libertychat.app.ui.components.MessageTransferProgress
+import network.libertychat.app.ui.components.QuickShareLocationBottomSheet
+import network.libertychat.app.ui.components.ReactionDisplayRow
+import network.libertychat.app.ui.components.ReactionModeOverlay
+import network.libertychat.app.ui.components.ReplyInputBar
+import network.libertychat.app.ui.components.ReplyPreviewBubble
+import network.libertychat.app.ui.components.SelectableTextDialog
+import network.libertychat.app.ui.components.StarToggleButton
+import network.libertychat.app.ui.components.SwipeableMessageBubble
+import network.libertychat.app.ui.components.SyncStatusBottomSheet
+import network.libertychat.app.ui.components.ConversationTransferTray
+import network.libertychat.app.ui.components.simpleVerticalScrollbar
+import network.libertychat.app.ui.model.CodecProfile
+import network.libertychat.app.ui.model.LocationSharingState
+import network.libertychat.app.ui.model.MessageRenderer
+import network.libertychat.app.ui.theme.MeshConnected
+import network.libertychat.app.ui.theme.MeshOffline
+import network.libertychat.app.ui.util.rememberLifecycleTickerMillis
+import network.libertychat.app.util.AnimatedImageLoader
+import network.libertychat.app.util.FileAttachment
+import network.libertychat.app.util.FileUtils
+import network.libertychat.app.util.ImageUtils
+import network.libertychat.app.util.LocationPermissionManager
+import network.libertychat.app.util.MediaPermissionManager
+import network.libertychat.app.util.formatRelativeTime
+import network.libertychat.app.util.formatTimeSince
+import network.libertychat.app.util.validation.ValidationConstants
+import network.libertychat.app.viewmodel.ContactToggleResult
+import network.libertychat.app.viewmodel.MessagingViewModel
+import network.libertychat.app.viewmodel.SharedImageViewModel
+import network.libertychat.app.viewmodel.SharedTextViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import network.columba.app.ui.components.VoiceMessageBubble
+import network.libertychat.app.ui.components.VoiceMessageBubble
 
 private const val URL_ANNOTATION_TAG = "url"
 
@@ -345,7 +345,7 @@ fun MessagingScreen(
     onPeerClick: () -> Unit = {},
     onViewMessageDetails: (messageId: String) -> Unit = {},
     onVoiceCall: (profileCode: Int, linkSpeedBps: Long?, halfDuplex: Boolean) -> Unit = { _, _, _ -> },
-    settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
+    settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel = hiltViewModel(),
     onLocateOnMap: (peerHash: String) -> Unit = {},
     fromNotification: Boolean = false,
     notificationEventId: Long = 0L,
@@ -664,15 +664,15 @@ fun MessagingScreen(
     // LCS: push-to-talk voice messages (hold the mic button to record, release to send)
     val pttEnabled by settingsViewModel.pttEnabled.collectAsStateWithLifecycle()
     val pttHighBandwidth by settingsViewModel.pttHighBandwidth.collectAsStateWithLifecycle()
-    var pttSession by remember { mutableStateOf<network.columba.app.util.PttRecorder.Session?>(null) }
+    var pttSession by remember { mutableStateOf<network.libertychat.app.util.PttRecorder.Session?>(null) }
     val isRecordingPtt = pttSession != null
 
     val beginPttRecording: () -> Unit = {
         if (pttSession == null) {
             val session =
-                network.columba.app.util.PttRecorder.start(
+                network.libertychat.app.util.PttRecorder.start(
                     context,
-                    network.columba.app.util.PttRecorder.profileFor(pttHighBandwidth),
+                    network.libertychat.app.util.PttRecorder.profileFor(pttHighBandwidth),
                 )
             if (session == null) {
                 Toast.makeText(context, "Couldn't start recording", Toast.LENGTH_SHORT).show()
@@ -688,7 +688,7 @@ fun MessagingScreen(
             // stopAndBuildClip suspends: the Codec2 profile encodes the whole
             // clip on release, which is real work on a long recording.
             scope.launch {
-                val clip = network.columba.app.util.PttRecorder.stopAndBuildClip(session)
+                val clip = network.libertychat.app.util.PttRecorder.stopAndBuildClip(session)
                 if (clip == null) {
                     Toast.makeText(context, "Too short — hold to record", Toast.LENGTH_SHORT).show()
                 } else {
@@ -712,7 +712,7 @@ fun MessagingScreen(
     // Make sure a recording never outlives the screen.
     DisposableEffect(Unit) {
         onDispose {
-            pttSession?.let { network.columba.app.util.PttRecorder.cancel(it) }
+            pttSession?.let { network.libertychat.app.util.PttRecorder.cancel(it) }
         }
     }
 
@@ -1357,7 +1357,7 @@ fun MessagingScreen(
                                     val cachedImage =
                                         decodedResult?.bitmap
                                             ?: if (message.decodedImage == null && loadedImageIds.contains(message.id)) {
-                                                network.columba.app.ui.model.ImageCache
+                                                network.libertychat.app.ui.model.ImageCache
                                                     .get(message.id)
                                             } else {
                                                 message.decodedImage
@@ -1942,7 +1942,7 @@ fun MessagingScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageBubble(
-    message: network.columba.app.ui.model.MessageUi,
+    message: network.libertychat.app.ui.model.MessageUi,
     isFromMe: Boolean,
     clipboardManager: androidx.compose.ui.platform.ClipboardManager,
     myIdentityHash: String? = null,
@@ -2366,7 +2366,7 @@ fun MessageBubble(
                             VoiceMessageBubble(
                                 audioMode = message.audioMode,
                                 isPlayable =
-                                    network.columba.app.util.VoiceMessagePlayer
+                                    network.libertychat.app.util.VoiceMessagePlayer
                                         .canPlay(message.audioMode),
                                 isPlaying = playingMessageId == message.id,
                                 isLoading = loadingAudioMessageId == message.id,
@@ -2807,7 +2807,7 @@ fun MessageInputBar(
                                 .clip(pttShape)
                                 .background(
                                     if (isRecordingPtt) {
-                                        network.columba.app.ui.theme.LcsRed
+                                        network.libertychat.app.ui.theme.LcsRed
                                     } else {
                                         MaterialTheme.colorScheme.surfaceVariant
                                     },
@@ -3084,7 +3084,7 @@ private fun FullscreenAnimatedImageDialog(
 @Suppress("FunctionNaming")
 @Composable
 fun PendingFileNotificationBubble(
-    pendingFileInfo: network.columba.app.ui.model.PendingFileInfo,
+    pendingFileInfo: network.libertychat.app.ui.model.PendingFileInfo,
     peerName: String,
     syncProgress: SyncProgress,
     onClick: () -> Unit,

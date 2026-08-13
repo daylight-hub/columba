@@ -1,4 +1,4 @@
-package network.columba.app.ui.theme
+package network.libertychat.app.ui.theme
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

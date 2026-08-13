@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -64,11 +64,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.NodeTypeBadge
-import network.columba.app.ui.components.ProfileIcon
-import network.columba.app.ui.util.getInterfaceInfo
-import network.columba.app.util.formatTimeSince
-import network.columba.app.viewmodel.AnnounceStreamViewModel
+import network.libertychat.app.ui.components.NodeTypeBadge
+import network.libertychat.app.ui.components.ProfileIcon
+import network.libertychat.app.ui.util.getInterfaceInfo
+import network.libertychat.app.util.formatTimeSince
+import network.libertychat.app.viewmodel.AnnounceStreamViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable

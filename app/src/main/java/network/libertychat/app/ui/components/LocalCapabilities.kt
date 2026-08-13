@@ -1,7 +1,7 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.runtime.staticCompositionLocalOf
-import network.columba.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.BackendCapabilities
 
 /**
  * Ambient [BackendCapabilities] for the active RNS backend.

@@ -1,4 +1,4 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import android.util.LruCache
 import androidx.compose.ui.graphics.ImageBitmap

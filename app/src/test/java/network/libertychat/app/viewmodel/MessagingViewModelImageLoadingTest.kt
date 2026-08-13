@@ -2,30 +2,30 @@
 // test dispatcher cannot control real IO threads, so Thread.sleep() is needed
 @file:Suppress("SleepInsteadOfDelay")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.app.Application
 import android.graphics.Bitmap
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.paging.PagingData
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.data.repository.ReceivedLocationRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.Identity
-import network.columba.app.notifications.NotificationHelper
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.ActiveConversationManager
-import network.columba.app.service.ConversationLinkManager
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.ui.model.ImageCache
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.data.repository.ReceivedLocationRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.notifications.NotificationHelper
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.ActiveConversationManager
+import network.libertychat.app.service.ConversationLinkManager
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.ui.model.ImageCache
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -184,7 +184,7 @@ class MessagingViewModelImageLoadingTest {
         every { propagationNodeManager.isSyncing } returns MutableStateFlow(false)
         every { propagationNodeManager.manualSyncResult } returns MutableSharedFlow()
         every { propagationNodeManager.syncProgress } returns
-            MutableStateFlow(network.columba.app.service.SyncProgress.Idle)
+            MutableStateFlow(network.libertychat.app.service.SyncProgress.Idle)
         every { propagationNodeManager.currentRelay } returns MutableStateFlow(null)
         coEvery { propagationNodeManager.triggerSync() } just Runs
         coEvery { propagationNodeManager.triggerSync(silent = any()) } just Runs

@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.location.Location
 import android.util.Log
@@ -26,22 +26,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import network.columba.app.data.db.dao.AnnounceDao
-import network.columba.app.data.db.dao.ReceivedLocationDao
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.model.MapStylePreference
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.OfflineMapRegionRepository
-import network.columba.app.map.MapStyleResult
-import network.columba.app.map.MapTileSourceManager
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.SharingSession
-import network.columba.app.service.TelemetryCollectorManager
-import network.columba.app.ui.model.SharingDuration
-import network.columba.app.ui.util.InterfaceCategory
-import network.columba.app.ui.util.categorizeInterface
+import network.libertychat.app.data.db.dao.AnnounceDao
+import network.libertychat.app.data.db.dao.ReceivedLocationDao
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.model.MapStylePreference
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.OfflineMapRegionRepository
+import network.libertychat.app.map.MapStyleResult
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.SharingSession
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.ui.model.SharingDuration
+import network.libertychat.app.ui.util.InterfaceCategory
+import network.libertychat.app.ui.util.categorizeInterface
 import javax.inject.Inject
 
 /**
@@ -92,7 +92,7 @@ data class InterfaceMarker(
     val id: String,
     val name: String,
     val type: String,
-    val category: network.columba.app.ui.util.InterfaceCategory,
+    val category: network.libertychat.app.ui.util.InterfaceCategory,
     val latitude: Double,
     val longitude: Double,
     val height: Double? = null,
@@ -110,7 +110,7 @@ data class InterfaceMarker(
 )
 
 internal fun InterfaceMarker.toFocusInterfaceDetails() =
-    network.columba.app.ui.screens.FocusInterfaceDetails(
+    network.libertychat.app.ui.screens.FocusInterfaceDetails(
         name = name,
         type = type,
         latitude = latitude,
@@ -175,7 +175,7 @@ data class MapState(
     /** Discovered interface markers with location data */
     val interfaceMarkers: List<InterfaceMarker> = emptyList(),
     /** Per-category filter state for interface markers (true = visible) */
-    val interfaceFilterEnabled: Map<network.columba.app.ui.util.InterfaceCategory, Boolean> = emptyMap(),
+    val interfaceFilterEnabled: Map<network.libertychat.app.ui.util.InterfaceCategory, Boolean> = emptyMap(),
 )
 
 /**
@@ -197,13 +197,13 @@ class MapViewModel
         private val receivedLocationDao: ReceivedLocationDao,
         private val locationSharingManager: LocationSharingManager,
         private val announceDao: AnnounceDao,
-        private val conversationDao: network.columba.app.data.db.dao.ConversationDao,
+        private val conversationDao: network.libertychat.app.data.db.dao.ConversationDao,
         private val settingsRepository: SettingsRepository,
         private val mapTileSourceManager: MapTileSourceManager,
         private val telemetryCollectorManager: TelemetryCollectorManager,
         private val offlineMapRegionRepository: OfflineMapRegionRepository,
         private val transportAdmin: RnsTransportAdmin,
-        private val interfaceFirstSeenDao: network.columba.app.data.db.dao.InterfaceFirstSeenDao,
+        private val interfaceFirstSeenDao: network.libertychat.app.data.db.dao.InterfaceFirstSeenDao,
     ) : ViewModel() {
         companion object {
             private const val TAG = "MapViewModel"
@@ -351,7 +351,7 @@ class MapViewModel
             viewModelScope.launch {
                 locationSharingManager.sharingEvents.collect { event ->
                     when (event) {
-                        is network.columba.app.service.SharingEvent.Blocked ->
+                        is network.libertychat.app.service.SharingEvent.Blocked ->
                             _locationSharingMessage.emit(
                                 "Location sharing is off. Enable it in Settings → Location Sharing.",
                             )
@@ -413,14 +413,14 @@ class MapViewModel
                 ) { args ->
                     @Suppress("UNCHECKED_CAST")
                     val locations =
-                        args[0] as List<network.columba.app.data.db.entity.ReceivedLocationEntity>
+                        args[0] as List<network.libertychat.app.data.db.entity.ReceivedLocationEntity>
                     @Suppress("UNCHECKED_CAST")
                     val contactList = args[1] as List<EnrichedContact>
                     @Suppress("UNCHECKED_CAST")
-                    val announceList = args[2] as List<network.columba.app.data.model.MapAnnounceLookup>
+                    val announceList = args[2] as List<network.libertychat.app.data.model.MapAnnounceLookup>
                     @Suppress("UNCHECKED_CAST")
                     val conversationPeerNames =
-                        args[3] as List<network.columba.app.data.db.dao.ConversationPeerNameLookup>
+                        args[3] as List<network.libertychat.app.data.db.dao.ConversationPeerNameLookup>
 
                     val currentTime = System.currentTimeMillis()
                     val localHashes = telemetryCollectorManager.getLocalIdentityHashes()
@@ -804,7 +804,7 @@ class MapViewModel
                         // adapter may still execute the prepared statement once per entity.
                         val entities =
                             withId.map { (id, _) ->
-                                network.columba.app.data.db.entity
+                                network.libertychat.app.data.db.entity
                                     .InterfaceFirstSeenEntity(id, now)
                             }
                         if (entities.isNotEmpty()) {

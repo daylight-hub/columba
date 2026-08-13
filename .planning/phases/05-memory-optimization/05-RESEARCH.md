@@ -94,7 +94,7 @@ for stat in top_stats[:10]:
 ```bash
 # Source: https://perfetto.dev/docs/case-studies/memory
 # Native/Dalvik heap breakdown
-adb shell dumpsys meminfo network.columba.app | grep -A 20 "App Summary"
+adb shell dumpsys meminfo network.libertychat.app | grep -A 20 "App Summary"
 
 # Output interpretation:
 # - "Native Heap" = C/C++ allocations (Python interpreter, Chaquopy JNI)
@@ -239,10 +239,10 @@ for stat in top_stats[:10]:
 ```bash
 # Source: https://developer.android.com/tools/dumpsys
 # Basic memory breakdown
-adb shell dumpsys meminfo network.columba.app
+adb shell dumpsys meminfo network.libertychat.app
 
 # Focus on heap sizes
-adb shell dumpsys meminfo network.columba.app | grep -A 5 "TOTAL"
+adb shell dumpsys meminfo network.libertychat.app | grep -A 5 "TOTAL"
 
 # Native Heap = Python interpreter + Chaquopy JNI
 # Dalvik Heap = Java/Kotlin objects

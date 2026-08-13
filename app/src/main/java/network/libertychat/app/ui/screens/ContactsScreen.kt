@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.util.Log
 import android.widget.Toast
@@ -107,24 +107,24 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import network.columba.app.R
-import network.columba.app.data.db.entity.ContactStatus
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.ui.components.AddContactConfirmationDialog
-import network.columba.app.ui.components.LocalWindowSize
-import network.columba.app.ui.components.ProfileIcon
-import network.columba.app.ui.components.simpleVerticalScrollbar
-import network.columba.app.ui.theme.MeshConnected
-import network.columba.app.ui.util.rememberLifecycleTickerMillis
-import network.columba.app.util.formatTimeSince
-import network.columba.app.util.validation.InputValidator
-import network.columba.app.util.validation.ValidationConstants
-import network.columba.app.util.validation.ValidationResult
-import network.columba.app.viewmodel.AddContactResult
-import network.columba.app.viewmodel.AnnounceStreamViewModel
-import network.columba.app.viewmodel.ContactsViewModel
-import network.columba.app.viewmodel.SharedImageViewModel
-import network.columba.app.viewmodel.SharedTextViewModel
+import network.libertychat.app.R
+import network.libertychat.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.ui.components.AddContactConfirmationDialog
+import network.libertychat.app.ui.components.LocalWindowSize
+import network.libertychat.app.ui.components.ProfileIcon
+import network.libertychat.app.ui.components.simpleVerticalScrollbar
+import network.libertychat.app.ui.theme.MeshConnected
+import network.libertychat.app.ui.util.rememberLifecycleTickerMillis
+import network.libertychat.app.util.formatTimeSince
+import network.libertychat.app.util.validation.InputValidator
+import network.libertychat.app.util.validation.ValidationConstants
+import network.libertychat.app.util.validation.ValidationResult
+import network.libertychat.app.viewmodel.AddContactResult
+import network.libertychat.app.viewmodel.AnnounceStreamViewModel
+import network.libertychat.app.viewmodel.ContactsViewModel
+import network.libertychat.app.viewmodel.SharedImageViewModel
+import network.libertychat.app.viewmodel.SharedTextViewModel
 
 private const val TAG = "ContactsScreen"
 
@@ -442,7 +442,7 @@ fun ContactsScreen(
                 FloatingActionButton(
                     onClick = { showAddContactSheet = true },
                     // LCS shiny red accent
-                    containerColor = network.columba.app.ui.theme.LcsRed,
+                    containerColor = network.libertychat.app.ui.theme.LcsRed,
                     contentColor = androidx.compose.ui.graphics.Color.White,
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add contact")

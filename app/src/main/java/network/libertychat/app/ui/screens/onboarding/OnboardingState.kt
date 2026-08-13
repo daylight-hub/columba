@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding
+package network.libertychat.app.ui.screens.onboarding
 
 import androidx.compose.runtime.Immutable
 

@@ -1,4 +1,4 @@
-package network.columba.app.navigation
+package network.libertychat.app.navigation
 
 /**
  * Canonical registry for every destination in Columba's application NavHost.

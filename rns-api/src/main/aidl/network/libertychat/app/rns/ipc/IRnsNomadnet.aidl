@@ -3,14 +3,14 @@
 // Bundle key conventions for IRnsResultCallback payloads:
 //   - requestNomadnetPage → "page": NomadnetPageResult
 //   - Result<Unit>        → Bundle.EMPTY
-package network.columba.app.rns.ipc;
+package network.libertychat.app.rns.ipc;
 
-import network.columba.app.rns.ipc.callback.IRnsBoolCallback;
-import network.columba.app.rns.ipc.callback.IRnsFloatCallback;
-import network.columba.app.rns.ipc.callback.IRnsFloatEventCallback;
-import network.columba.app.rns.ipc.callback.IRnsResultCallback;
-import network.columba.app.rns.ipc.callback.IRnsStringCallback;
-import network.columba.app.rns.ipc.callback.IRnsStringEventCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsBoolCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsFloatCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsFloatEventCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsResultCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringEventCallback;
 
 oneway interface IRnsNomadnet {
     void requestNomadnetPage(

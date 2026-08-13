@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,8 +31,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.ModemPreset
-import network.columba.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.data.model.ModemPreset
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
 
 /**
  * Step 3: Modem Preset Selection

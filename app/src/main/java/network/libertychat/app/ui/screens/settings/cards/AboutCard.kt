@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import android.content.Context
 import android.widget.Toast
@@ -31,12 +31,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.R
-import network.columba.app.service.AppUpdateResult
-import network.columba.app.ui.components.CollapsibleSettingsCard
-import network.columba.app.ui.theme.ShinyRedButton
-import network.columba.app.util.SystemInfo
-import network.columba.app.util.safeOpenUrl
+import network.libertychat.app.R
+import network.libertychat.app.service.AppUpdateResult
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.ui.theme.ShinyRedButton
+import network.libertychat.app.util.SystemInfo
+import network.libertychat.app.util.safeOpenUrl
 import java.util.Locale
 import android.content.Intent
 import androidx.core.net.toUri
@@ -178,13 +178,13 @@ fun AboutCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Based on Columba © 2025–${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                    text = "Based on Columba © 2025–${network.libertychat.app.BuildConfig.COPYRIGHT_YEAR} " +
                         "Columba Contributors (torlando-tech) — original design & code",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "LCS branding & modifications © ${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                    text = "LCS branding & modifications © ${network.libertychat.app.BuildConfig.COPYRIGHT_YEAR} " +
                         "Liberty Communication Systems, Inc.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

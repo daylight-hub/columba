@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.dialogs
+package network.libertychat.app.ui.screens.settings.dialogs
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,7 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.util.CrashReport
+import network.libertychat.app.util.CrashReport
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

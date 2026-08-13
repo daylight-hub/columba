@@ -1,12 +1,12 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import io.mockk.mockk
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.host.manager.CurrentTransport
-import network.columba.app.rns.host.manager.ridesOnIpCarrier
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.host.manager.CurrentTransport
+import network.libertychat.app.rns.host.manager.ridesOnIpCarrier
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

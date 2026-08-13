@@ -1,18 +1,18 @@
-package network.columba.app.di
+package network.libertychat.app.di
 
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import network.columba.app.rns.api.RnsTelephony
+import network.libertychat.app.rns.api.RnsTelephony
 
 /**
  * Hilt entry point for retrieving the singleton [RnsTelephony] from call
  * sites that aren't part of the Hilt-injected object graph:
  *
- * - [network.columba.app.MainActivity]'s root Composable (`@Composable`
+ * - [network.libertychat.app.MainActivity]'s root Composable (`@Composable`
  *   functions can't `@Inject`, but `LocalContext.current` +
  *   `EntryPointAccessors` is the blessed escape hatch).
- * - [network.columba.app.IncomingCallActivity] is deliberately *not*
+ * - [network.libertychat.app.IncomingCallActivity] is deliberately *not*
  *   `@AndroidEntryPoint` to keep its cold-start latency under the
  *   lock-screen ringing window; this entry point lets it reach the same
  *   singleton without joining Hilt's component graph.

@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 /**
  * Pure-state-machine coordinator for the notification-entry scroll-to-bottom

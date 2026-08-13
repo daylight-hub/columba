@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import android.Manifest
 import android.content.Intent
@@ -47,7 +47,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import network.columba.app.notifications.CallNotificationHelper
+import network.libertychat.app.notifications.CallNotificationHelper
 import kotlinx.coroutines.delay
 
 @Composable

@@ -1,8 +1,8 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
-import network.columba.app.data.db.dao.BlockedPeerDao
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.entity.BlockedPeerEntity
+import network.libertychat.app.data.db.dao.BlockedPeerDao
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.entity.BlockedPeerEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow

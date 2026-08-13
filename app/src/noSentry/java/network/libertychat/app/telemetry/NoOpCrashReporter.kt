@@ -1,4 +1,4 @@
-package network.columba.app.telemetry
+package network.libertychat.app.telemetry
 
 import android.content.Context
 

@@ -1,8 +1,8 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.repository.SettingsRepository
+import network.libertychat.app.repository.SettingsRepository
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

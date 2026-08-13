@@ -1,6 +1,6 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
-import network.columba.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.db.entity.ContactStatus
 
 /**
  * Enriched contact data combining contacts table with announces and conversations.

@@ -1,4 +1,4 @@
-package network.columba.app.nomadnet
+package network.libertychat.app.nomadnet
 
 import android.content.Context
 import org.junit.After

@@ -1,9 +1,9 @@
 @file:Suppress("UseOrEmpty", "UnsafeCast")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.model.FailedInterface
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.FailedInterface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -132,7 +132,7 @@ class DebugViewModelFetchTest {
             DebugInfo(
                 initialized = true,
                 reticulumAvailable = true,
-                storagePath = "/data/user/0/network.columba.app/files",
+                storagePath = "/data/user/0/network.libertychat.app/files",
                 interfaceCount = interfaces.size,
                 interfaces = interfaces,
                 transportEnabled = true,
@@ -143,7 +143,7 @@ class DebugViewModelFetchTest {
 
         assertTrue(debugInfo.initialized)
         assertTrue(debugInfo.reticulumAvailable)
-        assertEquals("/data/user/0/network.columba.app/files", debugInfo.storagePath)
+        assertEquals("/data/user/0/network.libertychat.app/files", debugInfo.storagePath)
         assertEquals(2, debugInfo.interfaceCount)
         assertTrue(debugInfo.transportEnabled)
         assertTrue(debugInfo.multicastLockHeld)
@@ -397,7 +397,7 @@ class DebugViewModelFetchTest {
             mapOf(
                 "initialized" to true,
                 "reticulum_available" to true,
-                "storage_path" to "/data/user/0/network.columba.app/files",
+                "storage_path" to "/data/user/0/network.libertychat.app/files",
                 "interfaces" to
                     listOf(
                         mapOf("name" to "RNode LoRa", "type" to "ColumbaRNodeInterface", "online" to true),
@@ -461,7 +461,7 @@ class DebugViewModelFetchTest {
         // Verify the complete result
         assertTrue(debugInfoResult.initialized)
         assertTrue(debugInfoResult.reticulumAvailable)
-        assertEquals("/data/user/0/network.columba.app/files", debugInfoResult.storagePath)
+        assertEquals("/data/user/0/network.libertychat.app/files", debugInfoResult.storagePath)
         assertEquals(3, debugInfoResult.interfaceCount)
         assertEquals(3, debugInfoResult.interfaces.size)
         assertEquals(false, debugInfoResult.transportEnabled)

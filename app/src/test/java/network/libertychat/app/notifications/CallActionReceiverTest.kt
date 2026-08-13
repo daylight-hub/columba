@@ -1,10 +1,10 @@
-package network.columba.app.notifications
+package network.libertychat.app.notifications
 
 import android.app.Application
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import network.columba.app.MainActivity
+import network.libertychat.app.MainActivity
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk

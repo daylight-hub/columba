@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ScrollState
@@ -43,9 +43,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import network.columba.app.rns.host.ble.model.BlePowerPreset
-import network.columba.app.util.validation.ValidationConstants
-import network.columba.app.viewmodel.InterfaceConfigState
+import network.libertychat.app.rns.host.ble.model.BlePowerPreset
+import network.libertychat.app.util.validation.ValidationConstants
+import network.libertychat.app.viewmodel.InterfaceConfigState
 
 /**
  * Dialog for adding or editing a Reticulum network interface configuration.

@@ -1,6 +1,6 @@
-package network.columba.app.util.validation
+package network.libertychat.app.util.validation
 
-import network.columba.app.util.validation.InputValidator.safeHexToBytes
+import network.libertychat.app.util.validation.InputValidator.safeHexToBytes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

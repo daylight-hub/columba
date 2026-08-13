@@ -1,24 +1,24 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.map.MapTileSourceManager
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.AvailableRelaysState
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.TelemetryCollectorManager
-import network.columba.app.ui.theme.PresetTheme
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.AvailableRelaysState
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.ui.theme.PresetTheme
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -65,16 +65,16 @@ class SettingsViewModelIncomingMessageLimitTest {
     private lateinit var rnsCore: RnsCore
     private lateinit var rnsLxmf: RnsLxmf
     private lateinit var rnsTransportAdmin: RnsTransportAdmin
-    private lateinit var rnsTelephony: network.columba.app.rns.api.RnsTelephony
+    private lateinit var rnsTelephony: network.libertychat.app.rns.api.RnsTelephony
     private lateinit var interfaceConfigManager: InterfaceConfigManager
     private lateinit var propagationNodeManager: PropagationNodeManager
     private lateinit var locationSharingManager: LocationSharingManager
     private lateinit var interfaceRepository: InterfaceRepository
     private lateinit var mapTileSourceManager: MapTileSourceManager
     private lateinit var telemetryCollectorManager: TelemetryCollectorManager
-    private lateinit var contactRepository: network.columba.app.data.repository.ContactRepository
-    private lateinit var updateChecker: network.columba.app.service.UpdateChecker
-    private lateinit var crashReportManager: network.columba.app.util.CrashReportManager
+    private lateinit var contactRepository: network.libertychat.app.data.repository.ContactRepository
+    private lateinit var updateChecker: network.libertychat.app.service.UpdateChecker
+    private lateinit var crashReportManager: network.libertychat.app.util.CrashReportManager
     private lateinit var context: android.content.Context
     private lateinit var viewModel: SettingsViewModel
 
@@ -184,7 +184,7 @@ class SettingsViewModelIncomingMessageLimitTest {
         every { settingsRepository.defaultSharingDurationFlow } returns MutableStateFlow("ONE_HOUR")
         every { settingsRepository.locationPrecisionRadiusFlow } returns MutableStateFlow(0)
         every { settingsRepository.preciseLocationPromptDismissedFlow } returns MutableStateFlow(false)
-        every { settingsRepository.imageCompressionPresetFlow } returns MutableStateFlow(network.columba.app.data.model.ImageCompressionPreset.AUTO)
+        every { settingsRepository.imageCompressionPresetFlow } returns MutableStateFlow(network.libertychat.app.data.model.ImageCompressionPreset.AUTO)
         every { settingsRepository.telemetryCollectorEnabledFlow } returns MutableStateFlow(false)
         every { settingsRepository.telemetryCollectorAddressFlow } returns MutableStateFlow<String?>(null)
         every { settingsRepository.telemetrySendIntervalSecondsFlow } returns MutableStateFlow(SettingsRepository.DEFAULT_TELEMETRY_SEND_INTERVAL_SECONDS)

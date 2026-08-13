@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.content.Intent
 import android.view.WindowManager
@@ -75,13 +75,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.IconPickerDialog
-import network.columba.app.ui.components.Identicon
-import network.columba.app.ui.components.ProfileIcon
-import network.columba.app.ui.components.QrCodeImage
-import network.columba.app.ui.components.findActivity
-import network.columba.app.viewmodel.DebugViewModel
-import network.columba.app.viewmodel.SettingsViewModel
+import network.libertychat.app.ui.components.IconPickerDialog
+import network.libertychat.app.ui.components.Identicon
+import network.libertychat.app.ui.components.ProfileIcon
+import network.libertychat.app.ui.components.QrCodeImage
+import network.libertychat.app.ui.components.findActivity
+import network.libertychat.app.viewmodel.DebugViewModel
+import network.libertychat.app.viewmodel.SettingsViewModel
 
 /**
  * Consolidated Identity Screen following Material Design 3 best practices.

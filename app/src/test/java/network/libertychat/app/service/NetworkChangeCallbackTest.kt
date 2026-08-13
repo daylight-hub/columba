@@ -1,9 +1,9 @@
 @file:Suppress("SwallowedException") // Test file intentionally catches exceptions to verify handling
 
-package network.columba.app.service
+package network.libertychat.app.service
 
-import network.columba.app.rns.host.binder.ReticulumServiceBinder
-import network.columba.app.rns.host.persistence.ServiceSettingsAccessor
+import network.libertychat.app.rns.host.binder.ReticulumServiceBinder
+import network.libertychat.app.rns.host.persistence.ServiceSettingsAccessor
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

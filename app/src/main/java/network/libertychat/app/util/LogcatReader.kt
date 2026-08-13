@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers

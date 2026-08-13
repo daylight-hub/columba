@@ -1,12 +1,12 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
-import network.columba.app.data.db.dao.AnnounceDao
-import network.columba.app.data.db.dao.ContactDao
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.db.entity.ContactStatus
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.util.HashUtils.computeIdentityHash
+import network.libertychat.app.data.db.dao.AnnounceDao
+import network.libertychat.app.data.db.dao.ContactDao
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.util.HashUtils.computeIdentityHash
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf

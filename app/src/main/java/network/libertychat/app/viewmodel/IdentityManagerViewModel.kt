@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.content.Context
 import android.net.Uri
@@ -15,11 +15,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.util.Base32
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.util.Base32
 import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 
@@ -35,7 +35,7 @@ class IdentityManagerViewModel
     constructor(
         @ApplicationContext private val context: Context,
         private val identityRepository: IdentityRepository,
-        private val identityKeyProvider: network.columba.app.data.crypto.IdentityKeyProvider,
+        private val identityKeyProvider: network.libertychat.app.data.crypto.IdentityKeyProvider,
         private val rnsCore: RnsCore,
         private val interfaceConfigManager: InterfaceConfigManager,
     ) : ViewModel() {

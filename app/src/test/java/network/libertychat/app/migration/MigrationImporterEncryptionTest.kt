@@ -1,4 +1,4 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
 import android.content.Context
 import android.net.Uri

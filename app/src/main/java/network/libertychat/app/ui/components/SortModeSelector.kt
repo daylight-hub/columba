@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import network.columba.app.viewmodel.DiscoveredInterfacesSortMode
+import network.libertychat.app.viewmodel.DiscoveredInterfacesSortMode
 
 /**
  * Sort mode selector with segmented buttons for discovered interfaces.

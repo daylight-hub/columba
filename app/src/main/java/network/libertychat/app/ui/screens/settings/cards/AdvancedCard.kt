@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -27,9 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.BuildConfig
-import network.columba.app.ui.components.CollapsibleSettingsCard
-import network.columba.app.ui.components.LocalCapabilities
+import network.libertychat.app.BuildConfig
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.ui.components.LocalCapabilities
 
 /**
  * Advanced settings card — houses power-user toggles and options that most users should

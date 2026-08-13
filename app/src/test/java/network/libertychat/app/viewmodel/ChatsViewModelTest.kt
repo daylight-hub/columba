@@ -1,18 +1,18 @@
 @file:Suppress("IgnoredReturnValue") // awaitItem() calls consume flow emissions, result intentionally unused
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.BlockedPeerRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.Conversation
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.ReceivedLocationRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.PropagationNodeManager
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.BlockedPeerRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.Conversation
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.ReceivedLocationRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.PropagationNodeManager
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

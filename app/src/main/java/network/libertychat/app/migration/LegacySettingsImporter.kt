@@ -1,7 +1,7 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
 import android.util.Log
-import network.columba.app.repository.SettingsRepository
+import network.libertychat.app.repository.SettingsRepository
 
 /**
  * Handles importing settings from legacy export formats (pre-automatic DataStore export).

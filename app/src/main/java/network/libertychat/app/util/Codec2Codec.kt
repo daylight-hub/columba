@@ -1,7 +1,7 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.util.Log
-import network.columba.app.rns.api.util.LxmfFields
+import network.libertychat.app.rns.api.util.LxmfFields
 import tech.torlando.lxst.codec.NativeCodec2
 
 /**

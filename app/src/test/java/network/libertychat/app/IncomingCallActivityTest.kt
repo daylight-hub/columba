@@ -1,13 +1,13 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.app.Application
 import android.content.Intent
 import android.view.WindowManager
 import dagger.hilt.android.EntryPointAccessors
-import network.columba.app.di.RnsTelephonyEntryPoint
-import network.columba.app.notifications.CallNotificationHelper
-import network.columba.app.rns.api.RnsTelephony
-import network.columba.app.rns.api.model.CallState
+import network.libertychat.app.di.RnsTelephonyEntryPoint
+import network.libertychat.app.notifications.CallNotificationHelper
+import network.libertychat.app.rns.api.RnsTelephony
+import network.libertychat.app.rns.api.model.CallState
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

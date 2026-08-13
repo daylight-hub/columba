@@ -1,4 +1,4 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import android.content.Context
 import android.net.Uri
@@ -8,12 +8,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
-import network.columba.app.data.crypto.IdentityKeyEncryptor
-import network.columba.app.data.crypto.IdentityKeyMigrator
-import network.columba.app.data.crypto.IdentityKeyProvider
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.crypto.IdentityKeyEncryptor
+import network.libertychat.app.data.crypto.IdentityKeyMigrator
+import network.libertychat.app.data.crypto.IdentityKeyProvider
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton

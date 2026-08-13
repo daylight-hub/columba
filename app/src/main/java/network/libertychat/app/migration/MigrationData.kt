@@ -1,6 +1,6 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
-import network.columba.app.data.db.entity.CustomThemeEntity
+import network.libertychat.app.data.db.entity.CustomThemeEntity
 import kotlinx.serialization.Serializable
 
 /**

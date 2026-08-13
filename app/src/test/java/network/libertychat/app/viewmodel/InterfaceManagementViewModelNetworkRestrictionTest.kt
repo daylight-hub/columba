@@ -1,6 +1,6 @@
 @file:Suppress("InjectDispatcher")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.viewModelScope
@@ -20,18 +20,18 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.model.BleConnectionsState
-import network.columba.app.data.repository.BleStatusRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.host.manager.CurrentTransport
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.service.manager.InterfaceTransportObserver
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.model.BleConnectionsState
+import network.libertychat.app.data.repository.BleStatusRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.host.manager.CurrentTransport
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.manager.InterfaceTransportObserver
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

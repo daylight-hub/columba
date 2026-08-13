@@ -1,6 +1,6 @@
-package network.columba.app.reticulum.protocol
+package network.libertychat.app.reticulum.protocol
 
-import network.columba.app.rns.api.model.FailedInterface
+import network.libertychat.app.rns.api.model.FailedInterface
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

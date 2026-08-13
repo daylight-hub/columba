@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.app.ActivityManager
 import android.content.Context
@@ -13,20 +13,20 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.di.ApplicationScope
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.LogLevel
-import network.columba.app.rns.api.model.ReticulumConfig
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.host.ReticulumService
-import network.columba.app.service.manager.InterfaceTransportObserver
-import network.columba.app.rns.host.manager.filterByTransport
-import network.columba.app.rns.host.persistence.ReticulumConfigSnapshot
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.di.ApplicationScope
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.LogLevel
+import network.libertychat.app.rns.api.model.ReticulumConfig
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.host.ReticulumService
+import network.libertychat.app.service.manager.InterfaceTransportObserver
+import network.libertychat.app.rns.host.manager.filterByTransport
+import network.libertychat.app.rns.host.persistence.ReticulumConfigSnapshot
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,7 +52,7 @@ class InterfaceConfigManager
         private val rnsTransportAdmin: RnsTransportAdmin,
         private val interfaceRepository: InterfaceRepository,
         private val identityRepository: IdentityRepository,
-        private val identityKeyProvider: network.columba.app.data.crypto.IdentityKeyProvider,
+        private val identityKeyProvider: network.libertychat.app.data.crypto.IdentityKeyProvider,
         private val conversationRepository: ConversationRepository,
         private val messageCollector: MessageCollector,
         private val database: ColumbaDatabase,
@@ -97,7 +97,7 @@ class InterfaceConfigManager
             //    the cascade.
             val clearApplyFlag: () -> Unit = {
                 context
-                    .getSharedPreferences("columba_prefs", Context.MODE_PRIVATE)
+                    .getSharedPreferences("libertychat_prefs", Context.MODE_PRIVATE)
                     .edit()
                     .putBoolean("is_applying_config", false)
                     .commit()
@@ -134,7 +134,7 @@ class InterfaceConfigManager
                     // Service runs in separate process and needs to read this from disk
                     Log.d(TAG, "Step 3: Setting config apply flag (synchronous write)...")
                     context
-                        .getSharedPreferences("columba_prefs", Context.MODE_PRIVATE)
+                        .getSharedPreferences("libertychat_prefs", Context.MODE_PRIVATE)
                         .edit()
                         .putBoolean("is_applying_config", true)
                         .commit() // Synchronous write - blocks until written to disk
@@ -225,7 +225,7 @@ class InterfaceConfigManager
                     // Step 7: Start service again (fresh process, no port conflicts)
                     // Clear user shutdown flag so the service starts normally
                     context
-                        .getSharedPreferences("columba_prefs", Context.MODE_PRIVATE)
+                        .getSharedPreferences("libertychat_prefs", Context.MODE_PRIVATE)
                         .edit()
                         .putBoolean("is_user_shutdown", false)
                         .commit()
@@ -463,7 +463,7 @@ class InterfaceConfigManager
          */
         fun setPendingChanges(hasPending: Boolean) {
             context
-                .getSharedPreferences("columba_prefs", Context.MODE_PRIVATE)
+                .getSharedPreferences("libertychat_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("has_pending_interface_changes", hasPending)
                 .apply()
@@ -474,7 +474,7 @@ class InterfaceConfigManager
          * @return true if there were pending changes, false otherwise
          */
         fun checkAndClearPendingChanges(): Boolean {
-            val prefs = context.getSharedPreferences("columba_prefs", Context.MODE_PRIVATE)
+            val prefs = context.getSharedPreferences("libertychat_prefs", Context.MODE_PRIVATE)
             val hasPending = prefs.getBoolean("has_pending_interface_changes", false)
             if (hasPending) {
                 prefs.edit().putBoolean("has_pending_interface_changes", false).apply()

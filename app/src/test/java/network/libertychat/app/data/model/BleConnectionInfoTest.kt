@@ -1,13 +1,13 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
-import network.columba.app.test.BleTestFixtures
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_EXCELLENT
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_EXCELLENT_BOUNDARY
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_FAIR
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_FAIR_BOUNDARY
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_GOOD
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_GOOD_BOUNDARY
-import network.columba.app.test.BleTestFixtures.Constants.RSSI_POOR
+import network.libertychat.app.test.BleTestFixtures
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_EXCELLENT
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_EXCELLENT_BOUNDARY
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_FAIR
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_FAIR_BOUNDARY
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_GOOD
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_GOOD_BOUNDARY
+import network.libertychat.app.test.BleTestFixtures.Constants.RSSI_POOR
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

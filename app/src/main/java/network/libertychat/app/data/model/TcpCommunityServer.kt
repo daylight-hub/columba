@@ -1,4 +1,4 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
 /**
  * Represents a community TCP server for Reticulum networking.

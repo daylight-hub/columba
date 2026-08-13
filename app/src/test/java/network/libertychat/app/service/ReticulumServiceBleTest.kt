@@ -1,7 +1,7 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.app.Application
-import network.columba.app.data.model.ConnectionType
+import network.libertychat.app.data.model.ConnectionType
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONException

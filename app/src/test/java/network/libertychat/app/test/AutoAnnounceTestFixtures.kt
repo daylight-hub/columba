@@ -1,4 +1,4 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
 /**
  * Test fixtures for AutoAnnounceCard UI tests.

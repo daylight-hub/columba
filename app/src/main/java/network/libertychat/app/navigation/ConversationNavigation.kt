@@ -1,4 +1,4 @@
-package network.columba.app.navigation
+package network.libertychat.app.navigation
 
 /**
  * Decision helper for idempotent conversation navigation.

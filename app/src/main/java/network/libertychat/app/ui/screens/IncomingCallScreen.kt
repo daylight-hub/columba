@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -49,8 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import network.columba.app.rns.api.model.CallState
-import network.columba.app.viewmodel.CallViewModel
+import network.libertychat.app.rns.api.model.CallState
+import network.libertychat.app.viewmodel.CallViewModel
 
 /**
  * Incoming call screen with answer/decline options.

@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -54,8 +54,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import network.columba.app.R
-import network.columba.app.ui.theme.MaterialDesignIcons
+import network.libertychat.app.R
+import network.libertychat.app.ui.theme.MaterialDesignIcons
 
 /**
  * Material Design Icons font family for icon picker previews.

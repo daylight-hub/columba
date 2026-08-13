@@ -1,4 +1,4 @@
-package network.columba.app.ui.util
+package network.libertychat.app.ui.util
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,8 +8,8 @@ import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.core.content.res.ResourcesCompat
-import network.columba.app.R
-import network.columba.app.ui.theme.MaterialDesignIcons
+import network.libertychat.app.R
+import network.libertychat.app.ui.theme.MaterialDesignIcons
 
 /**
  * Factory for creating marker bitmaps for the map.

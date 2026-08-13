@@ -1,10 +1,10 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
-import network.columba.app.ui.screens.settings.cards.computeSharedInstanceToggleChecked
-import network.columba.app.ui.screens.settings.cards.isSharedInstanceToggleEnabled
-import network.columba.app.ui.screens.settings.cards.shouldShowSharedInstanceBanner
-import network.columba.app.ui.theme.PresetTheme
-import network.columba.app.viewmodel.SettingsState
+import network.libertychat.app.ui.screens.settings.cards.computeSharedInstanceToggleChecked
+import network.libertychat.app.ui.screens.settings.cards.isSharedInstanceToggleEnabled
+import network.libertychat.app.ui.screens.settings.cards.shouldShowSharedInstanceBanner
+import network.libertychat.app.ui.theme.PresetTheme
+import network.libertychat.app.viewmodel.SettingsState
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

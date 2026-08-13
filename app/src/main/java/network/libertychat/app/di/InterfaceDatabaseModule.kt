@@ -1,4 +1,4 @@
-package network.columba.app.di
+package network.libertychat.app.di
 
 import android.content.Context
 import androidx.room.Room
@@ -11,20 +11,20 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import network.columba.app.data.database.InterfaceDatabase
-import network.columba.app.data.database.dao.InterfaceDao
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.AutoAnnounceManager
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.service.MessageCollector
-import network.columba.app.service.PropagationNodeManager
+import network.libertychat.app.data.database.InterfaceDatabase
+import network.libertychat.app.data.database.dao.InterfaceDao
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.AutoAnnounceManager
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.MessageCollector
+import network.libertychat.app.service.PropagationNodeManager
 import javax.inject.Provider
 import javax.inject.Qualifier
 import javax.inject.Singleton
@@ -116,7 +116,7 @@ object InterfaceDatabaseModule {
         rnsTransportAdmin: RnsTransportAdmin,
         interfaceRepository: InterfaceRepository,
         identityRepository: IdentityRepository,
-        identityKeyProvider: network.columba.app.data.crypto.IdentityKeyProvider,
+        identityKeyProvider: network.libertychat.app.data.crypto.IdentityKeyProvider,
         conversationRepository: ConversationRepository,
         messageCollector: MessageCollector,
         database: ColumbaDatabase,
@@ -124,7 +124,7 @@ object InterfaceDatabaseModule {
         autoAnnounceManager: AutoAnnounceManager,
         identityResolutionManager: IdentityResolutionManager,
         propagationNodeManager: PropagationNodeManager,
-        transportObserver: network.columba.app.service.manager.InterfaceTransportObserver,
+        transportObserver: network.libertychat.app.service.manager.InterfaceTransportObserver,
         @ApplicationScope applicationScope: CoroutineScope,
     ): InterfaceConfigManager =
         InterfaceConfigManager(

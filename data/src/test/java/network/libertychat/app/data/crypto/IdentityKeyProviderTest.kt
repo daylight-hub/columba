@@ -1,9 +1,9 @@
-package network.columba.app.data.crypto
+package network.libertychat.app.data.crypto
 
 import android.content.Context
 import android.os.Build
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every

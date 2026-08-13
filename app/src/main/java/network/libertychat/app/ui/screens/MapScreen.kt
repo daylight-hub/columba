@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -99,25 +99,25 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import network.columba.app.data.model.MapStylePreference
-import network.columba.app.map.MapStyleResult
-import network.columba.app.map.MapTileSourceManager
-import network.columba.app.ui.components.ContactLocationBottomSheet
-import network.columba.app.ui.components.LocationPermissionBottomSheet
-import network.columba.app.ui.components.ShareLocationBottomSheet
-import network.columba.app.ui.components.SharingStatusChip
-import network.columba.app.ui.util.InterfaceCategory
-import network.columba.app.ui.util.MarkerBitmapFactory
-import network.columba.app.ui.util.ScreenMarker
-import network.columba.app.ui.util.ScreenToLatLng
-import network.columba.app.ui.util.calculateDeclutteredPositions
-import network.columba.app.util.LocationCompat
-import network.columba.app.util.LocationPermissionManager
-import network.columba.app.viewmodel.ContactMarker
-import network.columba.app.viewmodel.InterfaceMarker
-import network.columba.app.viewmodel.MapViewModel
-import network.columba.app.viewmodel.MarkerState
-import network.columba.app.viewmodel.toFocusInterfaceDetails
+import network.libertychat.app.data.model.MapStylePreference
+import network.libertychat.app.map.MapStyleResult
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.ui.components.ContactLocationBottomSheet
+import network.libertychat.app.ui.components.LocationPermissionBottomSheet
+import network.libertychat.app.ui.components.ShareLocationBottomSheet
+import network.libertychat.app.ui.components.SharingStatusChip
+import network.libertychat.app.ui.util.InterfaceCategory
+import network.libertychat.app.ui.util.MarkerBitmapFactory
+import network.libertychat.app.ui.util.ScreenMarker
+import network.libertychat.app.ui.util.ScreenToLatLng
+import network.libertychat.app.ui.util.calculateDeclutteredPositions
+import network.libertychat.app.util.LocationCompat
+import network.libertychat.app.util.LocationPermissionManager
+import network.libertychat.app.viewmodel.ContactMarker
+import network.libertychat.app.viewmodel.InterfaceMarker
+import network.libertychat.app.viewmodel.MapViewModel
+import network.libertychat.app.viewmodel.MarkerState
+import network.libertychat.app.viewmodel.toFocusInterfaceDetails
 import org.maplibre.android.MapLibre
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
@@ -1172,7 +1172,7 @@ fun MapScreen(
             val screenDensity = context.resources.displayMetrics.density
 
             // Register category bitmaps (one per type, not per marker)
-            for (category in network.columba.app.ui.util.InterfaceCategory.entries) {
+            for (category in network.libertychat.app.ui.util.InterfaceCategory.entries) {
                 val imageId = "iface-${category.name}"
                 if (style.getImage(imageId) == null) {
                     MarkerBitmapFactory

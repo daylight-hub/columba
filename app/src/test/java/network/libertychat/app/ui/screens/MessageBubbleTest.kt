@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.ui.graphics.Color
@@ -11,11 +11,11 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.test.MessagingTestFixtures
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.model.MessageRenderer
-import network.columba.app.ui.model.MessageUi
-import network.columba.app.ui.theme.ColumbaTheme
+import network.libertychat.app.test.MessagingTestFixtures
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.model.MessageRenderer
+import network.libertychat.app.ui.model.MessageUi
+import network.libertychat.app.ui.theme.ColumbaTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

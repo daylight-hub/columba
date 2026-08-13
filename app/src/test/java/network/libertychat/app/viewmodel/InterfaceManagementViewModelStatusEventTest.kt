@@ -1,20 +1,20 @@
 @file:Suppress("InjectDispatcher")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.bluetooth.BluetoothAdapter
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.viewModelScope
 import app.cash.turbine.test
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.model.BleConnectionsState
-import network.columba.app.data.repository.BleStatusRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.model.BleConnectionsState
+import network.libertychat.app.data.repository.BleStatusRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.InterfaceConfigManager
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.every
@@ -54,7 +54,7 @@ class InterfaceManagementViewModelStatusEventTest {
     private lateinit var configManager: InterfaceConfigManager
     private lateinit var bleStatusRepository: BleStatusRepository
     private lateinit var serviceProtocol: RnsTransportAdmin
-    private lateinit var transportObserver: network.columba.app.service.manager.InterfaceTransportObserver
+    private lateinit var transportObserver: network.libertychat.app.service.manager.InterfaceTransportObserver
     private lateinit var rnsBackend: RnsBackend
     private lateinit var interfaceStatusFlow: MutableSharedFlow<String>
     private lateinit var debugInfoFlow: MutableSharedFlow<String>
@@ -76,13 +76,13 @@ class InterfaceManagementViewModelStatusEventTest {
         serviceProtocol = mockk()
         transportObserver = mockk()
         every { transportObserver.snapshotTransport() } returns
-            network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE
+            network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE
         // Default StateFlow seeded with WIFI_LIKE so most tests don't observe a
         // transport churn during init. Tests that exercise transitions override this
         // with their own MutableStateFlow before constructing the ViewModel.
         every { transportObserver.currentTransport } returns
             kotlinx.coroutines.flow.MutableStateFlow(
-                network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
+                network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
             )
 
         // These tests were written against the kotlin backend's hot-reload
@@ -1169,12 +1169,12 @@ class InterfaceManagementViewModelStatusEventTest {
             // Snapshot returns CELLULAR — VM seed must use it instead of the
             // CurrentTransport.NONE default on InterfaceManagementState.
             every { transportObserver.snapshotTransport() } returns
-                network.columba.app.rns.host.manager.CurrentTransport.CELLULAR
+                network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR
             // Pair the StateFlow with the same value so the immediate collect emission
             // doesn't clobber the seed back to a different value.
             every { transportObserver.currentTransport } returns
                 kotlinx.coroutines.flow.MutableStateFlow(
-                    network.columba.app.rns.host.manager.CurrentTransport.CELLULAR,
+                    network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR,
                 )
 
             viewModel =
@@ -1190,7 +1190,7 @@ class InterfaceManagementViewModelStatusEventTest {
             advanceUntilIdle()
 
             assertEquals(
-                network.columba.app.rns.host.manager.CurrentTransport.CELLULAR,
+                network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR,
                 viewModel.state.value.currentTransport,
             )
         }
@@ -1200,10 +1200,10 @@ class InterfaceManagementViewModelStatusEventTest {
         runTest {
             val transportFlow =
                 kotlinx.coroutines.flow.MutableStateFlow(
-                    network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
+                    network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
                 )
             every { transportObserver.snapshotTransport() } returns
-                network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE
+                network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE
             every { transportObserver.currentTransport } returns transportFlow
 
             viewModel =
@@ -1218,16 +1218,16 @@ class InterfaceManagementViewModelStatusEventTest {
 
             advanceUntilIdle()
             assertEquals(
-                network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
+                network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
                 viewModel.state.value.currentTransport,
             )
 
             // Emit a transition — VM's collector should propagate to state.
-            transportFlow.value = network.columba.app.rns.host.manager.CurrentTransport.CELLULAR
+            transportFlow.value = network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR
             advanceUntilIdle()
 
             assertEquals(
-                network.columba.app.rns.host.manager.CurrentTransport.CELLULAR,
+                network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR,
                 viewModel.state.value.currentTransport,
             )
         }
@@ -1237,10 +1237,10 @@ class InterfaceManagementViewModelStatusEventTest {
         runTest {
             val transportFlow =
                 kotlinx.coroutines.flow.MutableStateFlow(
-                    network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
+                    network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE,
                 )
             every { transportObserver.snapshotTransport() } returns
-                network.columba.app.rns.host.manager.CurrentTransport.WIFI_LIKE
+                network.libertychat.app.rns.host.manager.CurrentTransport.WIFI_LIKE
             every { transportObserver.currentTransport } returns transportFlow
 
             viewModel =
@@ -1264,12 +1264,12 @@ class InterfaceManagementViewModelStatusEventTest {
             assertEquals(false, before.interfaceOnlineStatus["BLE"])
 
             // Now flip the transport — only `currentTransport` should change.
-            transportFlow.value = network.columba.app.rns.host.manager.CurrentTransport.CELLULAR
+            transportFlow.value = network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR
             advanceUntilIdle()
 
             val after = viewModel.state.value
             assertEquals(
-                network.columba.app.rns.host.manager.CurrentTransport.CELLULAR,
+                network.libertychat.app.rns.host.manager.CurrentTransport.CELLULAR,
                 after.currentTransport,
             )
             assertEquals(before.interfaces, after.interfaces)

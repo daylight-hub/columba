@@ -1,15 +1,15 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ReceivedLocationRepository
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.RelayInfo
-import network.columba.app.test.TestFactories
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ReceivedLocationRepository
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.RelayInfo
+import network.libertychat.app.test.TestFactories
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

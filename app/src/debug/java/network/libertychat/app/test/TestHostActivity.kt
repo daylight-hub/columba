@@ -1,4 +1,4 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

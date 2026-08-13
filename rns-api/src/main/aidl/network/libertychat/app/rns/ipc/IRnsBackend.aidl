@@ -20,15 +20,15 @@
 //                            pushes updates as capabilities mutate at runtime
 //                            (e.g., LXST jar absence in stripped-down test
 //                            builds, RNode disconnect downgrades).
-package network.columba.app.rns.ipc;
+package network.libertychat.app.rns.ipc;
 
-import network.columba.app.rns.ipc.callback.IRnsCapabilitiesCallback;
-import network.columba.app.rns.ipc.callback.IRnsCoreCallback;
-import network.columba.app.rns.ipc.callback.IRnsLxmfCallback;
-import network.columba.app.rns.ipc.callback.IRnsNomadnetCallback;
-import network.columba.app.rns.ipc.callback.IRnsTelemetryCallback;
-import network.columba.app.rns.ipc.callback.IRnsTelephonyCallback;
-import network.columba.app.rns.ipc.callback.IRnsTransportAdminCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsCapabilitiesCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsCoreCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsLxmfCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsNomadnetCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsTelemetryCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsTelephonyCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsTransportAdminCallback;
 
 oneway interface IRnsBackend {
     // ==================== Sub-interface accessors ====================

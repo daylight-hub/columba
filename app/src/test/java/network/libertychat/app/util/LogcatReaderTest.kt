@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

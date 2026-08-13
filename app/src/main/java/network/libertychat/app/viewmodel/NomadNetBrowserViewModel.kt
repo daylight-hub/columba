@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -15,15 +15,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import network.columba.app.micron.MicronDocument
-import network.columba.app.micron.MicronElement
-import network.columba.app.micron.MicronParser
-import network.columba.app.nomadnet.NomadNetPageCache
-import network.columba.app.nomadnet.PartialManager
-import network.columba.app.nomadnet.buildNomadNetRequestData
-import network.columba.app.nomadnet.splitNomadNetPathFields
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsNomadnet
+import network.libertychat.app.micron.MicronDocument
+import network.libertychat.app.micron.MicronElement
+import network.libertychat.app.micron.MicronParser
+import network.libertychat.app.nomadnet.NomadNetPageCache
+import network.libertychat.app.nomadnet.PartialManager
+import network.libertychat.app.nomadnet.buildNomadNetRequestData
+import network.libertychat.app.nomadnet.splitNomadNetPathFields
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsNomadnet
 import javax.inject.Inject
 
 @Suppress("TooManyFunctions") // ViewModel has 15 UI-interaction methods at the threshold

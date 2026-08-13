@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,10 +52,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import network.columba.app.service.RelayInfo
-import network.columba.app.ui.components.CollapsibleSettingsCard
-import network.columba.app.ui.util.rememberLifecycleTickerMillis
-import network.columba.app.util.DestinationHashValidator
+import network.libertychat.app.service.RelayInfo
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.ui.util.rememberLifecycleTickerMillis
+import network.libertychat.app.util.DestinationHashValidator
 
 /**
  * Settings card for message delivery and retrieval options.

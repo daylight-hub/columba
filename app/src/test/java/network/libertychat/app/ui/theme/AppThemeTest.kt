@@ -1,4 +1,4 @@
-package network.columba.app.ui.theme
+package network.libertychat.app.ui.theme
 
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme

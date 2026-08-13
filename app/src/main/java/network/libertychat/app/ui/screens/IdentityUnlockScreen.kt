@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -43,8 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.viewmodel.IdentityUnlockUiState
-import network.columba.app.viewmodel.IdentityUnlockViewModel
+import network.libertychat.app.viewmodel.IdentityUnlockUiState
+import network.libertychat.app.viewmodel.IdentityUnlockViewModel
 
 /**
  * Screen shown after an Auto Backup restore when the active identity's

@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.Manifest
 import android.net.Uri
@@ -65,10 +65,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.PermissionChecker
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.migration.ExportResult
-import network.columba.app.migration.MigrationPreview
-import network.columba.app.viewmodel.MigrationUiState
-import network.columba.app.viewmodel.MigrationViewModel
+import network.libertychat.app.migration.ExportResult
+import network.libertychat.app.migration.MigrationPreview
+import network.libertychat.app.viewmodel.MigrationUiState
+import network.libertychat.app.viewmodel.MigrationViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -823,7 +823,7 @@ internal fun PasswordDialog(
     var passwordVisible by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(if (isWrongPassword) "Incorrect password" else null) }
 
-    val minLength = network.columba.app.migration.MigrationCrypto.MIN_PASSWORD_LENGTH
+    val minLength = network.libertychat.app.migration.MigrationCrypto.MIN_PASSWORD_LENGTH
 
     fun validate(): Boolean {
         if (password.length < minLength) {

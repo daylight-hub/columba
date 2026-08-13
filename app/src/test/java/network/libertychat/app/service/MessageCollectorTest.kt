@@ -1,14 +1,14 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
-import network.columba.app.data.db.dao.PeerIconDao
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.notifications.NotificationHelper
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.model.ReceivedMessage
+import network.libertychat.app.data.db.dao.PeerIconDao
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.notifications.NotificationHelper
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.model.ReceivedMessage
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

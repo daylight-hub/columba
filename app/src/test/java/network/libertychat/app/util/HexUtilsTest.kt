@@ -1,7 +1,7 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
-import network.columba.app.util.HexUtils.hexStringToByteArray
-import network.columba.app.util.HexUtils.toHexString
+import network.libertychat.app.util.HexUtils.hexStringToByteArray
+import network.libertychat.app.util.HexUtils.toHexString
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test

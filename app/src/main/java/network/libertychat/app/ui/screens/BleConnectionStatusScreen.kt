@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -64,14 +64,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.model.BleConnectionInfo
-import network.columba.app.data.model.ConnectionType
-import network.columba.app.data.model.SignalQuality
-import network.columba.app.ui.components.BluetoothPermissionController
-import network.columba.app.ui.components.PermissionDeniedCard
-import network.columba.app.ui.components.rememberBluetoothPermissionController
-import network.columba.app.viewmodel.BleConnectionsUiState
-import network.columba.app.viewmodel.BleConnectionsViewModel
+import network.libertychat.app.data.model.BleConnectionInfo
+import network.libertychat.app.data.model.ConnectionType
+import network.libertychat.app.data.model.SignalQuality
+import network.libertychat.app.ui.components.BluetoothPermissionController
+import network.libertychat.app.ui.components.PermissionDeniedCard
+import network.libertychat.app.ui.components.rememberBluetoothPermissionController
+import network.libertychat.app.viewmodel.BleConnectionsUiState
+import network.libertychat.app.viewmodel.BleConnectionsViewModel
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date

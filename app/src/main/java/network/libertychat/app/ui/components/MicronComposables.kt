@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.content.Intent
 import android.util.Log
@@ -51,15 +51,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import network.columba.app.R
-import network.columba.app.micron.MicronAlignment
-import network.columba.app.micron.MicronDocument
-import network.columba.app.micron.MicronElement
-import network.columba.app.micron.MicronLine
-import network.columba.app.micron.MicronStyle
-import network.columba.app.nomadnet.PartialManager
-import network.columba.app.ui.screens.toBrowsableUri
-import network.columba.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
+import network.libertychat.app.R
+import network.libertychat.app.micron.MicronAlignment
+import network.libertychat.app.micron.MicronDocument
+import network.libertychat.app.micron.MicronElement
+import network.libertychat.app.micron.MicronLine
+import network.libertychat.app.micron.MicronStyle
+import network.libertychat.app.nomadnet.PartialManager
+import network.libertychat.app.ui.screens.toBrowsableUri
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
 
 /** JetBrains Mono NL — block elements (▄ █ etc.) have the same advance width as ASCII. */
 private val JetBrainsMonoFamily = FontFamily(Font(R.font.jetbrains_mono_nl_regular))

@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.content.ContentValues
 import android.graphics.Bitmap
@@ -20,12 +20,12 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.model.Direction
-import network.columba.app.rns.api.model.TransferPhase
-import network.columba.app.rns.api.model.TransferProgressUpdate
-import network.columba.app.service.SyncProgress
-import network.columba.app.test.TestHostActivity
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.TransferPhase
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.test.TestHostActivity
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

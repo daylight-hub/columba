@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -6,16 +6,16 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.filter
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.repository.Announce
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.model.NodeType
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.service.IdentityResolutionManager
-import network.columba.app.service.PropagationNodeManager
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.NodeType
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.service.IdentityResolutionManager
+import network.libertychat.app.service.PropagationNodeManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -55,10 +55,10 @@ class AnnounceStreamViewModel
     constructor(
         private val rnsCore: RnsCore,
         private val announceRepository: AnnounceRepository,
-        private val contactRepository: network.columba.app.data.repository.ContactRepository,
+        private val contactRepository: network.libertychat.app.data.repository.ContactRepository,
         private val propagationNodeManager: PropagationNodeManager,
         private val identityRepository: IdentityRepository,
-        private val blockedPeerRepository: network.columba.app.data.repository.BlockedPeerRepository,
+        private val blockedPeerRepository: network.libertychat.app.data.repository.BlockedPeerRepository,
         private val identityResolutionManager: IdentityResolutionManager,
     ) : ViewModel() {
         companion object {
@@ -113,7 +113,7 @@ class AnnounceStreamViewModel
 
         // Announces with pagination support, filtered by node types, audio filter,
         // interface types, AND search query
-        val announces: Flow<PagingData<network.columba.app.data.repository.Announce>> =
+        val announces: Flow<PagingData<network.libertychat.app.data.repository.Announce>> =
             combine(
                 searchQuery,
                 _selectedNodeTypes,
@@ -262,25 +262,25 @@ class AnnounceStreamViewModel
                         withTimeoutOrNull(timeout) {
                             rnsCore.networkStatus.first { status ->
                                 when (status) {
-                                    is network.columba.app.rns.api.model.NetworkStatus.READY -> {
+                                    is network.libertychat.app.rns.api.model.NetworkStatus.READY -> {
                                         Log.d(TAG, "Service is READY, starting announce collection")
                                         _initializationStatus.value = "Ready"
                                         true
                                     }
-                                    is network.columba.app.rns.api.model.NetworkStatus.ERROR -> {
+                                    is network.libertychat.app.rns.api.model.NetworkStatus.ERROR -> {
                                         Log.e(TAG, "Service entered ERROR state: $status, not starting announce collection")
                                         _initializationStatus.value = "Error: ${status.message}"
                                         throw RuntimeException("Service error: ${status.message}")
                                     }
-                                    is network.columba.app.rns.api.model.NetworkStatus.CONNECTING -> {
+                                    is network.libertychat.app.rns.api.model.NetworkStatus.CONNECTING -> {
                                         Log.d(TAG, "Service is CONNECTING, waiting...")
                                         false
                                     }
-                                    is network.columba.app.rns.api.model.NetworkStatus.SHUTDOWN -> {
+                                    is network.libertychat.app.rns.api.model.NetworkStatus.SHUTDOWN -> {
                                         Log.d(TAG, "Service is SHUTDOWN, waiting...")
                                         false
                                     }
-                                    is network.columba.app.rns.api.model.NetworkStatus.INITIALIZING -> {
+                                    is network.libertychat.app.rns.api.model.NetworkStatus.INITIALIZING -> {
                                         Log.d(TAG, "Service is INITIALIZING, waiting...")
                                         false
                                     }
@@ -313,7 +313,7 @@ class AnnounceStreamViewModel
                     // Extract peer name from app_data using smart parser
                     // Prefers displayName from Python's LXMF.display_name_from_app_data()
                     val peerName =
-                        network.columba.app.reticulum.util.AppDataParser.extractPeerName(
+                        network.libertychat.app.reticulum.util.AppDataParser.extractPeerName(
                             announce.appData,
                             hashHex,
                             announce.displayName,
@@ -404,7 +404,7 @@ class AnnounceStreamViewModel
                 try {
                     val peerIdentityHash =
                         publicKey?.let {
-                            network.columba.app.data.util.HashUtils
+                            network.libertychat.app.data.util.HashUtils
                                 .computeIdentityHash(it)
                         }
                     blockedPeerRepository.blockPeer(destinationHash, peerIdentityHash, peerName, blackholeEnabled)
@@ -609,7 +609,7 @@ class AnnounceStreamViewModel
                     kotlinx.coroutines.flow.flowOf(emptyList())
                 } else {
                     val identityHash =
-                        network.columba.app.data.util.HashUtils
+                        network.libertychat.app.data.util.HashUtils
                             .computeIdentityHash(announce.publicKey)
                     announceRepository.getLinkedAnnouncesFlow(identityHash, destinationHash)
                 }

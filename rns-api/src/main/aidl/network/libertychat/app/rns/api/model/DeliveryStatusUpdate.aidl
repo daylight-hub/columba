@@ -1,3 +1,3 @@
-package network.columba.app.rns.api.model;
+package network.libertychat.app.rns.api.model;
 
 parcelable DeliveryStatusUpdate;

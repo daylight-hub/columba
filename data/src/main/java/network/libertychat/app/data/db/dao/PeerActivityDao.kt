@@ -1,4 +1,4 @@
-package network.columba.app.data.db.dao
+package network.libertychat.app.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -6,8 +6,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
-import network.columba.app.data.db.entity.PeerActivityEntity
-import network.columba.app.data.db.entity.PeerActivityEventEntity
+import network.libertychat.app.data.db.entity.PeerActivityEntity
+import network.libertychat.app.data.db.entity.PeerActivityEventEntity
 
 @Dao
 interface PeerActivityDao {

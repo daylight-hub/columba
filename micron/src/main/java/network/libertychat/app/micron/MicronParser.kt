@@ -1,4 +1,4 @@
-package network.columba.app.micron
+package network.libertychat.app.micron
 
 /**
  * Parser for Micron markup language used by NomadNet.

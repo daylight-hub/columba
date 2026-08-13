@@ -1,4 +1,4 @@
-package network.columba.app.startup
+package network.libertychat.app.startup
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -21,7 +21,7 @@ class ConfigApplyFlagManager
         @ApplicationContext private val context: Context,
     ) {
         companion object {
-            internal const val PREFS_NAME = "columba_prefs"
+            internal const val PREFS_NAME = "libertychat_prefs"
             internal const val KEY_IS_APPLYING_CONFIG = "is_applying_config"
         }
 

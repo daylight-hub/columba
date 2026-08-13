@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
-import network.columba.app.util.ThemeColorGenerator
+import network.libertychat.app.util.ThemeColorGenerator
 
 /**
  * ROYGBIV preset colors for quick selection.

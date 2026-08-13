@@ -1,4 +1,4 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import android.app.Application
 import android.content.Context
@@ -7,10 +7,10 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.AnnounceEntity
-import network.columba.app.data.model.EnrichedAnnounce
-import network.columba.app.data.model.InterfaceType
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.AnnounceEntity
+import network.libertychat.app.data.model.EnrichedAnnounce
+import network.libertychat.app.data.model.InterfaceType
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

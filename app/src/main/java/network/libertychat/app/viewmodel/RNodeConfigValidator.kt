@@ -1,6 +1,6 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
-import network.columba.app.data.model.FrequencyRegion
+import network.libertychat.app.data.model.FrequencyRegion
 
 /**
  * Validation result for a single field.

@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
@@ -65,16 +65,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.launch
-import network.columba.app.data.repository.Announce
-import network.columba.app.rns.api.model.NodeType
-import network.columba.app.ui.components.AnnounceFilterChips
-import network.columba.app.ui.components.LocalWindowSize
-import network.columba.app.ui.components.NodeTypeBadge
-import network.columba.app.ui.components.OtherBadge
-import network.columba.app.ui.components.PeerCard
-import network.columba.app.ui.components.SearchableTopAppBar
-import network.columba.app.ui.components.simpleVerticalScrollbar
-import network.columba.app.viewmodel.AnnounceStreamViewModel
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.rns.api.model.NodeType
+import network.libertychat.app.ui.components.AnnounceFilterChips
+import network.libertychat.app.ui.components.LocalWindowSize
+import network.libertychat.app.ui.components.NodeTypeBadge
+import network.libertychat.app.ui.components.OtherBadge
+import network.libertychat.app.ui.components.PeerCard
+import network.libertychat.app.ui.components.SearchableTopAppBar
+import network.libertychat.app.ui.components.simpleVerticalScrollbar
+import network.libertychat.app.viewmodel.AnnounceStreamViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -837,12 +837,12 @@ fun ClearAllAnnouncesDialog(
 /**
  * Stable key function for announce paging lists.
  *
- * Uses [network.columba.app.data.repository.Announce.destinationHash] as the primary key so Compose can track
+ * Uses [network.libertychat.app.data.repository.Announce.destinationHash] as the primary key so Compose can track
  * items across list re-sorts (e.g., when new announces insert at the top).
  * Falls back to appending a disambiguator only for transient Paging3 duplicates
  * (issue #542) to avoid a duplicate-key crash.
  */
-private fun LazyPagingItems<network.columba.app.data.repository.Announce>.stableKey(): (index: Int) -> Any {
+private fun LazyPagingItems<network.libertychat.app.data.repository.Announce>.stableKey(): (index: Int) -> Any {
     val seen = mutableSetOf<String>()
     val keys =
         Array<Any>(itemCount) { index ->

@@ -1,6 +1,6 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
-import network.columba.app.data.db.dao.ReceivedLocationDao
+import network.libertychat.app.data.db.dao.ReceivedLocationDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject

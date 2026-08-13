@@ -1,4 +1,4 @@
-package network.columba.app.repository
+package network.libertychat.app.repository
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -27,14 +27,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.data.model.MapStylePreference
-import network.columba.app.data.repository.CustomThemeRepository
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.rns.host.persistence.ServiceSettingsAccessor
-import network.columba.app.ui.theme.AppTheme
-import network.columba.app.ui.theme.CustomTheme
-import network.columba.app.ui.theme.PresetTheme
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.model.MapStylePreference
+import network.libertychat.app.data.repository.CustomThemeRepository
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.rns.host.persistence.ServiceSettingsAccessor
+import network.libertychat.app.ui.theme.AppTheme
+import network.libertychat.app.ui.theme.CustomTheme
+import network.libertychat.app.ui.theme.PresetTheme
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -1885,9 +1885,9 @@ class SettingsRepository
          * Export all preferences from DataStore for backup/migration.
          * Returns a list of preference entries that can be serialized.
          */
-        suspend fun exportAllPreferences(): List<network.columba.app.migration.PreferenceEntry> {
+        suspend fun exportAllPreferences(): List<network.libertychat.app.migration.PreferenceEntry> {
             val preferences = context.dataStore.data.first()
-            val entries = mutableListOf<network.columba.app.migration.PreferenceEntry>()
+            val entries = mutableListOf<network.libertychat.app.migration.PreferenceEntry>()
 
             preferences.asMap().forEach { (key, value) ->
                 val (type, stringValue) =
@@ -1902,7 +1902,7 @@ class SettingsRepository
                     }
 
                 entries.add(
-                    network.columba.app.migration.PreferenceEntry(
+                    network.libertychat.app.migration.PreferenceEntry(
                         key = key.name,
                         type = type,
                         value = stringValue,
@@ -1917,7 +1917,7 @@ class SettingsRepository
          * Import preferences from a list of preference entries.
          * Unknown keys are safely ignored for forward/backward compatibility.
          */
-        suspend fun importAllPreferences(entries: List<network.columba.app.migration.PreferenceEntry>) {
+        suspend fun importAllPreferences(entries: List<network.libertychat.app.migration.PreferenceEntry>) {
             context.dataStore.edit { prefs ->
                 entries.forEach { entry ->
                     try {
@@ -2172,7 +2172,7 @@ class SettingsRepository
         /**
          * Convert a CustomThemeData to a CustomTheme (for use in UI)
          */
-        fun customThemeDataToAppTheme(themeData: network.columba.app.data.repository.CustomThemeData): CustomTheme {
+        fun customThemeDataToAppTheme(themeData: network.libertychat.app.data.repository.CustomThemeData): CustomTheme {
             // Convert ThemeColorSet to ColorScheme
             val lightScheme =
                 with(themeData.lightColors) {

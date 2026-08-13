@@ -1,4 +1,4 @@
-package network.columba.app.notifications
+package network.libertychat.app.notifications
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -13,9 +13,9 @@ import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import network.columba.app.IncomingCallActivity
-import network.columba.app.MainActivity
-import network.columba.app.R
+import network.libertychat.app.IncomingCallActivity
+import network.libertychat.app.MainActivity
+import network.libertychat.app.R
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import javax.inject.Inject
@@ -44,10 +44,10 @@ class CallNotificationHelper
             const val NOTIFICATION_ID_ONGOING_CALL = 5001
 
             // Intent actions
-            const val ACTION_ANSWER_CALL = "network.columba.app.ACTION_ANSWER_CALL"
-            const val ACTION_DECLINE_CALL = "network.columba.app.ACTION_DECLINE_CALL"
-            const val ACTION_END_CALL = "network.columba.app.ACTION_END_CALL"
-            const val ACTION_OPEN_CALL = "network.columba.app.ACTION_OPEN_CALL"
+            const val ACTION_ANSWER_CALL = "network.libertychat.app.ACTION_ANSWER_CALL"
+            const val ACTION_DECLINE_CALL = "network.libertychat.app.ACTION_DECLINE_CALL"
+            const val ACTION_END_CALL = "network.libertychat.app.ACTION_END_CALL"
+            const val ACTION_OPEN_CALL = "network.libertychat.app.ACTION_OPEN_CALL"
 
             // Intent extras
             const val EXTRA_IDENTITY_HASH = "identity_hash"

@@ -1,13 +1,13 @@
-package network.columba.app.data.db
+package network.libertychat.app.data.db
 
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.entity.MessageEntity
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals

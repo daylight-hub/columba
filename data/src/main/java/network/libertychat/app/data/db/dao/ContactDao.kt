@@ -1,11 +1,11 @@
-package network.columba.app.data.db.dao
+package network.libertychat.app.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.model.EnrichedContact
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.model.EnrichedContact
 import kotlinx.coroutines.flow.Flow
 
 @Dao

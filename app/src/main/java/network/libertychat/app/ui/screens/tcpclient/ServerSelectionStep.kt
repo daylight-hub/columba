@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.tcpclient
+package network.libertychat.app.ui.screens.tcpclient
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,9 +26,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.TcpCommunityServer
-import network.columba.app.ui.components.CustomSettingsCard
-import network.columba.app.viewmodel.TcpClientWizardViewModel
+import network.libertychat.app.data.model.TcpCommunityServer
+import network.libertychat.app.ui.components.CustomSettingsCard
+import network.libertychat.app.viewmodel.TcpClientWizardViewModel
 
 /**
  * Step 1: Server Selection

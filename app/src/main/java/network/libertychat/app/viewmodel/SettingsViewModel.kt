@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -24,27 +24,27 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import network.columba.app.BuildConfig
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.map.MapTileSourceManager
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsException
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.AvailableRelaysState
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.RelayInfo
-import network.columba.app.service.TelemetryCollectorManager
-import network.columba.app.ui.theme.AppTheme
-import network.columba.app.ui.theme.PresetTheme
+import network.libertychat.app.BuildConfig
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsException
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.AvailableRelaysState
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.RelayInfo
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.ui.theme.AppTheme
+import network.libertychat.app.ui.theme.PresetTheme
 import javax.inject.Inject
 
 /**
@@ -153,7 +153,7 @@ data class SettingsState(
     val isHostingShareInstanceConflict: Boolean = false,
     // Location sharing state
     val locationSharingEnabled: Boolean = true,
-    val activeSharingSessions: List<network.columba.app.service.SharingSession> = emptyList(),
+    val activeSharingSessions: List<network.libertychat.app.service.SharingSession> = emptyList(),
     val defaultSharingDuration: String = "ONE_HOUR",
     val locationPrecisionRadius: Int = 0,
     val preciseLocationPromptDismissed: Boolean = false,
@@ -201,7 +201,7 @@ data class SettingsState(
     val cardExpansionStates: Map<String, Boolean> =
         SettingsCardId.entries.associate { it.name to false },
     // Update checker state
-    val updateCheckResult: network.columba.app.service.AppUpdateResult = network.columba.app.service.AppUpdateResult.Idle,
+    val updateCheckResult: network.libertychat.app.service.AppUpdateResult = network.libertychat.app.service.AppUpdateResult.Idle,
     val includePrereleaseUpdates: Boolean = false,
     // Message sort order: false = received time (default), true = sent time
     val sortMessagesBySentTime: Boolean = false,
@@ -220,16 +220,16 @@ class SettingsViewModel
         private val rnsCore: RnsCore,
         private val rnsLxmf: RnsLxmf,
         private val rnsTransportAdmin: RnsTransportAdmin,
-        private val rnsTelephony: network.columba.app.rns.api.RnsTelephony,
-        private val interfaceConfigManager: network.columba.app.service.InterfaceConfigManager,
+        private val rnsTelephony: network.libertychat.app.rns.api.RnsTelephony,
+        private val interfaceConfigManager: network.libertychat.app.service.InterfaceConfigManager,
         private val propagationNodeManager: PropagationNodeManager,
-        private val locationSharingManager: network.columba.app.service.LocationSharingManager,
+        private val locationSharingManager: network.libertychat.app.service.LocationSharingManager,
         private val interfaceRepository: InterfaceRepository,
         private val mapTileSourceManager: MapTileSourceManager,
         private val telemetryCollectorManager: TelemetryCollectorManager,
         private val contactRepository: ContactRepository,
-        private val updateChecker: network.columba.app.service.UpdateChecker,
-        private val crashReportManager: network.columba.app.util.CrashReportManager,
+        private val updateChecker: network.libertychat.app.service.UpdateChecker,
+        private val crashReportManager: network.libertychat.app.util.CrashReportManager,
     ) : ViewModel() {
         companion object {
             private const val TAG = "SettingsViewModel"
@@ -266,7 +266,7 @@ class SettingsViewModel
          * `ColumbaNavigation` provides this into `LocalCapabilities` above the
          * NavHost so any screen can capability-gate its UI (Phase D).
          */
-        val capabilities: StateFlow<network.columba.app.rns.api.BackendCapabilities> =
+        val capabilities: StateFlow<network.libertychat.app.rns.api.BackendCapabilities> =
             rnsBackend.capabilities
 
         // Track when we first noticed shared instance disconnected
@@ -413,7 +413,7 @@ class SettingsViewModel
                         settingsRepository.crashReportingConsentFlow,
                     ) { flows ->
                         @Suppress("UNCHECKED_CAST")
-                        val activeIdentity = flows[0] as network.columba.app.data.db.entity.LocalIdentityEntity?
+                        val activeIdentity = flows[0] as network.libertychat.app.data.db.entity.LocalIdentityEntity?
 
                         @Suppress("UNCHECKED_CAST")
                         val autoAnnounceEnabled = flows[1] as Boolean
@@ -1026,7 +1026,7 @@ class SettingsViewModel
                     // Set shutdown flag so restart mechanisms (onDestroy, START_STICKY) stay stopped
                     // Use commit() to ensure flag is on disk before service process reads it
                     context
-                        .getSharedPreferences("columba_prefs", android.content.Context.MODE_PRIVATE)
+                        .getSharedPreferences("libertychat_prefs", android.content.Context.MODE_PRIVATE)
                         .edit()
                         .putBoolean("is_user_shutdown", true)
                         .commit()
@@ -1039,8 +1039,8 @@ class SettingsViewModel
 
                     // Send ACTION_STOP to actually stop the foreground service and remove notification
                     val stopIntent =
-                        android.content.Intent(context, network.columba.app.rns.host.ReticulumService::class.java).apply {
-                            action = network.columba.app.rns.host.ReticulumService.ACTION_STOP
+                        android.content.Intent(context, network.libertychat.app.rns.host.ReticulumService::class.java).apply {
+                            action = network.libertychat.app.rns.host.ReticulumService.ACTION_STOP
                         }
                     androidx.core.content.ContextCompat
                         .startForegroundService(context, stopIntent)
@@ -1815,7 +1815,7 @@ class SettingsViewModel
             viewModelScope.launch {
                 settingsRepository.setCrashReportingConsent(enabled)
                 crashReportManager.setCrashReportingConsentMirror(enabled)
-                network.columba.app.telemetry.CrashReporterProvider
+                network.libertychat.app.telemetry.CrashReporterProvider
                     .create()
                     .setEnabled(enabled)
                 Log.d(TAG, "Crash reporting ${if (enabled) "enabled" else "disabled"}")
@@ -2479,11 +2479,11 @@ class SettingsViewModel
         }
 
         fun checkForUpdates(includePrerelease: Boolean = _state.value.includePrereleaseUpdates) {
-            _state.update { it.copy(updateCheckResult = network.columba.app.service.AppUpdateResult.Checking) }
+            _state.update { it.copy(updateCheckResult = network.libertychat.app.service.AppUpdateResult.Checking) }
             viewModelScope.launch {
                 val result = updateChecker.check(includePrerelease)
                 _state.update { it.copy(updateCheckResult = result) }
-                if (result !is network.columba.app.service.AppUpdateResult.Error) {
+                if (result !is network.libertychat.app.service.AppUpdateResult.Error) {
                     settingsRepository.setLastUpdateCheckTime(System.currentTimeMillis())
                 }
             }

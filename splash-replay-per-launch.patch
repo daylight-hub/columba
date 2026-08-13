@@ -1,7 +1,7 @@
-diff --git a/app/src/main/java/network/columba/app/MainActivity.kt b/app/src/main/java/network/columba/app/MainActivity.kt
+diff --git a/app/src/main/java/network/libertychat/app/MainActivity.kt b/app/src/main/java/network/libertychat/app/MainActivity.kt
 index 3974aa0..bb7f7ab 100644
---- a/app/src/main/java/network/columba/app/MainActivity.kt
-+++ b/app/src/main/java/network/columba/app/MainActivity.kt
+--- a/app/src/main/java/network/libertychat/app/MainActivity.kt
++++ b/app/src/main/java/network/libertychat/app/MainActivity.kt
 @@ -289,6 +289,14 @@ class MainActivity : ComponentActivity() {
          // which is exactly what happened in 1.2.0: the wordmark rendered behind
          // the splash and removed itself before the splash lifted. Gating on this
@@ -17,10 +17,10 @@ index 3974aa0..bb7f7ab 100644
          splashScreen.setOnExitAnimationListener { provider ->
              provider.remove()
              splashDismissed.value = true
-diff --git a/app/src/main/java/network/columba/app/ui/components/LcsBrandedSplashOverlay.kt b/app/src/main/java/network/columba/app/ui/components/LcsBrandedSplashOverlay.kt
+diff --git a/app/src/main/java/network/libertychat/app/ui/components/LcsBrandedSplashOverlay.kt b/app/src/main/java/network/libertychat/app/ui/components/LcsBrandedSplashOverlay.kt
 index 0f71c39..9b64288 100644
---- a/app/src/main/java/network/columba/app/ui/components/LcsBrandedSplashOverlay.kt
-+++ b/app/src/main/java/network/columba/app/ui/components/LcsBrandedSplashOverlay.kt
+--- a/app/src/main/java/network/libertychat/app/ui/components/LcsBrandedSplashOverlay.kt
++++ b/app/src/main/java/network/libertychat/app/ui/components/LcsBrandedSplashOverlay.kt
 @@ -19,7 +19,6 @@ import androidx.compose.runtime.LaunchedEffect
  import androidx.compose.runtime.getValue
  import androidx.compose.runtime.mutableStateOf

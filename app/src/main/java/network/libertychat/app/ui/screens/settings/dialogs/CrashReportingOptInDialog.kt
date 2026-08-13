@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.dialogs
+package network.libertychat.app.ui.screens.settings.dialogs
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BugReport

@@ -1,4 +1,4 @@
-package network.columba.app.ui.theme
+package network.libertychat.app.ui.theme
 
 import android.app.Activity
 import android.os.Build

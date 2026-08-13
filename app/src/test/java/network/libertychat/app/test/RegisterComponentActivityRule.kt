@@ -1,4 +1,4 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
 import android.app.Application
 import android.content.pm.ActivityInfo

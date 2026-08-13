@@ -1,4 +1,4 @@
-package network.columba.app.ui.theme
+package network.libertychat.app.ui.theme
 
 import android.app.Application
 import androidx.compose.foundation.background
@@ -18,7 +18,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.unit.dp
-import network.columba.app.test.RegisterComponentActivityRule
+import network.libertychat.app.test.RegisterComponentActivityRule
 import org.junit.Assert.assertNotEquals
 import org.junit.Rule
 import org.junit.Test

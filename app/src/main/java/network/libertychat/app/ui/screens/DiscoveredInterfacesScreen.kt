@@ -1,6 +1,6 @@
 @file:Suppress("TooManyFunctions")
 
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.clickable
@@ -86,15 +86,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
-import network.columba.app.R
-import network.columba.app.rns.api.model.DiscoveredInterface
-import network.columba.app.ui.components.LocalCapabilities
-import network.columba.app.ui.components.ServiceRestartBanner
-import network.columba.app.ui.components.SortModeSelector
-import network.columba.app.ui.theme.MaterialDesignIcons
-import network.columba.app.util.LocationCompat
-import network.columba.app.viewmodel.DiscoveredInterfaceTypeFilter
-import network.columba.app.viewmodel.DiscoveredInterfacesViewModel
+import network.libertychat.app.R
+import network.libertychat.app.rns.api.model.DiscoveredInterface
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.ui.components.ServiceRestartBanner
+import network.libertychat.app.ui.components.SortModeSelector
+import network.libertychat.app.ui.theme.MaterialDesignIcons
+import network.libertychat.app.util.LocationCompat
+import network.libertychat.app.viewmodel.DiscoveredInterfaceTypeFilter
+import network.libertychat.app.viewmodel.DiscoveredInterfacesViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

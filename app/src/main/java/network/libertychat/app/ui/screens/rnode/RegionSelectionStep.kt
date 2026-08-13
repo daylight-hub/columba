@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,10 +37,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.FrequencyRegion
-import network.columba.app.data.model.RNodeRegionalPreset
-import network.columba.app.ui.components.CustomSettingsCard
-import network.columba.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.data.model.FrequencyRegion
+import network.libertychat.app.data.model.RNodeRegionalPreset
+import network.libertychat.app.ui.components.CustomSettingsCard
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
 
 /**
  * Step 2: Region/Frequency Selection

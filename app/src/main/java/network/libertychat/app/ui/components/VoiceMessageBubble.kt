@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import network.columba.app.rns.api.util.LxmfFields
+import network.libertychat.app.rns.api.util.LxmfFields
 
 /**
  * LCS: bubble for an LXMF `FIELD_AUDIO` (0x07) voice message.

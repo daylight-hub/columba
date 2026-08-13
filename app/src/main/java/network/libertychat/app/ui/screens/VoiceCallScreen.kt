@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -55,13 +55,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import network.columba.app.call.PttMediaSessionManager
-import network.columba.app.rns.api.model.CallState
+import network.libertychat.app.call.PttMediaSessionManager
+import network.libertychat.app.rns.api.model.CallState
 import kotlinx.coroutines.delay
-import network.columba.app.ui.components.CallQualityAdvisory
-import network.columba.app.ui.components.InCallCodecDialog
-import network.columba.app.ui.model.CodecProfile
-import network.columba.app.viewmodel.CallViewModel
+import network.libertychat.app.ui.components.CallQualityAdvisory
+import network.libertychat.app.ui.components.InCallCodecDialog
+import network.libertychat.app.ui.model.CodecProfile
+import network.libertychat.app.viewmodel.CallViewModel
 
 /**
  * Voice call screen for active/outgoing calls.

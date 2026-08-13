@@ -1,8 +1,8 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
-import network.columba.app.data.model.TcpCommunityServer
-import network.columba.app.viewmodel.TcpClientWizardState
-import network.columba.app.viewmodel.TcpClientWizardStep
+import network.libertychat.app.data.model.TcpCommunityServer
+import network.libertychat.app.viewmodel.TcpClientWizardState
+import network.libertychat.app.viewmodel.TcpClientWizardStep
 
 /**
  * Test fixtures for TCP Client Wizard UI tests.

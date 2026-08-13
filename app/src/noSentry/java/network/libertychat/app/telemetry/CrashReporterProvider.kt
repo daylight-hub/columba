@@ -1,4 +1,4 @@
-package network.columba.app.telemetry
+package network.libertychat.app.telemetry
 
 /**
  * Flavor-bound factory. The `noSentry` flavor returns a no-op reporter, ensuring no

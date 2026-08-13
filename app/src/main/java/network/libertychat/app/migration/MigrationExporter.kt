@@ -1,15 +1,15 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
 import android.content.Context
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
 import androidx.core.content.FileProvider
-import network.columba.app.data.crypto.IdentityKeyEncryptor
-import network.columba.app.data.crypto.IdentityKeyProvider
-import network.columba.app.data.database.InterfaceDatabase
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.repository.SettingsRepository
+import network.libertychat.app.data.crypto.IdentityKeyEncryptor
+import network.libertychat.app.data.crypto.IdentityKeyProvider
+import network.libertychat.app.data.database.InterfaceDatabase
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -161,7 +161,7 @@ class MigrationExporter
         )
 
         private suspend fun collectUserData(
-            identities: List<network.columba.app.data.db.entity.LocalIdentityEntity>,
+            identities: List<network.libertychat.app.data.db.entity.LocalIdentityEntity>,
             onProgress: (Float) -> Unit,
         ): UserData {
             val allConversations = mutableListOf<ConversationExport>()
@@ -234,7 +234,7 @@ class MigrationExporter
             }
 
         private suspend fun exportIdentities(
-            identities: List<network.columba.app.data.db.entity.LocalIdentityEntity>,
+            identities: List<network.libertychat.app.data.db.entity.LocalIdentityEntity>,
             exportPassword: CharArray? = null,
         ): List<IdentityExport> {
             return identities.map { identity ->
@@ -284,7 +284,7 @@ class MigrationExporter
          */
         @Suppress("DEPRECATION")
         private suspend fun getDecryptedKeyData(
-            identity: network.columba.app.data.db.entity.LocalIdentityEntity,
+            identity: network.libertychat.app.data.db.entity.LocalIdentityEntity,
         ): ByteArray? {
             // Try to get from encrypted storage first
             if (identity.keyEncryptionVersion > 0 && identity.encryptedKeyData != null) {

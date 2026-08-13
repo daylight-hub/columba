@@ -1,0 +1,289 @@
+package network.libertychat.app.rns.ipc.client
+
+import android.os.Bundle
+import android.os.ParcelFileDescriptor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
+import network.libertychat.app.rns.api.RnsError
+import network.libertychat.app.rns.api.RnsException
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.DeliveryStatusUpdate
+import network.libertychat.app.rns.api.model.Destination
+import network.libertychat.app.rns.api.model.IconAppearance
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.rns.api.model.MessageReceipt
+import network.libertychat.app.rns.api.model.PropagationState
+import network.libertychat.app.rns.api.model.ReceivedMessage
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.rns.ipc.AttachmentBlob
+import network.libertychat.app.rns.ipc.BundleKeys
+import network.libertychat.app.rns.ipc.FieldsBlob
+import network.libertychat.app.rns.ipc.IRnsLxmf
+import network.libertychat.app.rns.ipc.callback.IRnsDeliveryStatusCallback
+import network.libertychat.app.rns.ipc.callback.IRnsMessageCallback
+import network.libertychat.app.rns.ipc.callback.IRnsPropagationStateCallback
+import network.libertychat.app.rns.ipc.callback.IRnsTransferProgressCallback
+import java.io.File
+
+internal class ClientRnsLxmf(
+    private val remote: IRnsLxmf,
+    private val scope: CoroutineScope,
+    /** App cache dir used to stage attachment blobs before handing the server a PFD. */
+    private val attachmentCacheDir: File,
+) : RnsLxmf {
+    override suspend fun sendLxmfMessage(
+        destinationHash: ByteArray,
+        content: String,
+        sourceIdentity: Identity,
+        imageData: ByteArray?,
+        imageFormat: String?,
+        fileAttachments: List<Pair<String, ByteArray>>?,
+    ): Result<MessageReceipt> = runCatching {
+        // Attachment bytes ride out-of-band via a PFD, never inline in the
+        // Binder transaction (see AttachmentBlob). The PFD is ours to close once
+        // the call settles; the server has read its own dup by then.
+        val blob = withContext(Dispatchers.IO) {
+            AttachmentBlob.writeToPfd(attachmentCacheDir, imageData, imageFormat, fileAttachments)
+        }
+        try {
+            val bundle = awaitResult { cb ->
+                remote.sendLxmfMessage(
+                    destinationHash,
+                    content,
+                    sourceIdentity,
+                    blob,
+                    cb,
+                )
+            }
+            bundle.classLoader = MessageReceipt::class.java.classLoader
+            @Suppress("DEPRECATION")
+            bundle.getParcelable<MessageReceipt>(BundleKeys.RECEIPT)
+                ?: throw RnsException(RnsError.Generic("sendLxmfMessage payload missing 'receipt'", null))
+        } finally {
+            runCatching { blob?.close() }
+        }
+    }
+
+    override suspend fun sendLxmfMessageWithMethod(
+        destinationHash: ByteArray,
+        content: String,
+        sourceIdentity: Identity,
+        deliveryMethod: DeliveryMethod,
+        tryPropagationOnFail: Boolean,
+        imageData: ByteArray?,
+        imageFormat: String?,
+        fileAttachments: List<Pair<String, ByteArray>>?,
+        replyToMessageId: String?,
+        replyQuotedContent: String?,
+        iconAppearance: IconAppearance?,
+        extraFields: Map<Int, Any>?,
+        audioMode: Int?,
+        audioData: ByteArray?,
+    ): Result<MessageReceipt> = runCatching {
+        // Attachment and audio bytes ride out-of-band via a PFD, never inline in
+        // the Binder transaction (see AttachmentBlob). The PFD is ours to close
+        // once the call settles; the server has read its own dup by then.
+        val blob = withContext(Dispatchers.IO) {
+            AttachmentBlob.writeToPfd(
+                attachmentCacheDir,
+                imageData,
+                imageFormat,
+                fileAttachments,
+                audioMode,
+                audioData,
+            )
+        }
+        try {
+            val bundle = awaitResult { cb ->
+                remote.sendLxmfMessageWithMethod(
+                    destinationHash,
+                    content,
+                    sourceIdentity,
+                    deliveryMethod,
+                    tryPropagationOnFail,
+                    blob,
+                    replyToMessageId,
+                    replyQuotedContent,
+                    iconAppearance,
+                    extraFields?.toExtraFieldsBundle(),
+                    cb,
+                )
+            }
+            bundle.classLoader = MessageReceipt::class.java.classLoader
+            @Suppress("DEPRECATION")
+            bundle.getParcelable<MessageReceipt>(BundleKeys.RECEIPT)
+                ?: throw RnsException(RnsError.Generic("sendLxmfMessageWithMethod payload missing 'receipt'", null))
+        } finally {
+            runCatching { blob?.close() }
+        }
+    }
+
+    override suspend fun sendReaction(
+        destinationHash: ByteArray,
+        targetMessageId: String,
+        emoji: String,
+        sourceIdentity: Identity,
+    ): Result<MessageReceipt> = runCatching {
+        val bundle = awaitResult { cb ->
+            remote.sendReaction(destinationHash, targetMessageId, emoji, sourceIdentity, cb)
+        }
+        bundle.classLoader = MessageReceipt::class.java.classLoader
+        @Suppress("DEPRECATION")
+        bundle.getParcelable<MessageReceipt>(BundleKeys.RECEIPT)
+            ?: throw RnsException(RnsError.Generic("sendReaction payload missing 'receipt'", null))
+    }
+
+    override fun observeMessages(): Flow<ReceivedMessage> = callbackFlow {
+        val cb = object : IRnsMessageCallback.Stub() {
+            override fun onMessage(message: ReceivedMessage?, fieldsBlob: ParcelFileDescriptor?) {
+                if (message == null) {
+                    runCatching { fieldsBlob?.close() }
+                    return
+                }
+                // Large messages (received image/file) arrive with fieldsJson
+                // stripped and carried out-of-band; reconstitute it. FieldsBlob
+                // closes the fd on success. On a read failure fall back to the
+                // (fieldsJson-less) message rather than dropping it, and never
+                // leak the fd.
+                val full = if (fieldsBlob != null) {
+                    val fields = runCatching { FieldsBlob.readFromPfd(fieldsBlob) }
+                        .onFailure { runCatching { fieldsBlob.close() } }
+                        .getOrNull()
+                    if (fields != null) message.copy(fieldsJson = fields) else message
+                } else {
+                    message
+                }
+                trySend(full)
+            }
+        }
+        if (!registerObserverOrClose { remote.registerMessageObserver(cb) }) return@callbackFlow
+        awaitClose { runCatching { remote.unregisterMessageObserver(cb) } }
+    }
+
+    override fun observeDeliveryStatus(): Flow<DeliveryStatusUpdate> = callbackFlow {
+        val cb = object : IRnsDeliveryStatusCallback.Stub() {
+            override fun onDeliveryStatus(update: DeliveryStatusUpdate?) { if (update != null) trySend(update) }
+        }
+        if (!registerObserverOrClose { remote.registerDeliveryStatusObserver(cb) }) return@callbackFlow
+        awaitClose { runCatching { remote.unregisterDeliveryStatusObserver(cb) } }
+    }
+
+    override fun observeTransferProgress(): Flow<TransferProgressUpdate> = callbackFlow {
+        val cb = object : IRnsTransferProgressCallback.Stub() {
+            override fun onTransferProgress(update: TransferProgressUpdate?) {
+                if (update != null) trySend(update)
+            }
+        }
+        if (!registerObserverOrClose { remote.registerTransferProgressObserver(cb) }) return@callbackFlow
+        awaitClose { runCatching { remote.unregisterTransferProgressObserver(cb) } }
+    }
+
+    override suspend fun getLxmfIdentity(): Result<Identity> = runCatching {
+        val bundle = awaitResult { cb -> remote.getLxmfIdentity(cb) }
+        bundle.classLoader = Identity::class.java.classLoader
+        @Suppress("DEPRECATION")
+        bundle.getParcelable<Identity>(BundleKeys.IDENTITY)
+            ?: throw RnsException(RnsError.Generic("getLxmfIdentity payload missing 'identity'", null))
+    }
+
+    override suspend fun getLxmfDestination(): Result<Destination> = runCatching {
+        val bundle = awaitResult { cb -> remote.getLxmfDestination(cb) }
+        bundle.classLoader = Destination::class.java.classLoader
+        @Suppress("DEPRECATION")
+        bundle.getParcelable<Destination>(BundleKeys.DESTINATION)
+            ?: throw RnsException(RnsError.Generic("getLxmfDestination payload missing 'destination'", null))
+    }
+
+    override suspend fun setOutboundPropagationNode(destHash: ByteArray?): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.setOutboundPropagationNode(destHash, cb) }
+        Unit
+    }
+
+    override suspend fun getOutboundPropagationNode(): Result<String?> = runCatching {
+        awaitNullableString { cb -> remote.getOutboundPropagationNode(cb) }
+    }
+
+    override suspend fun requestMessagesFromPropagationNode(
+        identityPrivateKey: ByteArray?,
+        maxMessages: Int,
+    ): Result<PropagationState> = runCatching {
+        val bundle = awaitResult { cb ->
+            remote.requestMessagesFromPropagationNode(identityPrivateKey, maxMessages, cb)
+        }
+        bundle.classLoader = PropagationState::class.java.classLoader
+        @Suppress("DEPRECATION")
+        bundle.getParcelable<PropagationState>(BundleKeys.PROPAGATION_STATE)
+            ?: throw RnsException(RnsError.Generic("requestMessagesFromPropagationNode payload missing 'state'", null))
+    }
+
+    override suspend fun getPropagationState(): Result<PropagationState> = runCatching {
+        val bundle = awaitResult { cb -> remote.getPropagationState(cb) }
+        bundle.classLoader = PropagationState::class.java.classLoader
+        @Suppress("DEPRECATION")
+        bundle.getParcelable<PropagationState>(BundleKeys.PROPAGATION_STATE)
+            ?: throw RnsException(RnsError.Generic("getPropagationState payload missing 'state'", null))
+    }
+
+    override suspend fun cancelMessageSync(): Result<Unit> = runCatching {
+        awaitResult { cb -> remote.cancelMessageSync(cb) }
+        Unit
+    }
+
+    private val propagationShared = MutableSharedFlow<PropagationState>(extraBufferCapacity = 16)
+
+    init {
+        callbackFlow<PropagationState> {
+            val cb = object : IRnsPropagationStateCallback.Stub() {
+                override fun onPropagationState(state: PropagationState?) {
+                    if (state != null) trySend(state)
+                }
+            }
+            if (!registerObserverOrClose { remote.registerPropagationStateObserver(cb) }) return@callbackFlow
+            awaitClose { runCatching { remote.unregisterPropagationStateObserver(cb) } }
+        }.onEach { propagationShared.emit(it) }.launchIn(scope)
+    }
+
+    override val propagationStateFlow: SharedFlow<PropagationState>
+        get() = propagationShared.asSharedFlow()
+
+    override fun setConversationActive(active: Boolean) {
+        runCatching { remote.setConversationActive(active) }
+    }
+
+    override fun setIncomingMessageSizeLimit(limitKb: Int) {
+        runCatching { remote.setIncomingMessageSizeLimit(limitKb) }
+    }
+}
+
+/**
+ * Pack a `Map<Int, Any>` of LXMF field/value entries into a Bundle whose keys
+ * are the stringified field numbers (`"4"`, `"5"`, `"16"`, ...). Mirrors the
+ * AIDL contract documented on `IRnsLxmf.sendLxmfMessageWithMethod`.
+ */
+private fun Map<Int, Any>.toExtraFieldsBundle(): Bundle {
+    val bundle = Bundle()
+    for ((field, value) in this) {
+        val key = field.toString()
+        when (value) {
+            is Boolean -> bundle.putBoolean(key, value)
+            is Int -> bundle.putInt(key, value)
+            is Long -> bundle.putLong(key, value)
+            is Float -> bundle.putFloat(key, value)
+            is Double -> bundle.putDouble(key, value)
+            is String -> bundle.putString(key, value)
+            is ByteArray -> bundle.putByteArray(key, value)
+            else -> bundle.putString(key, value.toString())
+        }
+    }
+    return bundle
+}

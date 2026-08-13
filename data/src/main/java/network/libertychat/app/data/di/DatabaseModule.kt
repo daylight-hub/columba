@@ -1,4 +1,4 @@
-package network.columba.app.data.di
+package network.libertychat.app.data.di
 
 import android.content.Context
 import android.util.Log
@@ -12,29 +12,29 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.dao.AnnounceDao
-import network.columba.app.data.db.dao.BlockedPeerDao
-import network.columba.app.data.db.dao.ContactDao
-import network.columba.app.data.db.dao.ConversationDao
-import network.columba.app.data.db.dao.CustomThemeDao
-import network.columba.app.data.db.dao.DraftDao
-import network.columba.app.data.db.dao.InterfaceFirstSeenDao
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.dao.MessageDao
-import network.columba.app.data.db.dao.OfflineMapRegionDao
-import network.columba.app.data.db.dao.PeerActivityDao
-import network.columba.app.data.db.dao.PeerIconDao
-import network.columba.app.data.db.dao.PeerIdentityDao
-import network.columba.app.data.db.dao.ReceivedLocationDao
-import network.columba.app.data.db.dao.RmspServerDao
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.dao.AnnounceDao
+import network.libertychat.app.data.db.dao.BlockedPeerDao
+import network.libertychat.app.data.db.dao.ContactDao
+import network.libertychat.app.data.db.dao.ConversationDao
+import network.libertychat.app.data.db.dao.CustomThemeDao
+import network.libertychat.app.data.db.dao.DraftDao
+import network.libertychat.app.data.db.dao.InterfaceFirstSeenDao
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.dao.MessageDao
+import network.libertychat.app.data.db.dao.OfflineMapRegionDao
+import network.libertychat.app.data.db.dao.PeerActivityDao
+import network.libertychat.app.data.db.dao.PeerIconDao
+import network.libertychat.app.data.db.dao.PeerIdentityDao
+import network.libertychat.app.data.db.dao.ReceivedLocationDao
+import network.libertychat.app.data.db.dao.RmspServerDao
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 @Suppress("TooManyFunctions") // Hilt modules have one @Provides per DAO
 object DatabaseModule {
-    const val DATABASE_NAME = "columba_database"
+    const val DATABASE_NAME = "libertychat_database"
 
     /**
      * Harden SQLite against process-kill-induced corruption.

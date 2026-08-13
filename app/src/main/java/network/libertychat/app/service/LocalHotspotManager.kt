@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.content.Context
 import android.net.wifi.WifiManager

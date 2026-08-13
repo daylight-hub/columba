@@ -1,12 +1,12 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.util.Log
-import network.columba.app.data.db.entity.PeerActivityEntity
-import network.columba.app.data.db.entity.PeerActivityType
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.data.repository.PeerActivityRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.util.HexUtils
+import network.libertychat.app.data.db.entity.PeerActivityEntity
+import network.libertychat.app.data.db.entity.PeerActivityType
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.repository.PeerActivityRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.util.HexUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -504,7 +504,7 @@ class ConversationLinkManager
          */
         private fun handleNewIncomingLink(
             destHashHex: String,
-            result: network.columba.app.rns.api.model.ConversationLinkResult,
+            result: network.libertychat.app.rns.api.model.ConversationLinkResult,
         ) {
             Log.d(
                 TAG,
@@ -553,7 +553,7 @@ class ConversationLinkManager
         private fun updateActiveLinkMetrics(
             destHashHex: String,
             state: LinkState,
-            result: network.columba.app.rns.api.model.ConversationLinkResult,
+            result: network.libertychat.app.rns.api.model.ConversationLinkResult,
         ) {
             val updatedState =
                 state.copy(

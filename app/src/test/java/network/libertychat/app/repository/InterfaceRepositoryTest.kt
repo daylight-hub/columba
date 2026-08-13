@@ -1,4 +1,4 @@
-package network.columba.app.repository
+package network.libertychat.app.repository
 
 import app.cash.turbine.test
 import io.mockk.clearAllMocks
@@ -11,11 +11,11 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import network.columba.app.data.database.dao.InterfaceDao
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.api.model.toJsonString
+import network.libertychat.app.data.database.dao.InterfaceDao
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.api.model.toJsonString
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

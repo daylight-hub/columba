@@ -1,7 +1,7 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.util.Log
-import network.columba.app.BuildConfig
+import network.libertychat.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException

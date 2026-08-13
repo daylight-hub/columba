@@ -1,4 +1,4 @@
-package network.columba.app.call
+package network.libertychat.app.call
 
 import android.content.Context
 import android.content.Intent

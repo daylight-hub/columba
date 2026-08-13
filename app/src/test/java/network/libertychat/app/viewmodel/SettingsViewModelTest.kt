@@ -1,28 +1,28 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.map.MapTileSourceManager
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsError
-import network.columba.app.rns.api.RnsException
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.AvailableRelaysState
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.PropagationNodeManager
-import network.columba.app.service.TelemetryCollectorManager
-import network.columba.app.ui.theme.PresetTheme
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsError
+import network.libertychat.app.rns.api.RnsException
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.AvailableRelaysState
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.ui.theme.PresetTheme
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -71,7 +71,7 @@ class SettingsViewModelTest {
     private lateinit var rnsCore: RnsCore
     private lateinit var rnsLxmf: RnsLxmf
     private lateinit var rnsTransportAdmin: RnsTransportAdmin
-    private lateinit var rnsTelephony: network.columba.app.rns.api.RnsTelephony
+    private lateinit var rnsTelephony: network.libertychat.app.rns.api.RnsTelephony
     private lateinit var interfaceConfigManager: InterfaceConfigManager
     private lateinit var propagationNodeManager: PropagationNodeManager
     private lateinit var locationSharingManager: LocationSharingManager
@@ -79,8 +79,8 @@ class SettingsViewModelTest {
     private lateinit var mapTileSourceManager: MapTileSourceManager
     private lateinit var telemetryCollectorManager: TelemetryCollectorManager
     private lateinit var contactRepository: ContactRepository
-    private lateinit var updateChecker: network.columba.app.service.UpdateChecker
-    private lateinit var crashReportManager: network.columba.app.util.CrashReportManager
+    private lateinit var updateChecker: network.libertychat.app.service.UpdateChecker
+    private lateinit var crashReportManager: network.libertychat.app.util.CrashReportManager
     private lateinit var context: android.content.Context
     private lateinit var viewModel: SettingsViewModel
 
@@ -102,7 +102,7 @@ class SettingsViewModelTest {
     private val batteryProfileFlow = MutableStateFlow(BatteryProfile.BALANCED)
     private val defaultDeliveryMethodFlow = MutableStateFlow("direct")
     private val imageCompressionPresetFlow =
-        MutableStateFlow(network.columba.app.data.model.ImageCompressionPreset.AUTO)
+        MutableStateFlow(network.libertychat.app.data.model.ImageCompressionPreset.AUTO)
 
     @Before
     @Suppress("LongMethod") // Setup configures many mock stubs for ViewModel's 10+ dependencies
@@ -1840,8 +1840,8 @@ class SettingsViewModelTest {
     @Test
     fun `applyCustomTheme validId appliesTheme`() =
         runTest {
-            val mockThemeData = mockk<network.columba.app.data.repository.CustomThemeData>()
-            val mockCustomTheme = mockk<network.columba.app.ui.theme.CustomTheme>()
+            val mockThemeData = mockk<network.libertychat.app.data.repository.CustomThemeData>()
+            val mockCustomTheme = mockk<network.libertychat.app.ui.theme.CustomTheme>()
             coEvery { settingsRepository.getCustomThemeById(123L) } returns mockThemeData
             every { settingsRepository.customThemeDataToAppTheme(mockThemeData) } returns mockCustomTheme
 
@@ -2764,7 +2764,7 @@ class SettingsViewModelTest {
             viewModel.state.test {
                 val state = awaitItem()
                 assertEquals(
-                    network.columba.app.data.model.ImageCompressionPreset.AUTO,
+                    network.libertychat.app.data.model.ImageCompressionPreset.AUTO,
                     state.imageCompressionPreset,
                 )
             }
@@ -2777,13 +2777,13 @@ class SettingsViewModelTest {
 
             val result =
                 runCatching {
-                    viewModel.setImageCompressionPreset(network.columba.app.data.model.ImageCompressionPreset.LOW)
+                    viewModel.setImageCompressionPreset(network.libertychat.app.data.model.ImageCompressionPreset.LOW)
                 }
 
             assertTrue("setImageCompressionPreset should complete successfully", result.isSuccess)
             coVerify {
                 settingsRepository.saveImageCompressionPreset(
-                    network.columba.app.data.model.ImageCompressionPreset.LOW,
+                    network.libertychat.app.data.model.ImageCompressionPreset.LOW,
                 )
             }
         }
@@ -2795,13 +2795,13 @@ class SettingsViewModelTest {
 
             val result =
                 runCatching {
-                    viewModel.setImageCompressionPreset(network.columba.app.data.model.ImageCompressionPreset.HIGH)
+                    viewModel.setImageCompressionPreset(network.libertychat.app.data.model.ImageCompressionPreset.HIGH)
                 }
 
             assertTrue("setImageCompressionPreset should complete successfully", result.isSuccess)
             coVerify {
                 settingsRepository.saveImageCompressionPreset(
-                    network.columba.app.data.model.ImageCompressionPreset.HIGH,
+                    network.libertychat.app.data.model.ImageCompressionPreset.HIGH,
                 )
             }
         }
@@ -2813,13 +2813,13 @@ class SettingsViewModelTest {
 
             val result =
                 runCatching {
-                    viewModel.setImageCompressionPreset(network.columba.app.data.model.ImageCompressionPreset.MEDIUM)
+                    viewModel.setImageCompressionPreset(network.libertychat.app.data.model.ImageCompressionPreset.MEDIUM)
                 }
 
             assertTrue("setImageCompressionPreset should complete successfully", result.isSuccess)
             coVerify {
                 settingsRepository.saveImageCompressionPreset(
-                    network.columba.app.data.model.ImageCompressionPreset.MEDIUM,
+                    network.libertychat.app.data.model.ImageCompressionPreset.MEDIUM,
                 )
             }
         }
@@ -2831,13 +2831,13 @@ class SettingsViewModelTest {
 
             val result =
                 runCatching {
-                    viewModel.setImageCompressionPreset(network.columba.app.data.model.ImageCompressionPreset.ORIGINAL)
+                    viewModel.setImageCompressionPreset(network.libertychat.app.data.model.ImageCompressionPreset.ORIGINAL)
                 }
 
             assertTrue("setImageCompressionPreset should complete successfully", result.isSuccess)
             coVerify {
                 settingsRepository.saveImageCompressionPreset(
-                    network.columba.app.data.model.ImageCompressionPreset.ORIGINAL,
+                    network.libertychat.app.data.model.ImageCompressionPreset.ORIGINAL,
                 )
             }
         }
@@ -2851,17 +2851,17 @@ class SettingsViewModelTest {
                 // Initial state
                 val initial = awaitItem()
                 assertEquals(
-                    network.columba.app.data.model.ImageCompressionPreset.AUTO,
+                    network.libertychat.app.data.model.ImageCompressionPreset.AUTO,
                     initial.imageCompressionPreset,
                 )
 
                 // Change preset via flow
-                imageCompressionPresetFlow.value = network.columba.app.data.model.ImageCompressionPreset.MEDIUM
+                imageCompressionPresetFlow.value = network.libertychat.app.data.model.ImageCompressionPreset.MEDIUM
 
                 // State should update
                 val updated = awaitItem()
                 assertEquals(
-                    network.columba.app.data.model.ImageCompressionPreset.MEDIUM,
+                    network.libertychat.app.data.model.ImageCompressionPreset.MEDIUM,
                     updated.imageCompressionPreset,
                 )
             }

@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.view.WindowManager
 import androidx.compose.foundation.background

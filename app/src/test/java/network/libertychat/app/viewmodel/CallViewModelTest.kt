@@ -1,13 +1,13 @@
 // NoVerifyOnlyTests: PTT tests verify side effects (IPC calls to telephony) which is the correct behavior
 @file:Suppress("NoVerifyOnlyTests")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.rns.api.RnsTelephony
-import network.columba.app.rns.api.model.CallState
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.rns.api.RnsTelephony
+import network.libertychat.app.rns.api.model.CallState
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify

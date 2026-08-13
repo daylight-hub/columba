@@ -1,9 +1,9 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import app.cash.turbine.test
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.storage.AttachmentStorageManager
-import network.columba.app.test.DatabaseTest
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.storage.AttachmentStorageManager
+import network.libertychat.app.test.DatabaseTest
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers

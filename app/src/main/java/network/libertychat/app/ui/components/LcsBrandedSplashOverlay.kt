@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -32,9 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import network.columba.app.R
-import network.columba.app.ui.theme.LibertyNavy40
-import network.columba.app.ui.theme.LibertySilver40
+import network.libertychat.app.R
+import network.libertychat.app.ui.theme.LibertyNavy40
+import network.libertychat.app.ui.theme.LibertySilver40
 
 /**
  * LCS: the "Liberty Chat — powered by Columba" splash wordmark.

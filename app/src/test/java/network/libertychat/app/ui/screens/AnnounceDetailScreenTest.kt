@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.material3.MaterialTheme
@@ -6,11 +6,11 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.repository.Announce
-import network.columba.app.data.repository.AnnounceInterfaceSighting
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.AnnounceStreamViewModel
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.data.repository.AnnounceInterfaceSighting
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.AnnounceStreamViewModel
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow

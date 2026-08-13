@@ -1,13 +1,13 @@
-package network.columba.app.startup
+package network.libertychat.app.startup
 
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.service.manager.InterfaceTransportObserver
-import network.columba.app.rns.host.manager.filterByTransport
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.service.manager.InterfaceTransportObserver
+import network.libertychat.app.rns.host.manager.filterByTransport
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first

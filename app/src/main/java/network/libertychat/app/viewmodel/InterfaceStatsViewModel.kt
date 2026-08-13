@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
@@ -11,11 +11,11 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.util.InterfaceReconnectSignal
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.util.InterfaceReconnectSignal
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -83,7 +83,7 @@ class InterfaceStatsViewModel
             private const val TAG = "InterfaceStatsVM"
             private const val STATS_REFRESH_INTERVAL_MS = 1000L // Poll faster for responsive UI
             private const val CONNECTING_TIMEOUT_MS = 15000L // Stop showing "connecting" after 15s
-            private const val ACTION_USB_PERMISSION = "network.columba.app.USB_PERMISSION"
+            private const val ACTION_USB_PERMISSION = "network.libertychat.app.USB_PERMISSION"
 
             // Test configuration flags - disable background operations during tests
             internal var enableStatsPolling = true

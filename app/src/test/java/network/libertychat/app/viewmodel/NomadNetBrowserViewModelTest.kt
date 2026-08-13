@@ -1,7 +1,7 @@
 // SleepInsteadOfDelay: IO coroutines need Thread.sleep for completion
 @file:Suppress("SleepInsteadOfDelay")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import io.mockk.Runs
@@ -24,10 +24,10 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import network.columba.app.nomadnet.NomadNetPageCache
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsNomadnet
-import network.columba.app.rns.api.model.NomadnetPageResult
+import network.libertychat.app.nomadnet.NomadNetPageCache
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsNomadnet
+import network.libertychat.app.rns.api.model.NomadnetPageResult
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

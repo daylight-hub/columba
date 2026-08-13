@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.Manifest
 import android.content.ClipData
@@ -53,41 +53,41 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
-import network.columba.app.ui.components.BackgroundLocationPermissionBottomSheet
-import network.columba.app.ui.components.LocationPermissionBottomSheet
-import network.columba.app.ui.components.ServiceRestartBanner
-import network.columba.app.ui.screens.settings.cards.AboutCard
-import network.columba.app.util.GITHUB_NEW_ISSUE_URL
-import network.columba.app.util.safeOpenUrl
-import network.columba.app.ui.screens.settings.cards.AdvancedCard
-import network.columba.app.ui.screens.settings.cards.AutoAnnounceCard
-import network.columba.app.ui.screens.settings.cards.BatteryOptimizationCard
-import network.columba.app.ui.screens.settings.cards.DataMigrationCard
-import network.columba.app.ui.screens.settings.cards.IdentityCard
-import network.columba.app.ui.screens.settings.cards.ImageCompressionCard
-import network.columba.app.ui.screens.settings.cards.LocationSharingCard
-import network.columba.app.ui.screens.settings.cards.MapSourcesCard
-import network.columba.app.ui.screens.settings.cards.MessageDeliveryRetrievalCard
-import network.columba.app.ui.screens.settings.cards.NetworkCard
-import network.columba.app.ui.screens.settings.cards.NotificationSettingsCard
-import network.columba.app.ui.screens.settings.cards.PrivacyCard
-import network.columba.app.ui.screens.settings.cards.ShareColumbaCard
-import network.columba.app.ui.screens.settings.cards.SharedInstanceBannerCard
-import network.columba.app.ui.screens.settings.cards.ThemeSelectionCard
-import network.columba.app.ui.screens.settings.cards.VoiceCallPermissionsCard
-import network.columba.app.ui.screens.settings.cards.shouldShowSharedInstanceBanner
-import network.columba.app.ui.screens.settings.dialogs.CrashReportDialog
-import network.columba.app.ui.screens.settings.dialogs.IdentityQrCodeDialog
-import network.columba.app.ui.util.LifecycleGuard
-import network.columba.app.util.CrashReport
-import network.columba.app.util.CrashReportManager
-import network.columba.app.util.DeviceInfoUtil
-import network.columba.app.util.LocationPermissionManager
-import network.columba.app.viewmodel.BlockedUsersViewModel
-import network.columba.app.viewmodel.DebugViewModel
-import network.columba.app.viewmodel.SettingsCardId
-import network.columba.app.viewmodel.SettingsViewModel
-import network.columba.app.viewmodel.SharedInstanceAccessEvent
+import network.libertychat.app.ui.components.BackgroundLocationPermissionBottomSheet
+import network.libertychat.app.ui.components.LocationPermissionBottomSheet
+import network.libertychat.app.ui.components.ServiceRestartBanner
+import network.libertychat.app.ui.screens.settings.cards.AboutCard
+import network.libertychat.app.util.GITHUB_NEW_ISSUE_URL
+import network.libertychat.app.util.safeOpenUrl
+import network.libertychat.app.ui.screens.settings.cards.AdvancedCard
+import network.libertychat.app.ui.screens.settings.cards.AutoAnnounceCard
+import network.libertychat.app.ui.screens.settings.cards.BatteryOptimizationCard
+import network.libertychat.app.ui.screens.settings.cards.DataMigrationCard
+import network.libertychat.app.ui.screens.settings.cards.IdentityCard
+import network.libertychat.app.ui.screens.settings.cards.ImageCompressionCard
+import network.libertychat.app.ui.screens.settings.cards.LocationSharingCard
+import network.libertychat.app.ui.screens.settings.cards.MapSourcesCard
+import network.libertychat.app.ui.screens.settings.cards.MessageDeliveryRetrievalCard
+import network.libertychat.app.ui.screens.settings.cards.NetworkCard
+import network.libertychat.app.ui.screens.settings.cards.NotificationSettingsCard
+import network.libertychat.app.ui.screens.settings.cards.PrivacyCard
+import network.libertychat.app.ui.screens.settings.cards.ShareColumbaCard
+import network.libertychat.app.ui.screens.settings.cards.SharedInstanceBannerCard
+import network.libertychat.app.ui.screens.settings.cards.ThemeSelectionCard
+import network.libertychat.app.ui.screens.settings.cards.VoiceCallPermissionsCard
+import network.libertychat.app.ui.screens.settings.cards.shouldShowSharedInstanceBanner
+import network.libertychat.app.ui.screens.settings.dialogs.CrashReportDialog
+import network.libertychat.app.ui.screens.settings.dialogs.IdentityQrCodeDialog
+import network.libertychat.app.ui.util.LifecycleGuard
+import network.libertychat.app.util.CrashReport
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.DeviceInfoUtil
+import network.libertychat.app.util.LocationPermissionManager
+import network.libertychat.app.viewmodel.BlockedUsersViewModel
+import network.libertychat.app.viewmodel.DebugViewModel
+import network.libertychat.app.viewmodel.SettingsCardId
+import network.libertychat.app.viewmodel.SettingsViewModel
+import network.libertychat.app.viewmodel.SharedInstanceAccessEvent
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -519,7 +519,7 @@ fun SettingsScreen(
                     detectedPreset = state.detectedCompressionPreset,
                     hasSlowInterface =
                         state.detectedCompressionPreset ==
-                            network.columba.app.data.model.ImageCompressionPreset.LOW,
+                            network.libertychat.app.data.model.ImageCompressionPreset.LOW,
                     onPresetChange = { viewModel.setImageCompressionPreset(it) },
                 )
 

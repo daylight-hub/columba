@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
@@ -70,9 +70,9 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.viewmodel.IdentityManagerUiState
-import network.columba.app.viewmodel.IdentityManagerViewModel
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.viewmodel.IdentityManagerUiState
+import network.libertychat.app.viewmodel.IdentityManagerViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

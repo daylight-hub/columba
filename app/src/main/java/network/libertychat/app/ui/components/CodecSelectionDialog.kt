@@ -1,12 +1,12 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import network.columba.app.service.ConversationLinkManager
-import network.columba.app.ui.model.CodecProfile
+import network.libertychat.app.service.ConversationLinkManager
+import network.libertychat.app.ui.model.CodecProfile
 
 /**
  * Dialog for selecting an audio codec profile before initiating a voice call.

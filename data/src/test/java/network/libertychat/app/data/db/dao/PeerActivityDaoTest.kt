@@ -1,4 +1,4 @@
-package network.columba.app.data.db.dao
+package network.libertychat.app.data.db.dao
 
 import android.app.Application
 import android.content.Context
@@ -6,13 +6,13 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.AnnounceEntity
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.db.entity.MessageEntity
-import network.columba.app.data.db.entity.PeerActivityType
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.AnnounceEntity
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.db.entity.PeerActivityType
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

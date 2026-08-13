@@ -1,4 +1,4 @@
-package network.columba.app.integration
+package network.libertychat.app.integration
 
 import android.content.Context
 import androidx.room.Room
@@ -7,14 +7,14 @@ import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import network.columba.app.data.crypto.IdentityKeyEncryptor
-import network.columba.app.data.crypto.IdentityKeyMigrator
-import network.columba.app.data.crypto.IdentityKeyProvider
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.db.entity.MessageEntity
-import network.columba.app.data.repository.IdentityRepository
+import network.libertychat.app.data.crypto.IdentityKeyEncryptor
+import network.libertychat.app.data.crypto.IdentityKeyMigrator
+import network.libertychat.app.data.crypto.IdentityKeyProvider
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.repository.IdentityRepository
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals

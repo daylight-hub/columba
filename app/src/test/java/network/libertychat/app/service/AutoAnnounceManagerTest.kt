@@ -1,10 +1,10 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.app.Application
 import app.cash.turbine.test
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

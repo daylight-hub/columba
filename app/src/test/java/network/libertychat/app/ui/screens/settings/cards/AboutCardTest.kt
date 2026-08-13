@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import android.app.Application
 import android.content.ActivityNotFoundException
@@ -17,11 +17,11 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
-import network.columba.app.R
-import network.columba.app.service.AppUpdateResult
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.theme.ColumbaTheme
-import network.columba.app.util.SystemInfo
+import network.libertychat.app.R
+import network.libertychat.app.service.AppUpdateResult
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.theme.ColumbaTheme
+import network.libertychat.app.util.SystemInfo
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

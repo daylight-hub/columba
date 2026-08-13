@@ -1,4 +1,4 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals

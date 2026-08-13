@@ -1,8 +1,8 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
-import network.columba.app.data.repository.Announce
-import network.columba.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.data.repository.AnnounceRepository
 import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify

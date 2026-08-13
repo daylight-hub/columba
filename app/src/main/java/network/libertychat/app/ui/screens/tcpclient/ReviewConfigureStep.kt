@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.tcpclient
+package network.libertychat.app.ui.screens.tcpclient
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
@@ -28,9 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import network.columba.app.ui.components.IfacConfigCard
-import network.columba.app.ui.components.NetworkRestrictionSelector
-import network.columba.app.viewmodel.TcpClientWizardViewModel
+import network.libertychat.app.ui.components.IfacConfigCard
+import network.libertychat.app.ui.components.NetworkRestrictionSelector
+import network.libertychat.app.viewmodel.TcpClientWizardViewModel
 
 /**
  * Step 2: Review and Configure

@@ -1,10 +1,10 @@
-package network.columba.app.map
+package network.libertychat.app.map
 
-import network.columba.app.data.repository.OfflineMapRegion
-import network.columba.app.data.repository.OfflineMapRegionRepository
-import network.columba.app.data.repository.RmspServer
-import network.columba.app.data.repository.RmspServerRepository
-import network.columba.app.repository.SettingsRepository
+import network.libertychat.app.data.repository.OfflineMapRegion
+import network.libertychat.app.data.repository.OfflineMapRegionRepository
+import network.libertychat.app.data.repository.RmspServer
+import network.libertychat.app.data.repository.RmspServerRepository
+import network.libertychat.app.repository.SettingsRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

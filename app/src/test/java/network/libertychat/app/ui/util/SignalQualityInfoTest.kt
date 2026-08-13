@@ -1,4 +1,4 @@
-package network.columba.app.ui.util
+package network.libertychat.app.ui.util
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SignalCellular4Bar

@@ -1,4 +1,4 @@
-package network.columba.app.integration
+package network.libertychat.app.integration
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -25,15 +25,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.data.repository.Message
-import network.columba.app.data.storage.AttachmentStorageManager
-import network.columba.app.ui.model.MessageRenderer
-import network.columba.app.ui.model.toMessageUi
-import network.columba.app.ui.screens.MessageBubble
-import network.columba.app.ui.theme.ColumbaTheme
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.data.repository.Message
+import network.libertychat.app.data.storage.AttachmentStorageManager
+import network.libertychat.app.ui.model.MessageRenderer
+import network.libertychat.app.ui.model.toMessageUi
+import network.libertychat.app.ui.screens.MessageBubble
+import network.libertychat.app.ui.theme.ColumbaTheme
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

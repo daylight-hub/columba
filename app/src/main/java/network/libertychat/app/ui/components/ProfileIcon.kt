@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -16,8 +16,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
-import network.columba.app.R
-import network.columba.app.ui.theme.MaterialDesignIcons
+import network.libertychat.app.R
+import network.libertychat.app.ui.theme.MaterialDesignIcons
 
 /**
  * Material Design Icons font family.

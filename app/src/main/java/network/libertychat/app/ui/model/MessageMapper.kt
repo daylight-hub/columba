@@ -1,15 +1,15 @@
 @file:Suppress("TooManyFunctions") // Message mapping requires multiple utilities for different field types
 
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import android.graphics.BitmapFactory
 import android.util.Log
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import network.columba.app.data.repository.Message
-import network.columba.app.rns.api.util.LxmfFields
-import network.columba.app.util.FileUtils
-import network.columba.app.util.ImageUtils
+import network.libertychat.app.data.repository.Message
+import network.libertychat.app.rns.api.util.LxmfFields
+import network.libertychat.app.util.FileUtils
+import network.libertychat.app.util.ImageUtils
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File

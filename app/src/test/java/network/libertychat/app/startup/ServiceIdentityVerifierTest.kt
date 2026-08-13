@@ -1,8 +1,8 @@
-package network.columba.app.startup
+package network.libertychat.app.startup
 
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.rns.api.model.Identity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.rns.api.model.Identity
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.mockk

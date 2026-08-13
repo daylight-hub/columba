@@ -1,4 +1,4 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -10,18 +10,18 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import network.columba.app.data.db.dao.ConversationDao
-import network.columba.app.data.db.dao.DraftDao
-import network.columba.app.data.db.dao.LocalIdentityDao
-import network.columba.app.data.db.dao.MessageDao
-import network.columba.app.data.db.dao.PeerIdentityDao
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.db.entity.DraftEntity
-import network.columba.app.data.db.entity.MessageEntity
-import network.columba.app.data.db.entity.PeerIdentityEntity
-import network.columba.app.data.model.EnrichedConversation
-import network.columba.app.data.storage.AttachmentStorageManager
-import network.columba.app.data.util.TextSanitizer
+import network.libertychat.app.data.db.dao.ConversationDao
+import network.libertychat.app.data.db.dao.DraftDao
+import network.libertychat.app.data.db.dao.LocalIdentityDao
+import network.libertychat.app.data.db.dao.MessageDao
+import network.libertychat.app.data.db.dao.PeerIdentityDao
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.db.entity.DraftEntity
+import network.libertychat.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.db.entity.PeerIdentityEntity
+import network.libertychat.app.data.model.EnrichedConversation
+import network.libertychat.app.data.storage.AttachmentStorageManager
+import network.libertychat.app.data.util.TextSanitizer
 import org.json.JSONArray
 import org.json.JSONObject
 import javax.inject.Inject

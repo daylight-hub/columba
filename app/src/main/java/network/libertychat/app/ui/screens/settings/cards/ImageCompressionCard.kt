@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,8 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
 
 /**
  * Settings card for selecting image compression preset.

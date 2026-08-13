@@ -1,15 +1,15 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import network.columba.app.di.IoDispatcher
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.util.IdentityQrCodeUtils
-import network.columba.app.util.generateDefaultDisplayName
+import network.libertychat.app.di.IoDispatcher
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.util.IdentityQrCodeUtils
+import network.libertychat.app.util.generateDefaultDisplayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.delay
@@ -100,9 +100,9 @@ class DebugViewModel
         private val rnsLxmf: RnsLxmf,
         private val rnsTransportAdmin: RnsTransportAdmin,
         private val settingsRepository: SettingsRepository,
-        private val identityRepository: network.columba.app.data.repository.IdentityRepository,
-        private val interfaceConfigManager: network.columba.app.service.InterfaceConfigManager,
-        private val interfaceRepository: network.columba.app.repository.InterfaceRepository,
+        private val identityRepository: network.libertychat.app.data.repository.IdentityRepository,
+        private val interfaceConfigManager: network.libertychat.app.service.InterfaceConfigManager,
+        private val interfaceRepository: network.libertychat.app.repository.InterfaceRepository,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
         companion object {
@@ -111,8 +111,8 @@ class DebugViewModel
         }
 
         // Cached identity and destination for test announces - reused across all announces
-        private var cachedIdentity: network.columba.app.rns.api.model.Identity? = null
-        private var cachedDestination: network.columba.app.rns.api.model.Destination? = null
+        private var cachedIdentity: network.libertychat.app.rns.api.model.Identity? = null
+        private var cachedDestination: network.libertychat.app.rns.api.model.Destination? = null
 
         private val _debugInfo = MutableStateFlow(DebugInfo())
         val debugInfo: StateFlow<DebugInfo> = _debugInfo.asStateFlow()
@@ -223,7 +223,7 @@ class DebugViewModel
                         wakeLockHeld = json.optBoolean("wake_lock_held", false),
                         error =
                             json.optString("error", null)
-                                ?: if (status is network.columba.app.rns.api.model.NetworkStatus.ERROR) status.message else null,
+                                ?: if (status is network.libertychat.app.rns.api.model.NetworkStatus.ERROR) status.message else null,
                         // Process persistence debug info
                         heartbeatAgeSeconds = json.optLong("heartbeat_age_seconds", -1),
                         healthCheckRunning = json.optBoolean("health_check_running", false),
@@ -246,16 +246,16 @@ class DebugViewModel
                     // Convert NetworkStatus to readable string
                     _networkStatus.value =
                         when (status) {
-                            is network.columba.app.rns.api.model.NetworkStatus.READY -> "READY"
-                            is network.columba.app.rns.api.model.NetworkStatus.INITIALIZING -> "INITIALIZING"
-                            is network.columba.app.rns.api.model.NetworkStatus.CONNECTING -> "CONNECTING"
-                            is network.columba.app.rns.api.model.NetworkStatus.SHUTDOWN -> "SHUTDOWN"
-                            is network.columba.app.rns.api.model.NetworkStatus.ERROR -> "ERROR: ${status.message}"
+                            is network.libertychat.app.rns.api.model.NetworkStatus.READY -> "READY"
+                            is network.libertychat.app.rns.api.model.NetworkStatus.INITIALIZING -> "INITIALIZING"
+                            is network.libertychat.app.rns.api.model.NetworkStatus.CONNECTING -> "CONNECTING"
+                            is network.libertychat.app.rns.api.model.NetworkStatus.SHUTDOWN -> "SHUTDOWN"
+                            is network.libertychat.app.rns.api.model.NetworkStatus.ERROR -> "ERROR: ${status.message}"
                             else -> status.toString()
                         }
 
                     // Reset debug info when shutdown - prevents stale "initialized: true" in UI
-                    if (status is network.columba.app.rns.api.model.NetworkStatus.SHUTDOWN) {
+                    if (status is network.libertychat.app.rns.api.model.NetworkStatus.SHUTDOWN) {
                         _debugInfo.value = DebugInfo(isLoading = false)
                     }
                 }
@@ -273,10 +273,10 @@ class DebugViewModel
         /** Check if the service has been shut down (by network status or SharedPreferences flag). */
         private fun isServiceShutdown(): Boolean {
             val status = rnsCore.networkStatus.value
-            if (status is network.columba.app.rns.api.model.NetworkStatus.SHUTDOWN) return true
+            if (status is network.libertychat.app.rns.api.model.NetworkStatus.SHUTDOWN) return true
             // Also check SharedPreferences flag — onServiceDisconnected may not have fired yet
             return context
-                .getSharedPreferences("columba_prefs", android.content.Context.MODE_PRIVATE)
+                .getSharedPreferences("libertychat_prefs", android.content.Context.MODE_PRIVATE)
                 .getBoolean("is_user_shutdown", false)
         }
 
@@ -321,7 +321,7 @@ class DebugViewModel
                             wakeLockHeld = wakeLockHeld,
                             error =
                                 pythonDebugInfo["error"] as? String
-                                    ?: if (status is network.columba.app.rns.api.model.NetworkStatus.ERROR) status.message else null,
+                                    ?: if (status is network.libertychat.app.rns.api.model.NetworkStatus.ERROR) status.message else null,
                             heartbeatAgeSeconds = (pythonDebugInfo["heartbeat_age_seconds"] as? Number)?.toLong() ?: -1,
                             healthCheckRunning = pythonDebugInfo["health_check_running"] as? Boolean ?: false,
                             networkMonitorRunning = pythonDebugInfo["network_monitor_running"] as? Boolean ?: false,
@@ -400,7 +400,7 @@ class DebugViewModel
          * Get the LXMF identity for test announces.
          * This ensures announces use the same identity as LXMF messaging.
          */
-        private suspend fun getOrCreateIdentity(): network.columba.app.rns.api.model.Identity {
+        private suspend fun getOrCreateIdentity(): network.libertychat.app.rns.api.model.Identity {
             // Return cached identity if available
             cachedIdentity?.let {
                 Log.d(TAG, "Using cached identity")
@@ -430,7 +430,7 @@ class DebugViewModel
          * Get the LXMF delivery destination for test announces.
          * This reuses the destination already created by the LXMF router.
          */
-        private suspend fun getOrCreateDestination(identity: network.columba.app.rns.api.model.Identity): network.columba.app.rns.api.model.Destination {
+        private suspend fun getOrCreateDestination(identity: network.libertychat.app.rns.api.model.Identity): network.libertychat.app.rns.api.model.Destination {
             // Return cached destination if available
             cachedDestination?.let {
                 Log.d(TAG, "Using cached destination")
@@ -538,7 +538,7 @@ class DebugViewModel
 
                     // Set shutdown flag so restart mechanisms (onDestroy, START_STICKY) stay stopped
                     context
-                        .getSharedPreferences("columba_prefs", android.content.Context.MODE_PRIVATE)
+                        .getSharedPreferences("libertychat_prefs", android.content.Context.MODE_PRIVATE)
                         .edit()
                         .putBoolean("is_user_shutdown", true)
                         .commit()
@@ -553,8 +553,8 @@ class DebugViewModel
 
                     // Send ACTION_STOP to stop the foreground service and remove notification
                     val stopIntent =
-                        android.content.Intent(context, network.columba.app.rns.host.ReticulumService::class.java).apply {
-                            action = network.columba.app.rns.host.ReticulumService.ACTION_STOP
+                        android.content.Intent(context, network.libertychat.app.rns.host.ReticulumService::class.java).apply {
+                            action = network.libertychat.app.rns.host.ReticulumService.ACTION_STOP
                         }
                     androidx.core.content.ContextCompat
                         .startForegroundService(context, stopIntent)

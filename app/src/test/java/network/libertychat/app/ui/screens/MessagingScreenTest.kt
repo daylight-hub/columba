@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.ui.input.key.Key
@@ -17,13 +17,13 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.test.withKeyDown
 import androidx.paging.PagingData
-import network.columba.app.service.SyncProgress
-import network.columba.app.test.MessagingTestFixtures
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.model.LocationSharingState
-import network.columba.app.ui.model.ReplyPreviewUi
-import network.columba.app.viewmodel.ContactToggleResult
-import network.columba.app.viewmodel.MessagingViewModel
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.test.MessagingTestFixtures
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.model.LocationSharingState
+import network.libertychat.app.ui.model.ReplyPreviewUi
+import network.libertychat.app.viewmodel.ContactToggleResult
+import network.libertychat.app.viewmodel.MessagingViewModel
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -355,10 +355,10 @@ class MessagingScreenTest {
         // "Online" is reserved for an active link only.
         every { mockViewModel.peerActivity } returns
             MutableStateFlow(
-                network.columba.app.data.db.entity.PeerActivityEntity(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
                     destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
                     lastReceivedAt = System.currentTimeMillis() - 60_000L,
-                    activityType = network.columba.app.data.db.entity.PeerActivityType.MESSAGE,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.MESSAGE,
                 ),
             )
 
@@ -382,10 +382,10 @@ class MessagingScreenTest {
         // Given - old verified inbound activity.
         every { mockViewModel.peerActivity } returns
             MutableStateFlow(
-                network.columba.app.data.db.entity.PeerActivityEntity(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
                     destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
                     lastReceivedAt = System.currentTimeMillis() - 60 * 60 * 1_000L,
-                    activityType = network.columba.app.data.db.entity.PeerActivityType.ANNOUNCE,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.ANNOUNCE,
                 ),
             )
 
@@ -407,10 +407,10 @@ class MessagingScreenTest {
     fun onlineStatus_ignoresActivityFromPreviousConversation() {
         every { mockViewModel.peerActivity } returns
             MutableStateFlow(
-                network.columba.app.data.db.entity.PeerActivityEntity(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
                     destinationHash = "different-peer",
                     lastReceivedAt = System.currentTimeMillis(),
-                    activityType = network.columba.app.data.db.entity.PeerActivityType.MESSAGE,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.MESSAGE,
                 ),
             )
 
@@ -432,7 +432,7 @@ class MessagingScreenTest {
         every { mockViewModel.currentConversationHash } returns MutableStateFlow("different-peer")
         every { mockViewModel.conversationLinkState } returns
             MutableStateFlow(
-                network.columba.app.service.ConversationLinkManager.LinkState(isActive = true),
+                network.libertychat.app.service.ConversationLinkManager.LinkState(isActive = true),
             )
 
         composeTestRule.setContent {

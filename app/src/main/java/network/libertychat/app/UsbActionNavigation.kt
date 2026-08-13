@@ -1,4 +1,4 @@
-package network.columba.app
+package network.libertychat.app
 
 /**
  * Whether a USB-device-action screen should be dismissed because the device it

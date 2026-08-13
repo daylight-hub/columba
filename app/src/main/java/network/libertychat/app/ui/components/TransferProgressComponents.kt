@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -19,10 +19,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import network.columba.app.R
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.model.TransferProgressUpdate
-import network.columba.app.service.SyncProgress
+import network.libertychat.app.R
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.TransferProgressUpdate
+import network.libertychat.app.service.SyncProgress
 import kotlin.math.roundToInt
 
 @Composable

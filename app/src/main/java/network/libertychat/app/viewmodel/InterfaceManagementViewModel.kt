@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.bluetooth.BluetoothAdapter
 import android.util.Log
@@ -17,20 +17,20 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.model.BleConnectionsState
-import network.columba.app.data.repository.BleStatusRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.host.manager.CurrentTransport
-import network.columba.app.rns.host.manager.filterByTransport
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.service.manager.InterfaceTransportObserver
-import network.columba.app.util.validation.InputValidator
-import network.columba.app.util.validation.ValidationResult
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.model.BleConnectionsState
+import network.libertychat.app.data.repository.BleStatusRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.host.manager.CurrentTransport
+import network.libertychat.app.rns.host.manager.filterByTransport
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.manager.InterfaceTransportObserver
+import network.libertychat.app.util.validation.InputValidator
+import network.libertychat.app.util.validation.ValidationResult
 import org.json.JSONObject
 import javax.inject.Inject
 

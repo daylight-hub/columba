@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.tcpclient
+package network.libertychat.app.ui.screens.tcpclient
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
@@ -25,9 +25,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.ui.components.WizardBottomBar
-import network.columba.app.viewmodel.TcpClientWizardStep
-import network.columba.app.viewmodel.TcpClientWizardViewModel
+import network.libertychat.app.ui.components.WizardBottomBar
+import network.libertychat.app.viewmodel.TcpClientWizardStep
+import network.libertychat.app.viewmodel.TcpClientWizardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

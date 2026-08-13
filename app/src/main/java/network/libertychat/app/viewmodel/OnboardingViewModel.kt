@@ -1,4 +1,4 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.Manifest
 import android.content.Context
@@ -16,18 +16,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import network.columba.app.data.model.TcpCommunityServers
-import network.columba.app.data.repository.IdentityRepository
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.service.InterfaceConfigManager
-import network.columba.app.telemetry.CrashReporterProvider
-import network.columba.app.ui.screens.onboarding.OnboardingInterfaceType
-import network.columba.app.ui.screens.onboarding.OnboardingState
-import network.columba.app.util.BatteryOptimizationManager
-import network.columba.app.util.CrashReportManager
-import network.columba.app.util.getBlePermissions
+import network.libertychat.app.data.model.TcpCommunityServers
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.telemetry.CrashReporterProvider
+import network.libertychat.app.ui.screens.onboarding.OnboardingInterfaceType
+import network.libertychat.app.ui.screens.onboarding.OnboardingState
+import network.libertychat.app.util.BatteryOptimizationManager
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.getBlePermissions
 import javax.inject.Inject
 
 /**

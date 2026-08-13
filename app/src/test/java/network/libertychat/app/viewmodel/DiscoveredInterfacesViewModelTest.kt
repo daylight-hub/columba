@@ -1,17 +1,17 @@
 @file:Suppress("InjectDispatcher")
 
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.RnsBackend
-import network.columba.app.rns.api.RnsTransportAdmin
-import network.columba.app.rns.api.model.DiscoveredInterface
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.api.model.DiscoveredInterface
+import network.libertychat.app.service.InterfaceConfigManager
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify

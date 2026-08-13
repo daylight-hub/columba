@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth

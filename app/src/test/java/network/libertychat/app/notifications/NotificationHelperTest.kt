@@ -1,11 +1,11 @@
-package network.columba.app.notifications
+package network.libertychat.app.notifications
 
 import android.Manifest
 import android.app.Application
 import android.app.NotificationManager
 import android.content.Context
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.service.ActiveConversationManager
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.service.ActiveConversationManager
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk

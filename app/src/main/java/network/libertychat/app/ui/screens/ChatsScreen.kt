@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -79,18 +79,18 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import network.columba.app.R
-import network.columba.app.data.repository.Conversation
-import network.columba.app.service.SyncResult
-import network.columba.app.ui.components.ProfileIcon
-import network.columba.app.ui.components.SearchableTopAppBar
-import network.columba.app.ui.components.StarToggleButton
-import network.columba.app.ui.components.SyncStatusBottomSheet
-import network.columba.app.ui.components.simpleVerticalScrollbar
-import network.columba.app.viewmodel.ChatsViewModel
-import network.columba.app.viewmodel.ContactToggleResult
-import network.columba.app.viewmodel.SharedImageViewModel
-import network.columba.app.viewmodel.SharedTextViewModel
+import network.libertychat.app.R
+import network.libertychat.app.data.repository.Conversation
+import network.libertychat.app.service.SyncResult
+import network.libertychat.app.ui.components.ProfileIcon
+import network.libertychat.app.ui.components.SearchableTopAppBar
+import network.libertychat.app.ui.components.StarToggleButton
+import network.libertychat.app.ui.components.SyncStatusBottomSheet
+import network.libertychat.app.ui.components.simpleVerticalScrollbar
+import network.libertychat.app.viewmodel.ChatsViewModel
+import network.libertychat.app.viewmodel.ContactToggleResult
+import network.libertychat.app.viewmodel.SharedImageViewModel
+import network.libertychat.app.viewmodel.SharedTextViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -103,8 +103,8 @@ fun ChatsScreen(
     onLocateOnMap: (peerHash: String) -> Unit = {},
     onNavigateToQrScanner: () -> Unit = {},
     viewModel: ChatsViewModel = hiltViewModel(),
-    settingsViewModel: network.columba.app.viewmodel.SettingsViewModel = hiltViewModel(),
-    debugViewModel: network.columba.app.viewmodel.DebugViewModel = hiltViewModel(),
+    settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel = hiltViewModel(),
+    debugViewModel: network.libertychat.app.viewmodel.DebugViewModel = hiltViewModel(),
 ) {
     val chatsState by viewModel.chatsState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -385,7 +385,7 @@ fun ChatsScreen(
                         peerHash = conversationToBlock.peerHash,
                         peerIdentityHash =
                             conversationToBlock.peerPublicKey?.let {
-                                network.columba.app.data.util.HashUtils
+                                network.libertychat.app.data.util.HashUtils
                                     .computeIdentityHash(it)
                             },
                         displayName = conversationToBlock.displayName,
@@ -413,7 +413,7 @@ fun ChatsScreen(
 
         // QR Code bottom sheet
         if (showQrBottomSheet) {
-            network.columba.app.ui.components.QrCodeBottomSheet(
+            network.libertychat.app.ui.components.QrCodeBottomSheet(
                 onDismiss = { showQrBottomSheet = false },
                 onScanQrCode = { onNavigateToQrScanner() },
                 onShowQrCode = { showQrCodeDialog = true },
@@ -422,7 +422,7 @@ fun ChatsScreen(
 
         // QR Code dialog - reuses IdentityQrCodeDialog from settings
         if (showQrCodeDialog && identityHash != null) {
-            network.columba.app.ui.screens.settings.dialogs.IdentityQrCodeDialog(
+            network.libertychat.app.ui.screens.settings.dialogs.IdentityQrCodeDialog(
                 displayName = settingsState.displayName,
                 identityHash = identityHash,
                 destinationHash = destinationHash,

@@ -1,4 +1,4 @@
-package network.columba.app.data.crypto
+package network.libertychat.app.data.crypto
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties

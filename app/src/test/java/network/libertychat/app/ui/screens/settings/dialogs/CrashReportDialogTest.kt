@@ -1,12 +1,12 @@
-package network.columba.app.ui.screens.settings.dialogs
+package network.libertychat.app.ui.screens.settings.dialogs
 
 import android.app.Application
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.ui.theme.ColumbaTheme
-import network.columba.app.util.CrashReport
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.theme.ColumbaTheme
+import network.libertychat.app.util.CrashReport
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test

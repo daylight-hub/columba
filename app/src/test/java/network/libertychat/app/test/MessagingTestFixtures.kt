@@ -1,8 +1,8 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
-import network.columba.app.data.repository.Announce
-import network.columba.app.ui.model.MessageUi
-import network.columba.app.ui.model.ReplyPreviewUi
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.ui.model.MessageUi
+import network.libertychat.app.ui.model.ReplyPreviewUi
 
 /**
  * Test fixtures for MessagingScreen UI tests.

@@ -1,14 +1,14 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.rns.api.model.Destination
-import network.columba.app.rns.api.model.DestinationType
-import network.columba.app.rns.api.model.Direction
-import network.columba.app.rns.api.model.Identity
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.model.PacketReceipt
-import network.columba.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.model.Destination
+import network.libertychat.app.rns.api.model.DestinationType
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.PacketReceipt
+import network.libertychat.app.rns.api.RnsCore
 import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

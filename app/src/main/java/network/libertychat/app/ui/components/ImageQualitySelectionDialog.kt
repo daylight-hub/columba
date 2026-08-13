@@ -1,8 +1,8 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.runtime.Composable
-import network.columba.app.data.model.ImageCompressionPreset
-import network.columba.app.service.ConversationLinkManager
+import network.libertychat.app.data.model.ImageCompressionPreset
+import network.libertychat.app.service.ConversationLinkManager
 
 /**
  * Dialog for selecting image quality/compression level before sending.

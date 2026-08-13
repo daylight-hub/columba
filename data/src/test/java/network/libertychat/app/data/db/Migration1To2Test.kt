@@ -1,4 +1,4 @@
-package network.columba.app.data.db
+package network.libertychat.app.data.db
 
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

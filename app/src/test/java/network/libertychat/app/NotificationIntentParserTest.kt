@@ -1,8 +1,8 @@
-package network.columba.app
+package network.libertychat.app
 
 import android.app.Application
 import android.content.Intent
-import network.columba.app.notifications.NotificationHelper
+import network.libertychat.app.notifications.NotificationHelper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals

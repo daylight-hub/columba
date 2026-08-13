@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.net.Uri
 import androidx.compose.foundation.clickable

@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.offlinemaps
+package network.libertychat.app.ui.screens.offlinemaps
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -59,9 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.repository.OfflineMapRegion
-import network.columba.app.viewmodel.OfflineMapsViewModel
-import network.columba.app.viewmodel.UpdateCheckResult
+import network.libertychat.app.data.repository.OfflineMapRegion
+import network.libertychat.app.viewmodel.OfflineMapsViewModel
+import network.libertychat.app.viewmodel.UpdateCheckResult
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

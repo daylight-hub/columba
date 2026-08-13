@@ -18,27 +18,27 @@
 //   - restorePeerIdentities / restoreAnnounceIdentities
 //                       → "count": int
 //   - Result<Unit>      → Bundle.EMPTY
-package network.columba.app.rns.ipc;
+package network.libertychat.app.rns.ipc;
 
-import network.columba.app.rns.api.model.AnnounceRestoreEntry;
-import network.columba.app.rns.api.model.Destination;
-import network.columba.app.rns.api.model.DestinationType;
-import network.columba.app.rns.api.model.Direction;
-import network.columba.app.rns.api.model.Identity;
-import network.columba.app.rns.api.model.Link;
-import network.columba.app.rns.api.model.PacketType;
-import network.columba.app.rns.api.model.PeerIdentityEntry;
-import network.columba.app.rns.api.model.ReticulumConfig;
-import network.columba.app.rns.ipc.callback.IRnsAnnounceCallback;
-import network.columba.app.rns.ipc.callback.IRnsBoolCallback;
-import network.columba.app.rns.ipc.callback.IRnsByteArrayCallback;
-import network.columba.app.rns.ipc.callback.IRnsIntCallback;
-import network.columba.app.rns.ipc.callback.IRnsLinkEventCallback;
-import network.columba.app.rns.ipc.callback.IRnsNetworkStatusCallback;
-import network.columba.app.rns.ipc.callback.IRnsPacketCallback;
-import network.columba.app.rns.ipc.callback.IRnsResultCallback;
-import network.columba.app.rns.ipc.callback.IRnsStringCallback;
-import network.columba.app.rns.ipc.callback.IRnsStringListCallback;
+import network.libertychat.app.rns.api.model.AnnounceRestoreEntry;
+import network.libertychat.app.rns.api.model.Destination;
+import network.libertychat.app.rns.api.model.DestinationType;
+import network.libertychat.app.rns.api.model.Direction;
+import network.libertychat.app.rns.api.model.Identity;
+import network.libertychat.app.rns.api.model.Link;
+import network.libertychat.app.rns.api.model.PacketType;
+import network.libertychat.app.rns.api.model.PeerIdentityEntry;
+import network.libertychat.app.rns.api.model.ReticulumConfig;
+import network.libertychat.app.rns.ipc.callback.IRnsAnnounceCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsBoolCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsByteArrayCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsIntCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsLinkEventCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsNetworkStatusCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsPacketCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsResultCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringListCallback;
 
 oneway interface IRnsCore {
     // ==================== Initialization & lifecycle ====================

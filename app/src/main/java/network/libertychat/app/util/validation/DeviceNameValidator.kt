@@ -1,4 +1,4 @@
-package network.columba.app.util.validation
+package network.libertychat.app.util.validation
 
 /**
  * Validates Bluetooth device names for RNode connections.

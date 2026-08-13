@@ -1,4 +1,4 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -11,15 +11,15 @@ import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import network.columba.app.data.db.dao.ReceivedLocationDao
-import network.columba.app.data.db.entity.ReceivedLocationEntity
-import network.columba.app.rns.api.model.LocationTelemetry
-import network.columba.app.di.ApplicationScope
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTelemetry
-import network.columba.app.ui.model.SharingDuration
-import network.columba.app.util.LocationCompat
+import network.libertychat.app.data.db.dao.ReceivedLocationDao
+import network.libertychat.app.data.db.entity.ReceivedLocationEntity
+import network.libertychat.app.rns.api.model.LocationTelemetry
+import network.libertychat.app.di.ApplicationScope
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTelemetry
+import network.libertychat.app.ui.model.SharingDuration
+import network.libertychat.app.util.LocationCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -72,7 +72,7 @@ class LocationSharingManager
         private val rnsTelemetry: RnsTelemetry,
         private val receivedLocationDao: ReceivedLocationDao,
         private val settingsRepository: SettingsRepository,
-        private val identityRepository: network.columba.app.data.repository.IdentityRepository,
+        private val identityRepository: network.libertychat.app.data.repository.IdentityRepository,
         @ApplicationScope private val scope: CoroutineScope,
     ) {
         companion object {
@@ -504,7 +504,7 @@ class LocationSharingManager
                         val fg = activeId.iconForegroundColor
                         val bg = activeId.iconBackgroundColor
                         if (name != null && fg != null && bg != null) {
-                            network.columba.app.rns.api.model.IconAppearance(
+                            network.libertychat.app.rns.api.model.IconAppearance(
                                 iconName = name,
                                 foregroundColor = fg,
                                 backgroundColor = bg,

@@ -1,4 +1,4 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
 import android.content.Context
 import android.util.Log
@@ -14,18 +14,18 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.rns.api.model.NetworkRestriction
-import network.columba.app.rns.api.model.DeliveryMethod
-import network.columba.app.rns.api.model.DeliveryStatusUpdate
-import network.columba.app.rns.api.model.IconAppearance
-import network.columba.app.rns.api.model.ReceivedMessage
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
-import network.columba.app.rns.api.RnsTelemetry
-import network.columba.app.rns.api.util.LxmfFields
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkRestriction
+import network.libertychat.app.rns.api.model.DeliveryMethod
+import network.libertychat.app.rns.api.model.DeliveryStatusUpdate
+import network.libertychat.app.rns.api.model.IconAppearance
+import network.libertychat.app.rns.api.model.ReceivedMessage
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTelemetry
+import network.libertychat.app.rns.api.util.LxmfFields
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.service.InterfaceConfigManager
 import java.io.File
 
 /**
@@ -299,9 +299,9 @@ object TestController {
      */
     private fun parseTestLocationJson(
         json: String,
-    ): network.columba.app.rns.api.model.LocationTelemetry? = runCatching {
+    ): network.libertychat.app.rns.api.model.LocationTelemetry? = runCatching {
         val o = org.json.JSONObject(json)
-        network.columba.app.rns.api.model.LocationTelemetry(
+        network.libertychat.app.rns.api.model.LocationTelemetry(
             lat = o.optDouble("lat", 0.0),
             lng = o.optDouble("lng", o.optDouble("lon", 0.0)),
             acc = o.optDouble("acc", o.optDouble("accuracy", 0.0)).toFloat(),
@@ -439,7 +439,7 @@ object TestController {
         eventTag: String,
         toHex: String,
         text: String,
-        sender: suspend (network.columba.app.rns.api.model.Identity, ByteArray) -> Result<network.columba.app.rns.api.model.MessageReceipt>,
+        sender: suspend (network.libertychat.app.rns.api.model.Identity, ByteArray) -> Result<network.libertychat.app.rns.api.model.MessageReceipt>,
     ) {
         ensureInit(context)
         scope.launch {

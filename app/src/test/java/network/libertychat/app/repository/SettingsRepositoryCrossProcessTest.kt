@@ -1,12 +1,12 @@
-package network.columba.app.repository
+package network.libertychat.app.repository
 
 import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.test.core.app.ApplicationProvider
 import app.cash.turbine.test
-import network.columba.app.data.repository.CustomThemeRepository
-import network.columba.app.rns.host.persistence.ServiceSettingsAccessor
+import network.libertychat.app.data.repository.CustomThemeRepository
+import network.libertychat.app.rns.host.persistence.ServiceSettingsAccessor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

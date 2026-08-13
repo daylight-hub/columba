@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,10 +29,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.data.repository.Announce
-import network.columba.app.ui.components.PeerCard
-import network.columba.app.ui.components.SearchableTopAppBar
-import network.columba.app.viewmodel.SavedPeersViewModel
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.ui.components.PeerCard
+import network.libertychat.app.ui.components.SearchableTopAppBar
+import network.libertychat.app.viewmodel.SavedPeersViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

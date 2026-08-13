@@ -1,4 +1,4 @@
-package network.columba.app.migration
+package network.libertychat.app.migration
 
 import android.content.Context
 import android.net.Uri
@@ -10,23 +10,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import network.columba.app.data.crypto.IdentityKeyEncryptor
-import network.columba.app.data.crypto.WrongPasswordException
-import network.columba.app.data.database.InterfaceDatabase
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.db.ColumbaDatabase
-import network.columba.app.data.db.entity.AnnounceEntity
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.db.entity.ContactStatus
-import network.columba.app.data.db.entity.ConversationEntity
-import network.columba.app.data.db.entity.CustomThemeEntity
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.db.entity.MessageEntity
-import network.columba.app.data.db.entity.PeerIdentityEntity
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.util.HashUtils
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.service.PropagationNodeManager
+import network.libertychat.app.data.crypto.IdentityKeyEncryptor
+import network.libertychat.app.data.crypto.WrongPasswordException
+import network.libertychat.app.data.database.InterfaceDatabase
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.db.ColumbaDatabase
+import network.libertychat.app.data.db.entity.AnnounceEntity
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.db.entity.ConversationEntity
+import network.libertychat.app.data.db.entity.CustomThemeEntity
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.db.entity.MessageEntity
+import network.libertychat.app.data.db.entity.PeerIdentityEntity
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.util.HashUtils
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.service.PropagationNodeManager
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
@@ -383,7 +383,7 @@ class MigrationImporter
                             val fieldsJson = msg.fieldsJson
                             if (fieldsJson != null) {
                                 val split =
-                                    network.columba.app.data.db.ColumbaDatabase
+                                    network.libertychat.app.data.db.ColumbaDatabase
                                         .splitReactionsOutOfFieldsJson(fieldsJson)
                                 if (split != null) split else fieldsJson to null
                             } else {
@@ -662,7 +662,7 @@ class MigrationImporter
                     val manifestJson = extractManifestFromZip(java.io.ByteArrayInputStream(zipBytes))
                     manifestJson?.let { json.decodeFromString<MigrationBundle>(it) to zipBytes }
                 }
-            } catch (e: network.columba.app.migration.WrongPasswordException) {
+            } catch (e: network.libertychat.app.migration.WrongPasswordException) {
                 Log.e(TAG, "Wrong password for encrypted export", e)
                 throw e
             } catch (e: WrongPasswordException) {

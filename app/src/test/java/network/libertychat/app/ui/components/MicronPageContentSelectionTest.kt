@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import android.app.Application
 import androidx.compose.runtime.mutableStateOf
@@ -16,12 +16,12 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
-import network.columba.app.micron.MicronDocument
-import network.columba.app.micron.MicronElement
-import network.columba.app.micron.MicronLine
-import network.columba.app.micron.MicronStyle
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
+import network.libertychat.app.micron.MicronDocument
+import network.libertychat.app.micron.MicronElement
+import network.libertychat.app.micron.MicronLine
+import network.libertychat.app.micron.MicronStyle
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.NomadNetBrowserViewModel.RenderingMode
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test

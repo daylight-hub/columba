@@ -1,4 +1,4 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import android.app.Application
 import org.junit.Assert.assertEquals

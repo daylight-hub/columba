@@ -1,4 +1,4 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -25,8 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.rns.api.model.NodeType
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.rns.api.model.NodeType
 
 private enum class AspectChip(
     val label: String,

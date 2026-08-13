@@ -1,4 +1,4 @@
-package network.columba.app.micron
+package network.libertychat.app.micron
 
 /**
  * Represents a color in Micron markup.

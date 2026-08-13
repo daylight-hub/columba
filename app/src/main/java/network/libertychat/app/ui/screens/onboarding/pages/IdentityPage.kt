@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding.pages
+package network.libertychat.app.ui.screens.onboarding.pages
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

@@ -1,4 +1,4 @@
-package network.columba.app.reticulum.util
+package network.libertychat.app.reticulum.util
 
 import android.util.Log
 import org.msgpack.core.MessagePack

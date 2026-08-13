@@ -1,13 +1,13 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.ApkSharingState
-import network.columba.app.viewmodel.ApkSharingViewModel
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.ApkSharingState
+import network.libertychat.app.viewmodel.ApkSharingViewModel
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow

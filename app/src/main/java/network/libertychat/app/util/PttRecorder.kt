@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -9,7 +9,7 @@ import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import network.columba.app.rns.api.util.LxmfFields
+import network.libertychat.app.rns.api.util.LxmfFields
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.min

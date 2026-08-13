@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,8 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.viewmodel.MainViewModel
-import network.columba.app.viewmodel.UiState
+import network.libertychat.app.viewmodel.MainViewModel
+import network.libertychat.app.viewmodel.UiState
 
 /**
  * Main screen of the Columba application.

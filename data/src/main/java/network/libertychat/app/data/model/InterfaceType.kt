@@ -1,4 +1,4 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
 /**
  * Canonical classifier for the transport an RNS interface runs over.

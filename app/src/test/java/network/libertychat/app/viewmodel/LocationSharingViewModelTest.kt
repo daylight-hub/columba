@@ -1,11 +1,11 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.service.LocationSharingManager
-import network.columba.app.service.SharingSession
-import network.columba.app.ui.model.LocationSharingState
-import network.columba.app.ui.model.SharingDuration
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.SharingSession
+import network.libertychat.app.ui.model.LocationSharingState
+import network.libertychat.app.ui.model.SharingDuration
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every

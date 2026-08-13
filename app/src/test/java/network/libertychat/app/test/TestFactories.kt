@@ -1,13 +1,13 @@
-package network.columba.app.test
+package network.libertychat.app.test
 
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.db.entity.ContactStatus
-import network.columba.app.data.db.entity.LocalIdentityEntity
-import network.columba.app.data.model.EnrichedContact
-import network.columba.app.data.model.InterfaceType
-import network.columba.app.data.repository.Announce
-import network.columba.app.data.repository.Conversation
-import network.columba.app.service.RelayInfo
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.db.entity.ContactStatus
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.model.EnrichedContact
+import network.libertychat.app.data.model.InterfaceType
+import network.libertychat.app.data.repository.Announce
+import network.libertychat.app.data.repository.Conversation
+import network.libertychat.app.service.RelayInfo
 
 /**
  * Factory functions for creating test objects with sensible defaults.

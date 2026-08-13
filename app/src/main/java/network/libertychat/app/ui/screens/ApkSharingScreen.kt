@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -46,10 +46,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import network.columba.app.service.LocalHotspotManager
-import network.columba.app.ui.components.QrCodeImage
-import network.columba.app.viewmodel.ApkSharingViewModel
-import network.columba.app.viewmodel.SharingMode
+import network.libertychat.app.service.LocalHotspotManager
+import network.libertychat.app.ui.components.QrCodeImage
+import network.libertychat.app.viewmodel.ApkSharingViewModel
+import network.libertychat.app.viewmodel.SharingMode
 
 /**
  * Screen for sharing the Columba APK with another device.

@@ -1,12 +1,12 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import app.cash.turbine.test
-import network.columba.app.data.database.entity.InterfaceEntity
-import network.columba.app.data.model.TcpCommunityServer
-import network.columba.app.repository.InterfaceRepository
-import network.columba.app.rns.api.model.InterfaceConfig
-import network.columba.app.service.InterfaceConfigManager
+import network.libertychat.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.model.TcpCommunityServer
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.service.InterfaceConfigManager
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.coEvery

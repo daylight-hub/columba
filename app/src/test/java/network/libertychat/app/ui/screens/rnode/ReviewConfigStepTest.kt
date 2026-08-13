@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.rnode
+package network.libertychat.app.ui.screens.rnode
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
@@ -7,14 +7,14 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import network.columba.app.data.model.BluetoothType
-import network.columba.app.data.model.DiscoveredRNode
-import network.columba.app.data.model.FrequencyRegion
-import network.columba.app.data.model.ModemPreset
-import network.columba.app.test.RegisterComponentActivityRule
-import network.columba.app.viewmodel.RNodeConnectionType
-import network.columba.app.viewmodel.RNodeWizardState
-import network.columba.app.viewmodel.RNodeWizardViewModel
+import network.libertychat.app.data.model.BluetoothType
+import network.libertychat.app.data.model.DiscoveredRNode
+import network.libertychat.app.data.model.FrequencyRegion
+import network.libertychat.app.data.model.ModemPreset
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.viewmodel.RNodeConnectionType
+import network.libertychat.app.viewmodel.RNodeWizardState
+import network.libertychat.app.viewmodel.RNodeWizardViewModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

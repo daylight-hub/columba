@@ -1,4 +1,4 @@
-package network.columba.app.ui.model
+package network.libertychat.app.ui.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

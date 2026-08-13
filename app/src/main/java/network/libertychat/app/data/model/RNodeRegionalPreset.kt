@@ -1,4 +1,4 @@
-package network.columba.app.data.model
+package network.libertychat.app.data.model
 
 import android.bluetooth.BluetoothDevice
 import java.util.Locale

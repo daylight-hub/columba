@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

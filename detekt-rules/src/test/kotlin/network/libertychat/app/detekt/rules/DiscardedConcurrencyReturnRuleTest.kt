@@ -1,4 +1,4 @@
-package network.columba.app.detekt.rules
+package network.libertychat.app.detekt.rules
 
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.test.lint

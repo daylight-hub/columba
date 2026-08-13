@@ -1,16 +1,16 @@
-package network.columba.app.service
+package network.libertychat.app.service
 
 import android.util.Log
-import network.columba.app.data.db.entity.ContactEntity
-import network.columba.app.data.repository.AnnounceRepository
-import network.columba.app.data.repository.ContactRepository
-import network.columba.app.di.ApplicationScope
-import network.columba.app.di.DefaultDispatcher
-import network.columba.app.repository.SettingsRepository
-import network.columba.app.rns.api.model.NetworkStatus
-import network.columba.app.rns.api.model.PropagationState
-import network.columba.app.rns.api.RnsCore
-import network.columba.app.rns.api.RnsLxmf
+import network.libertychat.app.data.db.entity.ContactEntity
+import network.libertychat.app.data.repository.AnnounceRepository
+import network.libertychat.app.data.repository.ContactRepository
+import network.libertychat.app.di.ApplicationScope
+import network.libertychat.app.di.DefaultDispatcher
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.PropagationState
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -432,7 +432,7 @@ class PropagationNodeManager
         }
 
         private suspend fun handlePollResult(
-            state: network.columba.app.rns.api.model.PropagationState,
+            state: network.libertychat.app.rns.api.model.PropagationState,
             timeoutJob: kotlinx.coroutines.Job,
         ): Boolean =
             when {

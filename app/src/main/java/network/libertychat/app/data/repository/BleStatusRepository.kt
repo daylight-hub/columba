@@ -1,13 +1,13 @@
-package network.columba.app.data.repository
+package network.libertychat.app.data.repository
 
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.util.Log
-import network.columba.app.data.model.BleConnectionInfo
-import network.columba.app.data.model.BleConnectionsState
-import network.columba.app.data.model.ConnectionType
-import network.columba.app.rns.host.ble.bridge.KotlinBLEBridge
-import network.columba.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.data.model.BleConnectionInfo
+import network.libertychat.app.data.model.BleConnectionsState
+import network.libertychat.app.data.model.ConnectionType
+import network.libertychat.app.rns.host.ble.bridge.KotlinBLEBridge
+import network.libertychat.app.rns.api.RnsTransportAdmin
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine

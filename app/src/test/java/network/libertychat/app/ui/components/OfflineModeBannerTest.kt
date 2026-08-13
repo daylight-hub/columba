@@ -1,6 +1,6 @@
-package network.columba.app.ui.components
+package network.libertychat.app.ui.components
 
-import network.columba.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.NetworkStatus
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

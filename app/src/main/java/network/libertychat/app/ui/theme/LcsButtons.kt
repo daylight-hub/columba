@@ -1,4 +1,4 @@
-package network.columba.app.ui.theme
+package network.libertychat.app.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

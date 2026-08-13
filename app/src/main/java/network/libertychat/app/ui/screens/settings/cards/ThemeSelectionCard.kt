@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -28,9 +28,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import network.columba.app.ui.components.CollapsibleSettingsCard
-import network.columba.app.ui.theme.AppTheme
-import network.columba.app.ui.theme.PresetTheme
+import network.libertychat.app.ui.components.CollapsibleSettingsCard
+import network.libertychat.app.ui.theme.AppTheme
+import network.libertychat.app.ui.theme.PresetTheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

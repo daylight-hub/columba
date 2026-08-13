@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens
+package network.libertychat.app.ui.screens
 
 import android.Manifest
 import android.content.Intent
@@ -76,9 +76,9 @@ import com.google.zxing.DecodeHintType
 import com.google.zxing.MultiFormatReader
 import com.google.zxing.PlanarYUVLuminanceSource
 import com.google.zxing.common.HybridBinarizer
-import network.columba.app.ui.components.AddContactConfirmationDialog
-import network.columba.app.util.CameraPermissionManager
-import network.columba.app.viewmodel.ContactsViewModel
+import network.libertychat.app.ui.components.AddContactConfirmationDialog
+import network.libertychat.app.util.CameraPermissionManager
+import network.libertychat.app.viewmodel.ContactsViewModel
 import kotlinx.coroutines.launch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

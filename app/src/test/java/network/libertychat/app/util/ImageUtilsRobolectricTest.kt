@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.app.Application
 import android.content.ContentResolver
@@ -6,7 +6,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.net.Uri
-import network.columba.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.model.ImageCompressionPreset
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

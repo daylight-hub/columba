@@ -1,11 +1,11 @@
-package network.columba.app.data.database.dao
+package network.libertychat.app.data.database.dao
 
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import network.columba.app.data.database.InterfaceDatabase
-import network.columba.app.data.database.entity.InterfaceEntity
+import network.libertychat.app.data.database.InterfaceDatabase
+import network.libertychat.app.data.database.entity.InterfaceEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After

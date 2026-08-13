@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.onboarding.pages
+package network.libertychat.app.ui.screens.onboarding.pages
 
 import android.app.Application
 import androidx.compose.ui.test.assertIsDisplayed
@@ -7,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import network.columba.app.test.RegisterComponentActivityRule
+import network.libertychat.app.test.RegisterComponentActivityRule
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

@@ -1,10 +1,10 @@
-package network.columba.app.data.db.dao
+package network.libertychat.app.data.db.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import network.columba.app.data.db.entity.PeerIconEntity
+import network.libertychat.app.data.db.entity.PeerIconEntity
 import kotlinx.coroutines.flow.Flow
 
 /**

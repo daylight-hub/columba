@@ -1,11 +1,11 @@
-package network.columba.app.viewmodel
+package network.libertychat.app.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import network.columba.app.data.repository.ConversationRepository
-import network.columba.app.ui.model.MessageUi
-import network.columba.app.ui.model.toMessageUi
+import network.libertychat.app.data.repository.ConversationRepository
+import network.libertychat.app.ui.model.MessageUi
+import network.libertychat.app.ui.model.toMessageUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +51,7 @@ class MessageDetailViewModel
                                 if (entity != null) {
                                     // Convert entity to domain model, then to UI model
                                     val domainMessage =
-                                        network.columba.app.data.repository.Message(
+                                        network.libertychat.app.data.repository.Message(
                                             id = entity.id,
                                             destinationHash = entity.conversationHash,
                                             content = entity.content,

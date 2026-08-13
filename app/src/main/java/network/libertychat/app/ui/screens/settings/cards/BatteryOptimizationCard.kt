@@ -1,4 +1,4 @@
-package network.columba.app.ui.screens.settings.cards
+package network.libertychat.app.ui.screens.settings.cards
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -49,10 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import network.columba.app.rns.api.BackendCapabilities
-import network.columba.app.rns.api.model.BatteryProfile
-import network.columba.app.ui.components.LocalCapabilities
-import network.columba.app.util.BatteryOptimizationManager
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.model.BatteryProfile
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.util.BatteryOptimizationManager
 
 @Composable
 fun BatteryOptimizationCard(

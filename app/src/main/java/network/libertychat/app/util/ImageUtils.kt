@@ -1,4 +1,4 @@
-package network.columba.app.util
+package network.libertychat.app.util
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,7 +8,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import android.util.Log
-import network.columba.app.data.model.ImageCompressionPreset
+import network.libertychat.app.data.model.ImageCompressionPreset
 import java.io.ByteArrayOutputStream
 import kotlin.math.max
 
