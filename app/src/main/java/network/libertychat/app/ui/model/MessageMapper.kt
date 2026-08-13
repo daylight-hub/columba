@@ -1,0 +1,1074 @@
+@file:Suppress("TooManyFunctions") // Message mapping requires multiple utilities for different field types
+
+package network.libertychat.app.ui.model
+
+import android.graphics.BitmapFactory
+import android.util.Log
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import network.libertychat.app.data.repository.Message
+import network.libertychat.app.util.FileUtils
+import network.libertychat.app.util.ImageUtils
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+private const val TAG = "MessageMapper"
+
+/**
+ * Marker key indicating a field is stored on disk.
+ * Must match AttachmentStorageManager.FILE_REF_KEY
+ */
+private const val FILE_REF_KEY = "_file_ref"
+
+/**
+ * Converts a domain Message to MessageUi.
+ *
+ * This function checks the ImageCache for pre-decoded images to avoid blocking
+ * the main thread. If an image exists but isn't cached, the message will have
+ * hasImageAttachment=true but decodedImage=null, signaling that async loading is needed.
+ *
+ * This is safe to call on the main thread because:
+ * - Cache lookup is fast (O(1) LruCache access)
+ * - No disk I/O or image decoding happens here
+ * - Image decoding happens asynchronously via decodeAndCacheImage()
+ */
+fun Message.toMessageUi(): MessageUi {
+    val hasImage = hasImageField(fieldsJson)
+    val cachedImage = if (hasImage) ImageCache.get(id) else null
+
+    val audioMode = parseAudioMode(fieldsJson)
+    val hasAudio = audioMode != null
+
+    val hasFiles = hasFileAttachmentsField(fieldsJson)
+    // DEBUG: Log file attachment detection
+    if (fieldsJson?.contains("\"5\"") == true) {
+        Log.d(TAG, "Message ${id.take(16)}... has field 5, hasFiles=$hasFiles, json=${fieldsJson?.take(200)}")
+    }
+    val fileAttachmentsList = if (hasFiles) parseFileAttachments(fieldsJson) else emptyList()
+
+    // Get reply-to message ID: prefer DB column, fallback to parsing field 16
+    val replyId = replyToMessageId ?: parseReplyToFromFields(fieldsJson)
+
+    // Parse the per-target-message reactions aggregation blob
+    // (DB-local; the wire format is a separate per-event surface).
+    val reactionsList = parseReactionsJson(reactionsJson)
+
+    // Determine if we need to preserve fieldsJson for UI components
+    // (uncached image, file attachments, or pending file notification)
+    val hasUncachedImage = hasImage && cachedImage == null
+    // Audio bytes are only ever read on demand (playback), never at map time,
+    // so the raw fields have to survive into the UI model the same way an
+    // undecoded image's do.
+    val needsFieldsJson =
+        hasUncachedImage || hasFiles || hasAudio || hasPendingFileNotification(fieldsJson)
+
+    return MessageUi(
+        id = id,
+        destinationHash = destinationHash,
+        content = content,
+        timestamp = timestamp,
+        isFromMe = isFromMe,
+        status = status,
+        decodedImage = cachedImage,
+        hasImageAttachment = hasImage,
+        fileAttachments = fileAttachmentsList,
+        hasFileAttachments = hasFiles,
+        fieldsJson = if (needsFieldsJson) fieldsJson else null,
+        deliveryMethod = deliveryMethod,
+        errorMessage = errorMessage,
+        replyToMessageId = replyId,
+        // Note: replyPreview is loaded asynchronously by the ViewModel
+        reactions = reactionsList,
+        receivedHopCount = receivedHopCount,
+        receivedInterface = receivedInterface,
+        receivedRssi = receivedRssi,
+        receivedSnr = receivedSnr,
+        receivedAt = receivedAt,
+        sentInterface = sentInterface,
+        hasAudio = hasAudio,
+        audioMode = audioMode,
+    )
+}
+
+/**
+ * Parse LXMF `FIELD_AUDIO` (0x07) out of a message's fields.
+ *
+ * On the wire the field is `[mode_int, audio_bytes]` — Sideband's `core.py`
+ * writes it, `audioproc.py` reads it, and upstream LXMF specifies nothing
+ * further. There is no container, header, or length prefix; for the Codec2
+ * modes the payload is just concatenated whole frames.
+ *
+ * By the time it reaches here it has been through one of three encodings:
+ *
+ *  1. **Inline array** — `"7": [16, "4f676753…"]`. `event_bridge.py::_jsonable`
+ *     hex-encodes the bytes on the way across the JNI boundary; the local echo
+ *     of our own sent clip is written in the same shape by `buildFieldsJson`.
+ *  2. **Disk reference** — `"7": {"_file_ref": "/path"}`, written by
+ *     `ConversationRepository.extractLargeAttachments` once the whole
+ *     `fieldsJson` blob crosses 500 KB. Note the file holds the *array's* JSON
+ *     text, not bare hex: that function stores `value.toString()`, and for a
+ *     JSONArray value that is `[16,"4f67…"]`. Sniffing for a leading `[`
+ *     distinguishes it from the bare-hex form used for field 6.
+ *  3. **Absent** — no audio, or a malformed field. Returns null either way.
+ *
+ * Returns `(mode, bytes)`, or null. Does not validate that [mode] is one we can
+ * actually decode — that is `LxmfFields.isPlayableAudioMode`'s job, and the
+ * bubble still wants to render an "unsupported codec" state for the rest.
+ *
+ * IMPORTANT: may perform disk I/O in the `_file_ref` case. Call off the main
+ * thread. Use [parseAudioMode] for the cheap "is there audio, and what kind"
+ * check during composition.
+ */
+@Suppress("ReturnCount")
+fun parseAudioField(fieldsJson: String?): Pair<Int, ByteArray>? {
+    val array = audioFieldArray(fieldsJson, allowDiskRead = true) ?: return null
+    val mode = array.optInt(0, -1)
+    val hex = array.optString(1, "")
+    if (mode < 0 || hex.isEmpty()) return null
+    return try {
+        mode to hexStringToByteArray(hex)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to decode audio payload for mode $mode", e)
+        null
+    }
+}
+
+/**
+ * Cheap variant of [parseAudioField] that returns only the `AM_*` mode.
+ *
+ * Never touches the disk and never decodes the payload, so it is safe to call
+ * during composition — the mode is enough to decide whether to draw a voice
+ * bubble and whether to draw it as playable or unsupported.
+ */
+@Suppress("SwallowedException", "ReturnCount")
+internal fun parseAudioMode(fieldsJson: String?): Int? {
+    val array = audioFieldArray(fieldsJson, allowDiskRead = false) ?: return null
+    return array.optInt(0, -1).takeIf { it >= 0 }
+}
+
+/**
+ * Resolve `fields["7"]` to its `[mode, hex]` array, following a `_file_ref`
+ * indirection only when [allowDiskRead] is set.
+ *
+ * When the payload is on disk and we are not allowed to read it, the mode is
+ * still recoverable from the reference object if a previous parse cached it;
+ * otherwise the caller degrades to "audio present, mode unknown", which
+ * [parseAudioMode] reports as null. In practice this only happens for clips
+ * large enough to have pushed the whole field blob past 500 KB — well beyond
+ * any plausible PTT recording — so the fast path stays allocation-light.
+ */
+@Suppress("SwallowedException", "ReturnCount")
+private fun audioFieldArray(
+    fieldsJson: String?,
+    allowDiskRead: Boolean,
+): JSONArray? {
+    if (fieldsJson == null) return null
+    return try {
+        when (val field7 = JSONObject(fieldsJson).opt("7")) {
+            is JSONArray -> field7.takeIf { it.length() >= 2 }
+
+            is JSONObject -> {
+                if (!allowDiskRead || !field7.has(FILE_REF_KEY)) return null
+                val text = loadAttachmentFromDisk(field7.getString(FILE_REF_KEY)) ?: return null
+                // extractLargeAttachments stores value.toString(); for a
+                // JSONArray value that is the array's JSON text, not bare hex.
+                if (!text.trimStart().startsWith("[")) {
+                    Log.w(TAG, "Audio _file_ref did not contain a JSON array")
+                    return null
+                }
+                JSONArray(text).takeIf { it.length() >= 2 }
+            }
+
+            else -> null
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Parse the reply-target message hash from an inbound LXMessage's
+ * fields. Two formats are accepted, in priority order:
+ *
+ *   1. **MeshChatX-compatible (canonical)** — `fields[0x30] = bytes`
+ *      raw 32-byte hash (serialized to hex string by event_bridge.py
+ *      `_jsonable` on the way across the JNI boundary). MeshChatX
+ *      reference: `meshchat.py:16697`.
+ *   2. **Legacy Columba overload** — `fields[0x10] = {reply_to: <hex>}`.
+ *      Older Columba peers still send this; new Columba peers send
+ *      0x30 instead. Kept as a parser fallback so an upgrade doesn't
+ *      strand un-upgraded peer threading; outbound code no longer
+ *      writes this shape.
+ *
+ * Returns a lowercase hex string of the target message hash, or null
+ * if neither shape is present.
+ */
+@Suppress("SwallowedException", "ReturnCount") // Invalid JSON is expected to fail silently here
+internal fun parseReplyToFromFields(fieldsJson: String?): String? {
+    if (fieldsJson == null) return null
+    return try {
+        val fields = JSONObject(fieldsJson)
+        // Canonical: fields[0x30] = hex-encoded bytes (event_bridge.py
+        // hex-encodes ByteArray field values via `_jsonable`).
+        val field30 = fields.opt("48") // 0x30 == 48 decimal == JSON key "48"
+        if (field30 is String && field30.isNotEmpty()) {
+            return field30.lowercase()
+        }
+        // Legacy fallback: fields[0x10].reply_to (hex string).
+        val field16 = fields.optJSONObject("16") ?: return null
+        if (field16.isNull("reply_to")) return null
+        val replyTo = field16.optString("reply_to", "")
+        replyTo.ifEmpty { null }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Parse the optional reply-quote content from `fields[0x31]` — UTF-8
+ * bytes of the original message's text the sender saw at reply time.
+ * Carried inline so recipients can render the quote even without the
+ * original in their local store (cross-app interop with MeshChatX,
+ * peer-history aged out, etc.). MeshChatX reference: `meshchat.py:16698`.
+ *
+ * Returns null when the field is absent — caller falls back to a local
+ * lookup of the original message's content.
+ */
+@Suppress("SwallowedException", "ReturnCount") // Invalid JSON is expected to fail silently here
+internal fun parseReplyQuoteFromFields(fieldsJson: String?): String? {
+    if (fieldsJson == null) return null
+    return try {
+        val fields = JSONObject(fieldsJson)
+        // 0x31 == 49 decimal. Hex-encoded by event_bridge.py before
+        // crossing JNI; decode and UTF-8 it.
+        val hex = fields.optString("49", "")
+        if (hex.isEmpty()) return null
+        runCatching {
+            val bytes = ByteArray(hex.length / 2) {
+                ((Character.digit(hex[it * 2], 16) shl 4) +
+                    Character.digit(hex[it * 2 + 1], 16)).toByte()
+            }
+            String(bytes, Charsets.UTF_8)
+        }.getOrNull()
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Legacy alias preserved for any pre-Phase-2 call sites. Forwards to
+ * [parseReplyToFromFields] which transparently handles both wire
+ * shapes. Will be removed once any remaining call sites migrate.
+ */
+@Deprecated(
+    "Use parseReplyToFromFields — it accepts both the canonical 0x30 " +
+        "format AND the legacy 0x10 overload.",
+    ReplaceWith("parseReplyToFromFields(fieldsJson)"),
+)
+private fun parseReplyToFromField16(fieldsJson: String?): String? =
+    parseReplyToFromFields(fieldsJson)
+
+/**
+ * Parse the per-target-message reactions aggregation blob stored
+ * in the `reactionsJson` column (DB v2+).
+ *
+ * Reaction layering — two distinct shapes exist:
+ *
+ *   1. **Wire format (per-event):** canonical upstream-LXMF
+ *      `fields[0x40] = {0x00: <target hash bytes>, 0x01: <emoji UTF-8 bytes>}`
+ *      (`LXMF.py` commit 764758d), with a parse-only fallback to the legacy
+ *      `fields[0x10] = {"reaction_to": <hex>, "emoji": "👍", "sender": <hex>}`
+ *      for un-upgraded Columba peers. One LXMF message per reaction event.
+ *      Both backends decode it via the shared `ReactionWireCodec` and the
+ *      reaction routers dispatch the normalized event via
+ *      `_reactionReceivedFlow` → `handleIncomingReaction`.
+ *
+ *   2. **DB-aggregated form (local-only, what this function reads):**
+ *      Flat `{"👍": [sender1, sender2], "❤️": [sender3]}` stored in
+ *      the `reactionsJson` column on the *target* message's row.
+ *      Built locally by `handleIncomingReaction` →
+ *      `mergeReactionIntoReactionsJson`. Never goes on the wire.
+ *
+ * Pre-v2 storage overloaded `fieldsJson.field16.reactions` for this
+ * blob; the v1→v2 Room migration in `ColumbaDatabase.MIGRATION_1_2`
+ * lifts that data into the dedicated column.
+ *
+ * @param reactionsJson The target message's reactionsJson column value
+ * @return List of ReactionUi objects, or empty list if absent / malformed
+ */
+@Suppress("SwallowedException") // Invalid JSON is expected to fail silently here
+fun parseReactionsJson(reactionsJson: String?): List<ReactionUi> {
+    if (reactionsJson.isNullOrEmpty()) return emptyList()
+    return try {
+        val reactionsObj = JSONObject(reactionsJson)
+        val reactions = mutableListOf<ReactionUi>()
+        val keys = reactionsObj.keys()
+        while (keys.hasNext()) {
+            val emoji = keys.next()
+            val sendersArray = reactionsObj.optJSONArray(emoji) ?: continue
+            val senderHashes = mutableListOf<String>()
+            for (i in 0 until sendersArray.length()) {
+                if (sendersArray.isNull(i)) continue
+                val sender = sendersArray.optString(i, "")
+                if (sender.isNotEmpty()) {
+                    senderHashes.add(sender)
+                }
+            }
+            if (senderHashes.isNotEmpty()) {
+                reactions.add(ReactionUi(emoji = emoji, senderHashes = senderHashes))
+            }
+        }
+        reactions
+    } catch (e: Exception) {
+        emptyList()
+    }
+}
+
+/**
+ * Check if the message has an image field (type 6) in its JSON.
+ * This is a fast check that doesn't decode anything.
+ * Returns false for invalid JSON (malformed messages should not show images).
+ */
+@Suppress("SwallowedException") // Invalid JSON is expected to fail silently here
+private fun hasImageField(fieldsJson: String?): Boolean {
+    if (fieldsJson == null) return false
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val field6 = fields.opt("6")
+        when {
+            field6 is JSONObject && (field6.has(FILE_REF_KEY) || field6.has(BINARY_REF_KEY)) -> true
+            field6 is String && field6.isNotEmpty() -> true
+            // Handle array format from Python: ["format", "hex_data"] or ["format", null, "staging_path"]
+            field6 is JSONArray &&
+                field6.length() >= 2 &&
+                (
+                    (field6.opt(1) as? String)?.isNotEmpty() == true ||
+                        (field6.length() >= 3 && (field6.opt(2) as? String)?.isNotEmpty() == true)
+                ) -> true
+            else -> false
+        }
+    } catch (e: Exception) {
+        false
+    }
+}
+
+/**
+ * Result of decoding image data from a message.
+ *
+ * @property rawBytes Raw image bytes (for animated GIFs with Coil)
+ * @property bitmap Decoded static bitmap (for non-animated images)
+ * @property isAnimated True if this is an animated GIF
+ */
+data class DecodedImageResult(
+    val rawBytes: ByteArray,
+    val bitmap: ImageBitmap?,
+    val isAnimated: Boolean,
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as DecodedImageResult
+
+        if (!rawBytes.contentEquals(other.rawBytes)) return false
+        if (bitmap != other.bitmap) return false
+        if (isAnimated != other.isAnimated) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = rawBytes.contentHashCode()
+        result = 31 * result + (bitmap?.hashCode() ?: 0)
+        result = 31 * result + isAnimated.hashCode()
+        return result
+    }
+}
+
+/**
+ * Decode and cache the image for a message.
+ *
+ * IMPORTANT: Call this from a background thread (Dispatchers.IO).
+ * This function performs disk I/O and expensive image decoding.
+ *
+ * @param messageId The message ID (used as cache key)
+ * @param fieldsJson The message's fields JSON containing the image data
+ * @return The decoded ImageBitmap, or null if decoding fails
+ */
+fun decodeAndCacheImage(
+    messageId: String,
+    fieldsJson: String?,
+): ImageBitmap? {
+    // Check cache first (in case another coroutine already decoded it)
+    ImageCache.get(messageId)?.let { return it }
+
+    val decoded = decodeImageFromFields(fieldsJson)
+    if (decoded != null) {
+        ImageCache.put(messageId, decoded)
+        Log.d(TAG, "Decoded and cached image for message ${messageId.take(8)}...")
+    }
+    return decoded
+}
+
+/**
+ * Decode image data from a message, detecting if it's an animated GIF.
+ *
+ * IMPORTANT: Call this from a background thread (Dispatchers.IO).
+ * This function performs disk I/O and expensive image decoding.
+ *
+ * For animated GIFs, returns raw bytes without decoding to bitmap (for Coil).
+ * For static images, returns both raw bytes and decoded bitmap (bitmap cached).
+ *
+ * @param messageId The message ID (used as cache key for static images)
+ * @param fieldsJson The message's fields JSON containing the image data
+ * @return DecodedImageResult with raw bytes, optional bitmap, and animated flag
+ */
+fun decodeImageWithAnimation(
+    messageId: String,
+    fieldsJson: String?,
+): DecodedImageResult? {
+    if (fieldsJson == null) return null
+
+    return try {
+        // Get raw image bytes
+        val rawBytes = extractImageBytes(fieldsJson) ?: return null
+
+        // Check if it's an animated GIF
+        val isAnimated = ImageUtils.isAnimatedGif(rawBytes)
+
+        if (isAnimated) {
+            // Animated GIF - don't decode to bitmap, just return raw bytes
+            Log.d(TAG, "Detected animated GIF for message ${messageId.take(8)}... (${rawBytes.size} bytes)")
+            DecodedImageResult(rawBytes, null, isAnimated = true)
+        } else {
+            // Static image - decode to bitmap and cache
+            // Use subsampling for large images to avoid memory/rendering issues
+            val bitmap =
+                ImageCache.get(messageId) ?: run {
+                    // First pass: get dimensions
+                    val boundsOptions =
+                        BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                        }
+                    BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, boundsOptions)
+
+                    // Calculate sample size for display (max 1024px for message bubbles)
+                    val maxDisplayDimension = 1024
+                    val sampleSize =
+                        ImageUtils.calculateSampleSize(
+                            boundsOptions.outWidth,
+                            boundsOptions.outHeight,
+                            maxDisplayDimension,
+                        )
+
+                    // Second pass: decode with subsampling
+                    val decodeOptions =
+                        BitmapFactory.Options().apply {
+                            inSampleSize = sampleSize
+                        }
+                    val decoded = BitmapFactory.decodeByteArray(rawBytes, 0, rawBytes.size, decodeOptions)?.asImageBitmap()
+
+                    if (sampleSize > 1) {
+                        Log.d(TAG, "Subsampled image for display: sampleSize=$sampleSize")
+                    }
+                    decoded?.let { ImageCache.put(messageId, it) }
+                    decoded
+                }
+            Log.d(TAG, "Decoded static image for message ${messageId.take(8)}... (${rawBytes.size} bytes)")
+            DecodedImageResult(rawBytes, bitmap, isAnimated = false)
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to decode image with animation check", e)
+        null
+    }
+}
+
+/**
+ * Extract raw image bytes from fields JSON.
+ *
+ * IMPORTANT: Call this from a background thread (Dispatchers.IO).
+ *
+ * @param fieldsJson The message's fields JSON containing the image data
+ * @return Raw image bytes, or null if not found
+ */
+@Suppress("ReturnCount", "CyclomaticComplexMethod")
+private fun extractImageBytes(fieldsJson: String?): ByteArray? {
+    if (fieldsJson == null) return null
+
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val field6 = fields.opt("6") ?: return null
+
+        // Binary ref: raw binary file from Python staging (large images)
+        if (field6 is JSONObject && field6.has(BINARY_REF_KEY)) {
+            val filePath = field6.getString(BINARY_REF_KEY)
+            return loadBinaryFromDisk(filePath)
+        }
+
+        // Array format: ["format", "hex_data"] or ["format", null, "staging_path"]
+        if (field6 is JSONArray && field6.length() >= 3 && field6.isNull(1)) {
+            val stagingPath = field6.optString(2, "")
+            if (stagingPath.isNotEmpty()) return loadBinaryFromDisk(stagingPath)
+        }
+
+        val hexImageData: String =
+            when {
+                field6 is JSONObject && field6.has(FILE_REF_KEY) -> {
+                    val filePath = field6.getString(FILE_REF_KEY)
+                    loadAttachmentFromDisk(filePath) ?: return null
+                }
+                field6 is String && field6.isNotEmpty() -> field6
+                // Handle array format from Python: ["format", "hex_data"]
+                field6 is JSONArray && field6.length() >= 2 -> field6.optString(1, "")
+                else -> return null
+            }
+
+        if (hexImageData.isEmpty()) return null
+        hexStringToByteArray(hexImageData)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to extract image bytes", e)
+        null
+    }
+}
+
+/**
+ * Decodes LXMF image field (type 6) from hex string to ImageBitmap.
+ *
+ * Supports three formats:
+ * 1. Inline hex string: "6": "ffda8e..." (original format)
+ * 2. File reference: "6": {"_file_ref": "/path/to/file"} (large attachments saved to disk)
+ * 3. Array format from Python: "6": ["format", "hex_data"] (LXMF standard format)
+ *
+ * IMPORTANT: This performs disk I/O and CPU-intensive decoding.
+ * Must be called from a background thread.
+ *
+ * Returns null if no image field exists or decoding fails.
+ */
+@Suppress("CyclomaticComplexMethod", "ReturnCount")
+private fun decodeImageFromFields(fieldsJson: String?): ImageBitmap? {
+    if (fieldsJson == null) return null
+
+    return try {
+        val fields = JSONObject(fieldsJson)
+
+        // Get field 6 (IMAGE) - could be string, object with file reference, or array
+        val field6 = fields.opt("6") ?: return null
+
+        // Binary ref: raw binary file from Python staging (large images)
+        if (field6 is JSONObject && field6.has(BINARY_REF_KEY)) {
+            val filePath = field6.getString(BINARY_REF_KEY)
+            val imageBytes = loadBinaryFromDisk(filePath) ?: return null
+            return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+        }
+
+        // Array format: ["format", null, "staging_path"] (unresolved staging)
+        if (field6 is JSONArray && field6.length() >= 3 && field6.isNull(1)) {
+            val stagingPath = field6.optString(2, "")
+            if (stagingPath.isNotEmpty()) {
+                val imageBytes = loadBinaryFromDisk(stagingPath) ?: return null
+                return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+            }
+        }
+
+        val hexImageData: String =
+            when {
+                // File reference: load from disk
+                field6 is JSONObject && field6.has(FILE_REF_KEY) -> {
+                    val filePath = field6.getString(FILE_REF_KEY)
+                    loadAttachmentFromDisk(filePath) ?: return null
+                }
+                // Inline hex string
+                field6 is String && field6.isNotEmpty() -> field6
+                // Array format from Python: ["format", "hex_data"]
+                field6 is JSONArray && field6.length() >= 2 -> field6.optString(1, "")
+                else -> return null
+            }
+
+        if (hexImageData.isEmpty()) return null
+
+        // Convert hex string to bytes
+        val imageBytes =
+            hexImageData
+                .chunked(2)
+                .map { it.toInt(16).toByte() }
+                .toByteArray()
+
+        // Decode bitmap
+        BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)?.asImageBitmap()
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to decode image", e)
+        null
+    }
+}
+
+/**
+ * Load attachment data from disk.
+ *
+ * IMPORTANT: This performs disk I/O. Must be called from a background thread.
+ *
+ * @param filePath Absolute path to attachment file
+ * @return Attachment data (hex-encoded string), or null if not found
+ */
+private const val MAX_ATTACHMENT_BYTES = 50L * 1024 * 1024 // 50 MB safety cap
+
+private fun loadAttachmentFromDisk(filePath: String): String? =
+    try {
+        val file = File(filePath)
+        if (!file.exists()) {
+            Log.w(TAG, "Attachment file not found: $filePath")
+            null
+        } else if (file.length() > MAX_ATTACHMENT_BYTES) {
+            Log.e(TAG, "Attachment file too large (${file.length()} bytes): $filePath")
+            null
+        } else {
+            file.readText().also {
+                Log.d(TAG, "Loaded attachment from disk: $filePath (${it.length} chars)")
+            }
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to load attachment from disk: $filePath", e)
+        null
+    }
+
+/**
+ * Load raw binary data from disk (from Python staging files).
+ */
+private fun loadBinaryFromDisk(filePath: String): ByteArray? =
+    try {
+        val file = File(filePath)
+        if (!file.exists()) {
+            Log.w(TAG, "Binary file not found: $filePath")
+            null
+        } else if (file.length() > MAX_ATTACHMENT_BYTES) {
+            Log.e(TAG, "Binary file too large (${file.length()} bytes): $filePath")
+            null
+        } else {
+            file.readBytes().also {
+                Log.d(TAG, "Loaded binary from disk: $filePath (${it.size} bytes)")
+            }
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to load binary from disk: $filePath", e)
+        null
+    }
+
+/**
+ * Check if the message has a file attachments field (type 5) in its JSON.
+ * This is a fast check that doesn't decode anything.
+ * Returns false for invalid JSON (malformed messages should not show files).
+ */
+@Suppress("SwallowedException") // Invalid JSON is expected to fail silently here
+private fun hasFileAttachmentsField(fieldsJson: String?): Boolean {
+    if (fieldsJson == null) return false
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val field5 = fields.opt("5")
+        // File attachments are always a JSON array (from Sideband or our app)
+        field5 is JSONArray && field5.length() > 0
+    } catch (e: Exception) {
+        false
+    }
+}
+
+/**
+ * Check if the message has a pending file notification in field 16.
+ * This indicates the sender's file is coming via propagation relay.
+ */
+@Suppress("SwallowedException") // Invalid JSON is expected to fail silently here
+private fun hasPendingFileNotification(fieldsJson: String?): Boolean {
+    if (fieldsJson == null) return false
+    return fieldsJson.contains("pending_file_notification")
+}
+
+/**
+ * Parse file attachment metadata from LXMF field 5.
+ *
+ * Supports two formats:
+ * 1. Inline from Sideband: "5": [{"filename": "doc.pdf", "data": "hex...", "size": 12345}, ...]
+ * 2. Optimized format: "5": [{"filename": "doc.pdf", "size": 12345, "_data_ref": "/path"}, ...]
+ *    (metadata inline, file data on disk per-file - faster for large files)
+ *
+ * This is safe to call on the main thread because it only parses metadata,
+ * not the actual file data. The hex "data" field is skipped during parsing.
+ *
+ * @param fieldsJson The message's fields JSON containing file attachment data
+ * @return List of FileAttachmentUi with metadata, or empty list if parsing fails
+ */
+@Suppress("SwallowedException", "ReturnCount") // Invalid JSON is expected to fail silently
+private fun parseFileAttachments(fieldsJson: String?): List<FileAttachmentUi> {
+    if (fieldsJson == null) return emptyList()
+
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val field5 = fields.optJSONArray("5") ?: return emptyList()
+        // Metadata is always inline (fast - no disk I/O for metadata parsing)
+        parseFileAttachmentsArray(field5)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to parse file attachments", e)
+        emptyList()
+    }
+}
+
+/**
+ * Parse a JSONArray of file attachments into FileAttachmentUi objects.
+ *
+ * Two element formats are accepted:
+ *  1. Object: {"filename": "doc.pdf", "size": 12345, "data": "hex..."}
+ *     or {"filename": "...", "size": ..., "_data_ref": "/path"} — used by
+ *     Columba's on-disk optimized storage.
+ *  2. Positional array (LXMF wire format from Sideband and other apps):
+ *     [filename_string, data_hex_string] — 2-element tuple.
+ *     Sideband serializes FIELD_FILE_ATTACHMENTS this way, so an inbound
+ *     image-only message from Sideband hits this branch. Without it,
+ *     `getJSONObject(i)` throws typeMismatch, the attachment is dropped
+ *     silently, and the chat bubble renders empty.
+ *
+ * @param attachmentsArray JSONArray containing file attachment entries
+ * @return List of FileAttachmentUi with metadata
+ */
+private fun parseFileAttachmentsArray(attachmentsArray: JSONArray): List<FileAttachmentUi> {
+    val result = mutableListOf<FileAttachmentUi>()
+
+    for (i in 0 until attachmentsArray.length()) {
+        try {
+            val entry = attachmentsArray.opt(i) ?: continue
+            val parsed =
+                when (entry) {
+                    is JSONObject -> parseObjectAttachment(entry, i)
+                    is JSONArray -> parsePositionalAttachment(entry, i)
+                    else -> {
+                        Log.w(TAG, "Unknown file attachment entry type at $i: ${entry::class.java.simpleName}")
+                        null
+                    }
+                }
+            if (parsed != null) result.add(parsed)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse file attachment at index $i", e)
+            // Skip this attachment and continue with the rest
+        }
+    }
+
+    return result
+}
+
+private fun parseObjectAttachment(
+    attachment: JSONObject,
+    index: Int,
+): FileAttachmentUi {
+    val filename = attachment.optString("filename", "unknown")
+    val sizeBytes = attachment.optInt("size", 0)
+    return FileAttachmentUi(
+        filename = filename,
+        sizeBytes = sizeBytes,
+        mimeType = FileUtils.getMimeTypeFromFilename(filename),
+        index = index,
+    )
+}
+
+private fun parsePositionalAttachment(
+    entry: JSONArray,
+    index: Int,
+): FileAttachmentUi? {
+    if (entry.length() < 2) {
+        Log.w(TAG, "Positional file attachment at $index has ${entry.length()} elements, expected >= 2")
+        return null
+    }
+    // Filename element: Columba (both backends) sends bytes; upstream LXMF
+    // serializers hex-encode every ByteArray field value, so what arrives
+    // here is the lowercase hex of the UTF-8 filename. Sideband sends a
+    // `str` filename which arrives unchanged. Decode hex when it looks
+    // like hex; fall back to the raw string otherwise so Sideband interop
+    // (real strings) and Columba<->Columba (hex bytes) both render right.
+    val rawFilename = entry.optString(0, "unknown").ifEmpty { "unknown" }
+    val filename = decodeHexFilenameOrNull(rawFilename) ?: rawFilename
+    // Data is hex-encoded; each byte is 2 hex chars. If a size field is
+    // provided as element [2] prefer it, otherwise infer from the hex
+    // length — matches the observed Sideband wire payload exactly.
+    val dataHexLen = entry.optString(1).length
+    val sizeBytes = entry.optInt(2, dataHexLen / 2)
+    return FileAttachmentUi(
+        filename = filename,
+        sizeBytes = sizeBytes,
+        mimeType = FileUtils.getMimeTypeFromFilename(filename),
+        index = index,
+    )
+}
+
+/**
+ * If [s] looks like lowercase-hex (even-length, all `[0-9a-f]`) and decodes
+ * to printable UTF-8, return the decoded string; else null. The "printable"
+ * check rejects a real filename that *happens* to be a hex literal (e.g.
+ * `"deadbeef"`) from getting decoded into garbage — the round-trip-to-bytes-
+ * and-back check guards the false-positive case.
+ */
+private fun decodeHexFilenameOrNull(s: String): String? {
+    if (s.length < 2 || s.length % 2 != 0) return null
+    if (!s.all { it in '0'..'9' || it in 'a'..'f' || it in 'A'..'F' }) return null
+    return try {
+        val bytes = ByteArray(s.length / 2) {
+            ((Character.digit(s[it * 2], 16) shl 4) + Character.digit(s[it * 2 + 1], 16)).toByte()
+        }
+        val decoded = String(bytes, Charsets.UTF_8)
+        // Filenames are practically always printable; reject if decode
+        // produced control characters (other than tab/newline) — that's
+        // a hex literal that just happened to look hex-shaped.
+        if (decoded.any { it.code in 0..31 && it != '\t' && it != '\n' }) null else decoded
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * Marker key for per-file data reference (optimized format, hex-encoded text).
+ */
+private const val DATA_REF_KEY = "_data_ref"
+
+/**
+ * Marker key for binary data reference (raw binary file from Python staging).
+ */
+private const val BINARY_REF_KEY = "_binary_ref"
+
+/**
+ * Load file attachment data by index.
+ *
+ * Supports three formats:
+ * 1. Object with inline hex: {"data": "hex..."}
+ * 2. Object with on-disk ref: {"_data_ref": "/path/to/5_0"} (Columba's
+ *    optimized per-file storage) or {"_binary_ref": "..."}.
+ * 3. LXMF positional wire format (from Sideband and the reference
+ *    LXMF lib): [filename, data_hex_string]. The hex is at element [1].
+ *
+ * IMPORTANT: This performs disk I/O and may return large byte arrays.
+ * Must be called from a background thread.
+ *
+ * @param fieldsJson The message's fields JSON containing file attachment data
+ * @param index The index of the file attachment to load
+ * @return File data as bytes, or null if not found or loading fails
+ */
+@Suppress("ReturnCount")
+fun loadFileAttachmentData(
+    fieldsJson: String?,
+    index: Int,
+): ByteArray? {
+    if (fieldsJson == null) return null
+
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val attachmentsArray = fields.optJSONArray("5") ?: return null
+
+        if (index < 0 || index >= attachmentsArray.length()) {
+            Log.w(TAG, "File attachment index out of bounds: $index (array size: ${attachmentsArray.length()})")
+            return null
+        }
+
+        // Dispatch on entry shape — positional wire format vs. object
+        // format. Must match parseFileAttachmentsArray.
+        when (val entry = attachmentsArray.opt(index)) {
+            is JSONObject -> loadFileAttachmentDataFromObject(entry, index)
+            is JSONArray -> loadFileAttachmentDataFromPositional(entry, index)
+            else -> {
+                Log.w(TAG, "File attachment at $index has unexpected type: ${entry?.javaClass?.simpleName}")
+                null
+            }
+        }
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to load file attachment data at index $index", e)
+        null
+    }
+}
+
+@Suppress("ReturnCount")
+private fun loadFileAttachmentDataFromObject(
+    attachment: JSONObject,
+    index: Int,
+): ByteArray? {
+    // Binary format: raw binary data on disk (large attachments from Python staging)
+    if (attachment.has(BINARY_REF_KEY)) {
+        val filePath = attachment.getString(BINARY_REF_KEY)
+        return loadBinaryFromDisk(filePath)?.also {
+            Log.d(TAG, "Loaded file attachment at index $index from binary ref (${it.size} bytes)")
+        }
+    }
+
+    // Optimized format: hex data stored per-file on disk
+    if (attachment.has(DATA_REF_KEY)) {
+        val filePath = attachment.getString(DATA_REF_KEY)
+        val hexData = loadAttachmentFromDisk(filePath) ?: return null
+        return hexStringToByteArray(hexData).also {
+            Log.d(TAG, "Loaded file attachment at index $index from disk (${it.size} bytes)")
+        }
+    }
+
+    // Inline data format (from Sideband-style objects or small files)
+    val hexData = attachment.optString("data", "")
+    if (hexData.isEmpty()) {
+        Log.w(TAG, "File attachment at index $index has no data")
+        return null
+    }
+
+    return hexStringToByteArray(hexData).also {
+        Log.d(TAG, "Loaded file attachment at index $index inline (${it.size} bytes)")
+    }
+}
+
+private fun loadFileAttachmentDataFromPositional(
+    entry: JSONArray,
+    index: Int,
+): ByteArray? {
+    if (entry.length() < 2) {
+        Log.w(TAG, "Positional file attachment at $index has ${entry.length()} elements, need >= 2")
+        return null
+    }
+    val hexData = entry.optString(1, "")
+    if (hexData.isEmpty()) {
+        Log.w(TAG, "Positional file attachment at $index has empty data")
+        return null
+    }
+    return hexStringToByteArray(hexData).also {
+        Log.d(TAG, "Loaded positional file attachment at index $index (${it.size} bytes)")
+    }
+}
+
+/**
+ * Data class for file attachment metadata.
+ */
+data class FileAttachmentInfo(
+    val filename: String,
+    val mimeType: String,
+)
+
+/**
+ * Load file attachment metadata (filename and MIME type) by index.
+ *
+ * This is fast because metadata is always inline - no disk I/O needed.
+ *
+ * @param fieldsJson The message's fields JSON containing file attachment data
+ * @param index The index of the file attachment
+ * @return FileAttachmentInfo or null if not found
+ */
+@Suppress("ReturnCount") // Early returns for null checks improve readability
+fun loadFileAttachmentMetadata(
+    fieldsJson: String?,
+    index: Int,
+): FileAttachmentInfo? {
+    if (fieldsJson == null) return null
+
+    return try {
+        val fields = JSONObject(fieldsJson)
+        val attachmentsArray = fields.optJSONArray("5") ?: return null
+
+        if (index < 0 || index >= attachmentsArray.length()) {
+            return null
+        }
+
+        // Must handle both shapes that parseFileAttachmentsArray accepts.
+        // Anything else (e.g. a bare string) is treated as malformed and
+        // returns null — same as pre-fix behavior.
+        val filename =
+            when (val entry = attachmentsArray.opt(index)) {
+                is JSONObject -> entry.optString("filename", "unknown")
+                is JSONArray ->
+                    if (entry.length() >= 1) {
+                        entry.optString(0, "unknown").ifEmpty { "unknown" }
+                    } else {
+                        return null
+                    }
+                else -> return null
+            }
+        val mimeType = FileUtils.getMimeTypeFromFilename(filename)
+
+        FileAttachmentInfo(filename = filename, mimeType = mimeType)
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to load file attachment metadata at index $index", e)
+        null
+    }
+}
+
+/**
+ * Load image data (raw bytes) from a message's fields JSON.
+ *
+ * Supports two formats:
+ * 1. Inline hex string: "6": "ffda8e..." (original format)
+ * 2. File reference: "6": {"_file_ref": "/path/to/file"} (large attachments saved to disk)
+ *
+ * IMPORTANT: This performs disk I/O. Must be called from a background thread.
+ *
+ * @param fieldsJson The message's fields JSON containing image data (field 6)
+ * @return Raw image bytes, or null if not found or loading fails
+ */
+fun loadImageData(fieldsJson: String?): ByteArray? = extractImageBytes(fieldsJson)
+
+/**
+ * Get image metadata for save operations.
+ *
+ * Detects the actual image format from magic bytes:
+ * - JPEG: FF D8 FF
+ * - PNG: 89 50 4E 47
+ * - GIF: 47 49 46
+ * - WebP: 52 49 46 46 (RIFF header)
+ *
+ * @param fieldsJson The message's fields JSON containing image data (field 6)
+ * @return Pair of (mimeType, fileExtension) based on image format, or null if no image
+ */
+fun getImageMetadata(fieldsJson: String?): Pair<String, String>? {
+    val bytes = extractImageBytes(fieldsJson) ?: return null
+    if (bytes.size < 4) return null // Need at least 4 bytes for PNG detection
+    return detectImageFormat(bytes)
+}
+
+/**
+ * Detect image format from magic bytes.
+ */
+private fun detectImageFormat(bytes: ByteArray): Pair<String, String> =
+    when {
+        ImageUtils.isAnimatedGif(bytes) -> "image/gif" to "gif"
+        isJpeg(bytes) -> "image/jpeg" to "jpg"
+        isPng(bytes) -> "image/png" to "png"
+        isGif(bytes) -> "image/gif" to "gif"
+        isWebP(bytes) -> "image/webp" to "webp"
+        else -> "application/octet-stream" to "bin"
+    }
+
+private fun isJpeg(bytes: ByteArray): Boolean = bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() && bytes[2] == 0xFF.toByte()
+
+private fun isPng(bytes: ByteArray): Boolean =
+    bytes[0] == 0x89.toByte() &&
+        bytes[1] == 0x50.toByte() &&
+        bytes[2] == 0x4E.toByte() &&
+        bytes[3] == 0x47.toByte()
+
+private fun isGif(bytes: ByteArray): Boolean = bytes[0] == 0x47.toByte() && bytes[1] == 0x49.toByte() && bytes[2] == 0x46.toByte()
+
+private fun isWebP(bytes: ByteArray): Boolean =
+    bytes.size >= 12 &&
+        bytes[0] == 0x52.toByte() &&
+        bytes[1] == 0x49.toByte() &&
+        bytes[2] == 0x46.toByte() &&
+        bytes[3] == 0x46.toByte() &&
+        bytes[8] == 0x57.toByte() &&
+        bytes[9] == 0x45.toByte() &&
+        bytes[10] == 0x42.toByte() &&
+        bytes[11] == 0x50.toByte()
+
+/**
+ * Efficiently convert a hex string to byte array.
+ * Uses direct array allocation and character arithmetic instead of
+ * chunked/map which creates many intermediate objects.
+ *
+ * @throws IllegalArgumentException if hex string has odd length or invalid characters
+ */
+private fun hexStringToByteArray(hex: String): ByteArray {
+    val len = hex.length
+    require(len % 2 == 0) { "Hex string must have even length, got: $len" }
+    val result = ByteArray(len / 2)
+    var i = 0
+    while (i < len) {
+        val high = Character.digit(hex[i], 16)
+        val low = Character.digit(hex[i + 1], 16)
+        require(high != -1 && low != -1) { "Invalid hex character at position $i" }
+        result[i / 2] = ((high shl 4) or low).toByte()
+        i += 2
+    }
+    return result
+}

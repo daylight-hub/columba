@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 APP_MODULE="app"
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
-PACKAGE_NAME="network.columba.app"
+PACKAGE_NAME="network.libertychat.app"
 MAIN_ACTIVITY="${PACKAGE_NAME}.MainActivity"
 
 # Functions

@@ -22,7 +22,7 @@ plugins {
 }
 
 android {
-    namespace = "network.columba.app.rns.host"
+    namespace = "network.libertychat.app.rns.host"
     compileSdk = 36
 
     defaultConfig {

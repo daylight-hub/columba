@@ -24,8 +24,8 @@ SERIAL="${COLUMBA_EMULATOR_SERIAL:-}"
 HOST="${COLUMBA_RNSD_HOST:-192.0.2.10}"
 PORT="${COLUMBA_RNSD_PORT:-4242}"
 PROP_NODE="${COLUMBA_PROP_NODE_HEX:-33f2621f135146ce30f0767d811af2b6}"
-PKG="network.columba.app.debug"
-RECEIVER="$PKG/network.columba.app.test.TestReceiver"
+PKG="network.libertychat.app.debug"
+RECEIVER="$PKG/network.libertychat.app.test.TestReceiver"
 
 if [[ -z "$SERIAL" ]]; then
     SERIAL="$(adb devices | awk '/emulator-/{print $1; exit}')"
@@ -54,7 +54,7 @@ sleep 6
 #    `files/reticulum/reticulum/config`, and step 3's force-stop +
 #    relaunch picks it up on next boot.
 adb -s "$SERIAL" shell am broadcast \
-    -a network.columba.test.ADD_TCP_CLIENT \
+    -a network.libertychat.test.ADD_TCP_CLIENT \
     --es name 'interop_host' \
     --es host "$HOST" \
     --es port "$PORT" \
@@ -63,7 +63,7 @@ sleep 4
 
 # 3) Set propagation node hex for PROPAGATED-method tests.
 adb -s "$SERIAL" shell am broadcast \
-    -a network.columba.test.SET_PROP_NODE \
+    -a network.libertychat.test.SET_PROP_NODE \
     --es hex "$PROP_NODE" \
     -n "$RECEIVER" >/dev/null
 sleep 3
@@ -85,7 +85,7 @@ echo "Waiting for backend bootstrap (cold-start ~60s)..."
 deadline=$(($(date +%s) + 120))
 while [[ $(date +%s) -lt $deadline ]]; do
     adb -s "$SERIAL" logcat -c
-    adb -s "$SERIAL" shell am broadcast -a network.columba.test.GET_DEST -n "$RECEIVER" >/dev/null
+    adb -s "$SERIAL" shell am broadcast -a network.libertychat.test.GET_DEST -n "$RECEIVER" >/dev/null
     sleep 3
     result="$(adb -s "$SERIAL" logcat -d -s 'COLUMBA_TEST:*' | tail -3)"
     if echo "$result" | grep -q 'dest=[0-9a-f]'; then

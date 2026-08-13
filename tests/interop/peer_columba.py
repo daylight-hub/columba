@@ -1,18 +1,18 @@
 """Columba (Android emulator) peer.
 
 Drives Columba via the debug-only `TestReceiver` broadcast surface
-(`app/src/debug/java/network/columba/app/test/TestReceiver.kt`). Verifies
+(`app/src/debug/java/network/libertychat/app/test/TestReceiver.kt`). Verifies
 inbound messages by scanning `logcat` for the `rx_msg source=stream …`
 lines that `TestController.observeMessages` emits live as messages
 arrive.
 
-Sends: shell out to `adb shell am broadcast -a network.columba.test.SEND_*`.
+Sends: shell out to `adb shell am broadcast -a network.libertychat.test.SEND_*`.
 Receives: capture `logcat` to a buffer + parse `rx_msg` lines.
 
 Image / file / telemetry sends use a small in-emulator path-staging step:
 the payload is `adb push`'d into a tmp file in the app's external files
 dir, then a `SEND_IMAGE` / `SEND_FILE` action is broadcast with the path.
-We piggy-back on the existing `network.columba.test.*` action namespace
+We piggy-back on the existing `network.libertychat.test.*` action namespace
 but add per-payload extras here (the receiver-side code is small enough
 that the additions remain readable).
 
@@ -31,8 +31,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-PKG = "network.columba.app.debug"
-RECEIVER = f"{PKG}/network.columba.app.test.TestReceiver"
+PKG = "network.libertychat.app.debug"
+RECEIVER = f"{PKG}/network.libertychat.app.test.TestReceiver"
 LOGCAT_TAG = "COLUMBA_TEST"
 
 
@@ -391,7 +391,7 @@ class ColumbaPeer:
         quotes inside are encoded `'\''`)."""
         cmd = (
             "am broadcast"
-            f" -a network.columba.test.{action}"
+            f" -a network.libertychat.test.{action}"
             f" -n {RECEIVER}"
         )
         for k, v in extras.items():
@@ -475,10 +475,10 @@ class ColumbaPeer:
         self.broadcast(action)
         time.sleep(1.5)
         for line in self._read_logcat_lines():
-            if f"rx_broadcast_unknown action=network.columba.test.{action}" in line:
+            if f"rx_broadcast_unknown action=network.libertychat.test.{action}" in line:
                 raise NotImplementedError(
                     f"TestReceiver doesn't handle {action}. Add a branch in "
-                    "app/src/debug/java/network/columba/app/test/TestReceiver.kt "
+                    "app/src/debug/java/network/libertychat/app/test/TestReceiver.kt "
                     "matching the action and routing to a TestController handler."
                 )
 

@@ -215,7 +215,7 @@
             android:launchMode="singleTask"
             android:showOnLockScreen="true"
             android:turnScreenOn="true"
-            android:taskAffinity="network.columba.app.incoming_call"
+            android:taskAffinity="network.libertychat.app.incoming_call"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.Columba" />
 

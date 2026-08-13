@@ -30,7 +30,7 @@ def _columba_has_send_reaction(columba_peer) -> bool:
         )
         time.sleep(1.5)
         for line in columba_peer._read_logcat_lines():
-            if "rx_broadcast action=network.columba.test.SEND_REACTION" in line:
+            if "rx_broadcast action=network.libertychat.test.SEND_REACTION" in line:
                 return True
         return False
     except Exception:  # noqa: BLE001
@@ -106,7 +106,7 @@ def test_reaction_columba_to_meshchatx_wire_format(meshchatx_interop):
     if not _columba_has_send_reaction(pair.columba):
         pytest.skip(
             "Columba TestReceiver does not expose SEND_REACTION yet. "
-            "Wire it via `network.columba.test.SEND_REACTION` to enable."
+            "Wire it via `network.libertychat.test.SEND_REACTION` to enable."
         )
 
     anchor_content = f"mcx_react_anchor_{int(time.time() * 1000)}"

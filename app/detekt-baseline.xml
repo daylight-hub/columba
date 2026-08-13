@@ -59,7 +59,7 @@
     <ID>TooManyFunctions:SettingsRepository.kt$SettingsRepository</ID>
     <ID>UnusedParameter:ContactsScreen.kt$contactName: String</ID>
     <ID>UnusedParameter:ContactsScreen.kt$onNavigateToConversation: (destinationHash: String) -&gt; Unit = {}</ID>
-    <ID>UnusedParameter:DebugViewModel.kt$DebugViewModel$identity: network.columba.app.rns.api.model.Identity</ID>
+    <ID>UnusedParameter:DebugViewModel.kt$DebugViewModel$identity: network.libertychat.app.rns.api.model.Identity</ID>
     <ID>UnusedParameter:IdentityManagerViewModel.kt$IdentityManagerViewModel$identityHash: String</ID>
     <ID>UnusedParameter:IdentityScreen.kt$identityHash: String?</ID>
     <ID>UnusedParameter:MyIdentityScreen.kt$onNavigateToIdentityManager: () -&gt; Unit = {}</ID>
@@ -77,8 +77,8 @@
     <ID>UnusedPrivateProperty:IdentityScreen.kt$val context = LocalContext.current</ID>
     <ID>UnusedPrivateProperty:InterfaceDatabase.kt$InterfaceDatabase.Callback$private val applicationScope: CoroutineScope</ID>
     <ID>UnusedPrivateProperty:InterfaceDatabase.kt$InterfaceDatabase.Callback$private val database: Provider&lt;InterfaceDatabase&gt;</ID>
-    <ID>UnusedPrivateProperty:NotificationHelper.kt$NotificationHelper.Companion$private const val ACTION_MARK_READ = "network.columba.app.ACTION_MARK_READ"</ID>
-    <ID>UnusedPrivateProperty:NotificationHelper.kt$NotificationHelper.Companion$private const val ACTION_REPLY = "network.columba.app.ACTION_REPLY"</ID>
+    <ID>UnusedPrivateProperty:NotificationHelper.kt$NotificationHelper.Companion$private const val ACTION_MARK_READ = "network.libertychat.app.ACTION_MARK_READ"</ID>
+    <ID>UnusedPrivateProperty:NotificationHelper.kt$NotificationHelper.Companion$private const val ACTION_REPLY = "network.libertychat.app.ACTION_REPLY"</ID>
     <ID>UnusedPrivateProperty:ThemeEditorViewModel.kt$ThemeEditorViewModel.Companion$private const val TAG = "ThemeEditorViewModel"</ID>
     <ID>UseCheckOrError:AppRestarter.kt$AppRestarter$throw IllegalStateException("Unable to get launch intent for app")</ID>
     <ID>UseRequire:IdentityQrCodeUtils.kt$IdentityQrCodeUtils$throw IllegalArgumentException("Hex string must have even length")</ID>
