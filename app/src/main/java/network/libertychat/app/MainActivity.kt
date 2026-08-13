@@ -1,0 +1,2369 @@
+package network.libertychat.app
+
+import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.Settings
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Chat
+import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import network.libertychat.app.di.RnsTelephonyEntryPoint
+import network.libertychat.app.notifications.CallNotificationHelper
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.host.ble.util.BlePermissionManager
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.rns.host.ReticulumService
+import network.libertychat.app.ui.components.BlePermissionBottomSheet
+import network.libertychat.app.ui.components.LocalCapabilities
+import network.libertychat.app.ui.components.LocalWindowSize
+import network.libertychat.app.ui.components.OfflineModeBanner
+import network.libertychat.app.ui.screens.AnnounceDetailScreen
+import network.libertychat.app.ui.screens.AnnounceStreamScreen
+import network.libertychat.app.ui.screens.ApkSharingScreen
+import network.libertychat.app.ui.screens.BleConnectionStatusScreen
+import network.libertychat.app.ui.screens.BlockedUsersScreen
+import network.libertychat.app.ui.screens.ChatsScreen
+import network.libertychat.app.ui.screens.ContactsScreen
+import network.libertychat.app.ui.screens.DiscoveredInterfacesScreen
+import network.libertychat.app.ui.screens.IdentityManagerScreen
+import network.libertychat.app.ui.screens.IdentityScreen
+import network.libertychat.app.ui.screens.IncomingCallScreen
+import network.libertychat.app.ui.screens.InterfaceManagementScreen
+import network.libertychat.app.ui.screens.MapScreen
+import network.libertychat.app.ui.screens.MessageDetailScreen
+import network.libertychat.app.ui.screens.MessagingScreen
+import network.libertychat.app.ui.screens.MigrationScreen
+import network.libertychat.app.ui.screens.MyIdentityScreen
+import network.libertychat.app.ui.screens.NomadNetBrowserScreen
+import network.libertychat.app.ui.screens.NotificationSettingsScreen
+import network.libertychat.app.ui.screens.QrScannerScreen
+import network.libertychat.app.ui.screens.SettingsScreen
+import network.libertychat.app.ui.screens.ThemeEditorScreen
+import network.libertychat.app.ui.screens.ThemeManagementScreen
+import network.libertychat.app.ui.screens.VoiceCallScreen
+import network.libertychat.app.ui.screens.buildFocusInterfaceDetails
+import network.libertychat.app.ui.screens.flasher.RNodeFlasherScreen
+import network.libertychat.app.ui.screens.offlinemaps.OfflineMapDownloadScreen
+import network.libertychat.app.ui.screens.offlinemaps.OfflineMapsScreen
+import network.libertychat.app.ui.screens.onboarding.OnboardingPagerScreen
+import network.libertychat.app.ui.screens.tcpclient.TcpClientWizardScreen
+import network.libertychat.app.ui.theme.ColumbaTheme
+import network.libertychat.app.ui.util.LifecycleGuard
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.InterfaceReconnectSignal
+import network.libertychat.app.viewmodel.ContactsViewModel
+import network.libertychat.app.viewmodel.MapViewModel
+import network.libertychat.app.viewmodel.OnboardingViewModel
+import network.libertychat.app.viewmodel.SettingsViewModel
+import network.libertychat.app.viewmodel.SharedImageViewModel
+import network.libertychat.app.viewmodel.SharedTextViewModel
+import network.libertychat.app.rns.api.model.CallState
+import javax.inject.Inject
+
+/**
+ * LCS: true once the system splash has been removed from the window.
+ *
+ * File-level rather than a MainActivity property because the consumer,
+ * [ColumbaNavigation], is a top-level composable rather than a method of the
+ * Activity — an Activity-private field is simply not in scope there.
+ *
+ * Process-scoped, which is the correct lifetime: the splash belongs to a cold
+ * start, and a fresh process is exactly when it should play again. The overlay
+ * keeps its own `rememberSaveable` latch so an Activity recreation (rotation,
+ * "don't keep activities") does not replay it.
+ */
+private val splashDismissed = mutableStateOf(false)
+
+/**
+ * LCS: true once the branded splash overlay has fully finished — dwell plus
+ * fade-out, not merely the system splash lifting.
+ *
+ * Permission sheets (Bluetooth, precise location) are gated on this. They fire
+ * from LaunchedEffects that otherwise run the instant the app composes, i.e.
+ * behind the splash — which is why the Bluetooth sheet was popping up over
+ * the logo as the wordmark faded in. Holding them until the branding is gone
+ * means: splash, then app, then any prompt — never a prompt over the splash.
+ */
+private val splashFinished = mutableStateOf(false)
+
+/**
+ * Main activity for the Columba LXMF Messenger application.
+ */
+@AndroidEntryPoint
+class MainActivity : ComponentActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+
+        /**
+         * When true, USB auto-navigation is disabled to allow bootloader flashing.
+         * Set this before connecting a device in bootloader mode to prevent
+         * the app from communicating with it and kicking it out of bootloader.
+         */
+        @Volatile
+        var bootloaderFlashModeActive: Boolean = false
+    }
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
+    @Inject
+    lateinit var interfaceRepository: InterfaceRepository
+
+    @Inject
+    lateinit var crashReportManager: CrashReportManager
+
+
+    @Inject
+    lateinit var transportAdmin: RnsTransportAdmin
+
+    // State to hold pending navigation from intent
+    private val pendingNavigation = mutableStateOf<PendingNavigation?>(null)
+
+    // Build-time-swappable crash reporter (no-op in the noSentry flavor). Breadcrumbs are
+    // recorded against the global reporting hub initialized by ColumbaApplication.
+    private val crashReporter: network.libertychat.app.telemetry.CrashReporter =
+        network.libertychat.app.telemetry.CrashReporterProvider.create()
+
+    // JankStats for performance monitoring (Phase 1 Plan 01-03)
+    private lateinit var jankStats: androidx.metrics.performance.JankStats
+
+    private val jankFrameListener =
+        androidx.metrics.performance.JankStats.OnFrameListener { frameData ->
+            // Report janky frames as breadcrumbs (flavor-gated via crashReporter)
+            if (frameData.isJank) {
+                val durationMs = frameData.frameDurationUiNanos / 1_000_000
+                crashReporter.addBreadcrumb(
+                    network.libertychat.app.telemetry.CrashBreadcrumb(
+                        category = "performance",
+                        message = "Janky frame: ${durationMs}ms",
+                        level =
+                            if (durationMs > 100) {
+                                network.libertychat.app.telemetry.CrashReportLevel.WARNING
+                            } else {
+                                network.libertychat.app.telemetry.CrashReportLevel.INFO
+                            },
+                        data =
+                            mapOf(
+                                "frame_duration_ms" to durationMs,
+                                "states" to frameData.states.joinToString { "${it.key}=${it.value}" },
+                            ),
+                    ),
+                )
+
+                // Log for local debugging
+                Log.w(TAG, "Jank detected: ${durationMs}ms with states ${frameData.states}")
+            }
+        }
+
+    // Track last handled USB device to avoid double-processing
+    private var lastHandledUsbDeviceId: Int = -1
+    private var lastHandledUsbTimestamp: Long = 0
+    private var lastUsbReconnectAttempted: Boolean = false // Track if reconnect was actually attempted
+
+    @Suppress("VariableNaming") // Constant value uses SCREAMING_SNAKE_CASE by convention
+    private val USB_DEBOUNCE_MS = 5000L // 5 second window to ignore duplicate USB events
+
+    // USB device attached/detached receiver
+    private val usbReceiver =
+        object : BroadcastReceiver() {
+            override fun onReceive(
+                context: Context,
+                intent: Intent,
+            ) {
+                Log.d(TAG, "🔌 USB BroadcastReceiver onReceive: action=${intent.action}")
+                when (intent.action) {
+                    UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
+                        @Suppress("DEPRECATION")
+                        val usbDevice: UsbDevice? =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                            } else {
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                            }
+                        if (usbDevice != null) {
+                            Log.d(TAG, "🔌 USB device attached via receiver: ${usbDevice.deviceName} (${usbDevice.deviceId})")
+                            handleUsbDeviceAttached(usbDevice)
+                        }
+                    }
+                    UsbManager.ACTION_USB_DEVICE_DETACHED -> {
+                        @Suppress("DEPRECATION")
+                        val usbDevice: UsbDevice? =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                            } else {
+                                intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                            }
+                        if (usbDevice != null) {
+                            Log.d(TAG, "🔌 USB device detached: ${usbDevice.deviceName} (${usbDevice.deviceId})")
+                            // Clear debounce state for this device so re-plug will be handled
+                            if (usbDevice.deviceId == lastHandledUsbDeviceId) {
+                                Log.d(TAG, "🔌 Clearing debounce state for detached device")
+                                lastHandledUsbDeviceId = -1
+                                lastHandledUsbTimestamp = 0
+                                lastUsbReconnectAttempted = false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Install splash screen before super.onCreate()
+        // Splash screen will be displayed until theme is loaded, preventing flash
+        val splashScreen = installSplashScreen()
+        var isThemeReady = false
+        var isOnboardingReady = false
+        splashScreen.setKeepOnScreenCondition { !isThemeReady || !isOnboardingReady }
+
+        // LCS: fire once the system splash actually leaves the screen.
+        //
+        // setContent below composes the whole tree immediately, while the splash
+        // is still covering it. Anything that starts a timer on composition —
+        // like the branded wordmark overlay — would run and expire underneath,
+        // which is exactly what happened in 1.2.0: the wordmark rendered behind
+        // the splash and removed itself before the splash lifted. Gating on this
+        // flag is the only way to know the user can actually see the screen.
+        // LCS: reset per launch. splashDismissed / splashFinished are file-level
+        // (process-scoped), so on a warm start they would still read true from
+        // the previous launch — the overlay would think it had already finished
+        // and skip straight to opening the permission gate. Clear them here so
+        // every onCreate runs the splash from scratch.
+        splashDismissed.value = false
+        splashFinished.value = false
+
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.remove()
+            splashDismissed.value = true
+        }
+
+        super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge mode for proper IME insets handling
+        enableEdgeToEdge()
+
+        // Reset location permission sheet dismissal on fresh app launch
+        // This ensures users see the permission prompt again when the app is relaunched
+        if (savedInstanceState == null) {
+            lifecycleScope.launch {
+                settingsRepository.resetLocationPermissionSheetDismissal()
+            }
+        }
+
+        // Process the intent that launched the activity
+        processIntent(intent)
+
+        // Register USB receiver to catch USB device attachments while app is running
+        val usbFilter =
+            IntentFilter().apply {
+                addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+                addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(usbReceiver, usbFilter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(usbReceiver, usbFilter)
+        }
+        Log.d(TAG, "🔌 USB BroadcastReceiver registered for attach/detach")
+
+        setContent {
+            // Signal splash screen dismissal once theme loads
+            val settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel = hiltViewModel()
+            val settingsState by settingsViewModel.state.collectAsState()
+
+            // Dismiss splash screen once theme is loaded (non-default theme or after timeout)
+            LaunchedEffect(settingsState.selectedTheme, settingsState.isLoading) {
+                if (!settingsState.isLoading) {
+                    isThemeReady = true
+                    Log.d(TAG, "Theme loaded: ${settingsState.selectedTheme.displayName} - dismissing splash")
+                }
+            }
+
+            // Wait for onboarding status to resolve before dismissing splash.
+            // startDestination is memoised via remember{}, so it captures the first
+            // composed value. The LaunchedEffect in ColumbaNavigation redirects
+            // upgraders to Chats once onboardingState resolves; the extended splash
+            // screen hides that redirect, preventing the wizard from flashing.
+            val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+            LaunchedEffect(Unit) {
+                val resolved = onboardingViewModel.state.first { !it.isLoading }
+                isOnboardingReady = true
+                Log.d(TAG, "Onboarding status resolved: completed=${resolved.hasCompletedOnboarding}")
+            }
+
+            // Provide the active backend's capabilities into LocalCapabilities
+            // above the whole UI tree so any screen can capability-gate without
+            // prop-drilling (Phase D). settingsViewModel is the Activity-scoped
+            // instance, so this is the same StateFlow the gated screens read.
+            val capabilities by settingsViewModel.capabilities.collectAsState()
+            // WindowSizeClass exposes width/height buckets (Compact/Medium/Expanded)
+            // so screens can collapse chrome on landscape phones (compact-height)
+            // and eventually adopt list-detail layouts on tablets/foldables
+            // (expanded-width). Computed once at the activity root; consumers read
+            // via LocalWindowSize.
+            @OptIn(androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi::class)
+            val windowSizeClass =
+                androidx.compose.material3.windowsizeclass.calculateWindowSizeClass(this)
+            CompositionLocalProvider(
+                LocalCapabilities provides capabilities,
+                LocalWindowSize provides windowSizeClass,
+            ) {
+                ColumbaNavigation(
+                    pendingNavigation = pendingNavigation,
+                    interfaceRepository = interfaceRepository,
+                    crashReportManager = crashReportManager,
+                )
+            }
+        }
+
+        // Initialize JankStats for frame monitoring (Phase 1 Plan 01-03)
+        window.decorView.post {
+            jankStats =
+                androidx.metrics.performance.JankStats
+                    .createAndTrack(window, jankFrameListener)
+            jankStats.isTrackingEnabled = true
+            Log.d(TAG, "JankStats initialized and tracking enabled")
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::jankStats.isInitialized) {
+            jankStats.isTrackingEnabled = true
+        }
+
+        // Reinforce foreground notification: on Android 13+ users can swipe it away,
+        // and only Service.startForeground() can restore it. Sending ACTION_START
+        // triggers onStartCommand which calls startForeground(this).
+        try {
+            val serviceIntent =
+                Intent(this, ReticulumService::class.java).apply {
+                    action = ReticulumService.ACTION_START
+                }
+            ContextCompat.startForegroundService(this, serviceIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not reinforce foreground notification", e)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (::jankStats.isInitialized) {
+            jankStats.isTrackingEnabled = false
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        processIntent(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(usbReceiver)
+            Log.d(TAG, "🔌 USB BroadcastReceiver unregistered")
+        } catch (e: Exception) {
+            Log.w(TAG, "🔌 Failed to unregister USB receiver", e)
+        }
+    }
+
+    private val intentHandler by lazy {
+        MainActivityIntentHandler(
+            activity = this,
+            pendingNavigation = pendingNavigation,
+            logTag = TAG,
+            onUsbDeviceAttached = { usbDevice -> handleUsbDeviceAttached(usbDevice) },
+        )
+    }
+
+    private fun processIntent(intent: Intent?) {
+        if (intent == null) return
+
+        Log.w(TAG, "📞 processIntent() - action=${intent.action}, extras=${intent.extras?.keySet()}")
+        Log.d(TAG, "🔌 USB action check: action='${intent.action}' vs expected='${UsbManager.ACTION_USB_DEVICE_ATTACHED}'")
+
+        intentHandler.handle(intent)
+    }
+
+    /**
+     * Handle USB device attachment - check if it's already configured as an RNode interface.
+     */
+    private fun handleUsbDeviceAttached(usbDevice: UsbDevice) {
+        Log.d(TAG, "🔌 handleUsbDeviceAttached called for device: ${usbDevice.deviceName}")
+
+        // Check if bootloader flash mode is active - skip all auto-navigation
+        // This prevents us from communicating with a device that's in bootloader mode
+        if (bootloaderFlashModeActive) {
+            Log.d(TAG, "🔌 Bootloader flash mode active - skipping auto-navigation")
+            return
+        }
+
+        // Check if we've already handled this device recently (debounce)
+        // But allow retry if previous attempt didn't reconnect due to missing permission
+        val now = System.currentTimeMillis()
+        if (usbDevice.deviceId == lastHandledUsbDeviceId &&
+            (now - lastHandledUsbTimestamp) < USB_DEBOUNCE_MS &&
+            lastUsbReconnectAttempted
+        ) {
+            Log.d(TAG, "🔌 Ignoring duplicate USB event for device ${usbDevice.deviceId} (debounce)")
+            return
+        }
+
+        // Mark this device as handled (reconnect attempt status will be set below)
+        lastHandledUsbDeviceId = usbDevice.deviceId
+        lastHandledUsbTimestamp = now
+        lastUsbReconnectAttempted = false // Will be set to true if reconnect is actually triggered
+
+        lifecycleScope.launch {
+            try {
+                Log.d(
+                    TAG,
+                    "🔌 Looking up USB device: VID=${usbDevice.vendorId} (0x${usbDevice.vendorId.toString(
+                        16,
+                    )}), PID=${usbDevice.productId} (0x${usbDevice.productId.toString(16)})",
+                )
+                // Check if this USB device is already configured as an RNode interface
+                // Use VID/PID matching since they are stable hardware identifiers (unlike device IDs which change)
+                val existingInterface = interfaceRepository.findRNodeByUsbVidPid(usbDevice.vendorId, usbDevice.productId)
+                Log.d(TAG, "🔌 findRNodeByUsbVidPid result: ${existingInterface?.name ?: "NOT FOUND"}")
+
+                if (existingInterface != null) {
+                    // Device is already configured - trigger reconnect and navigate to stats screen
+                    Log.d(TAG, "🔌 USB device is configured interface: ${existingInterface.name} (id=${existingInterface.id})")
+
+                    // Signal that a reconnection is starting (ViewModel will show connecting spinner)
+                    InterfaceReconnectSignal.triggerReconnect()
+
+                    // Navigate to stats screen immediately
+                    pendingNavigation.value = PendingNavigation.InterfaceStats(existingInterface.id)
+
+                    // Check if we have USB permission before attempting reconnect
+                    val usbManager = getSystemService(UsbManager::class.java)
+                    if (usbManager.hasPermission(usbDevice)) {
+                        // We have permission - reconnect immediately
+                        Log.d(TAG, "🔌 USB permission already granted, triggering reconnect")
+                        lastUsbReconnectAttempted = true
+                        try {
+                            transportAdmin.reconnectRNodeInterface()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "🔌 Error triggering RNode reconnect", e)
+                        }
+                    } else {
+                        // No permission yet - the Activity intent (via processIntent) will handle
+                        // reconnection after Android grants permission through UsbResolverActivity
+                        Log.d(TAG, "🔌 No USB permission yet, skipping reconnect (will retry via Activity intent)")
+                        // lastUsbReconnectAttempted stays false, allowing retry after permission granted
+                    }
+                    Log.d(TAG, "🔌 pendingNavigation set to InterfaceStats(${existingInterface.id})")
+                } else {
+                    // Device is not configured - navigate to action screen to choose flash or configure
+                    Log.d(TAG, "🔌 USB device is not configured - launching action screen")
+                    pendingNavigation.value =
+                        PendingNavigation.UsbDeviceAction(
+                            usbDeviceId = usbDevice.deviceId,
+                            vendorId = usbDevice.vendorId,
+                            productId = usbDevice.productId,
+                            deviceName = usbDevice.deviceName,
+                        )
+                    Log.d(TAG, "🔌 pendingNavigation set to UsbDeviceAction")
+                }
+                Log.d(TAG, "🔌 pendingNavigation.value is now: ${pendingNavigation.value}")
+            } catch (e: Exception) {
+                Log.e(TAG, "🔌 Error handling USB device attachment", e)
+            }
+        }
+    }
+}
+
+/**
+ * Represents a pending navigation action from an intent.
+ */
+sealed class PendingNavigation {
+    data class AnnounceDetail(
+        val destinationHash: String,
+    ) : PendingNavigation()
+
+    data class Conversation(
+        val destinationHash: String,
+        val peerName: String,
+    ) : PendingNavigation()
+
+    data class AddContact(
+        val lxmaUrl: String,
+    ) : PendingNavigation()
+
+    data class SharedText(
+        val text: String,
+    ) : PendingNavigation()
+
+    data class SharedImage(
+        val uris: List<Uri>,
+    ) : PendingNavigation()
+
+    data class IncomingCall(
+        val identityHash: String,
+    ) : PendingNavigation()
+
+    data class AnswerCall(
+        val identityHash: String,
+    ) : PendingNavigation()
+
+    /** Navigate to Identity Manager with a pre-filled Base32 identity key (from Sideband share) */
+    data class ImportIdentityFromText(
+        val base32Text: String,
+    ) : PendingNavigation()
+
+    /** Navigate to interface stats screen for an existing configured interface */
+    data class InterfaceStats(
+        val interfaceId: Long,
+    ) : PendingNavigation()
+
+    /** Navigate to USB device action screen to choose between flash or configure */
+    data class UsbDeviceAction(
+        val usbDeviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val deviceName: String,
+    ) : PendingNavigation()
+
+    /** Navigate to RNode wizard with USB device pre-selected */
+    data class RNodeWizardWithUsb(
+        val usbDeviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val deviceName: String,
+    ) : PendingNavigation()
+
+    /** Navigate directly to flasher with skip-detection mode for bootloader flashing */
+    data class DirectFlash(
+        val usbDeviceId: Int,
+        val vendorId: Int,
+        val productId: Int,
+        val deviceName: String,
+    ) : PendingNavigation()
+
+    /** Navigate to NomadNet browser with a specific node and path */
+    data class NomadNetBrowser(
+        val nodeHash: String,
+        val path: String,
+    ) : PendingNavigation()
+}
+
+sealed class Screen(
+    val route: String,
+    val title: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+) {
+    object Welcome : Screen("welcome", "Welcome", Icons.Default.Sensors)
+
+    object IdentityUnlock : Screen("identity_unlock", "Restore Identity", Icons.Default.Sensors)
+
+    object Chats : Screen("chats", "Chats", Icons.Default.Chat)
+
+    object Announces : Screen("announce_stream", "Announces", Icons.Default.Sensors)
+
+    object Contacts : Screen("contacts", "Contacts", Icons.Default.People)
+
+    object Map : Screen("map", "Map", Icons.Default.Map)
+
+    object Identity : Screen("identity", "Network Status", Icons.Default.Info)
+
+    object Settings : Screen("settings", "Settings", Icons.Default.Settings)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ColumbaNavigation(
+    pendingNavigation: MutableState<PendingNavigation?>,
+    interfaceRepository: InterfaceRepository,
+    crashReportManager: CrashReportManager,
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val navController = rememberNavController()
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    val sharedTextViewModel: SharedTextViewModel = viewModel(viewModelStoreOwner = context as ComponentActivity)
+    val sharedImageViewModel: SharedImageViewModel = viewModel(viewModelStoreOwner = context as ComponentActivity)
+
+    // Clear pending shared text/images deterministically if the user leaves Chats/Contacts
+    // without selecting a destination.
+    var lastRoute by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntryFlow.collect { entry ->
+            val route = entry.destination.route
+            val wasInPickDestinationFlow = lastRoute == Screen.Chats.route || lastRoute == Screen.Contacts.route
+            val isInPickDestinationFlow = route == Screen.Chats.route || route == Screen.Contacts.route
+
+            if (wasInPickDestinationFlow && !isInPickDestinationFlow) {
+                sharedTextViewModel.clearIfUnassigned()
+                sharedImageViewModel.clearIfUnassigned()
+            }
+
+            lastRoute = route
+        }
+    }
+
+    // Track if we're currently navigating to answer a call (prevents race with callState observer)
+    var isAnsweringCall by remember { mutableStateOf(false) }
+
+    // Track if the Map screen's location permission UI has been dismissed this session.
+    // Managed here (at MainActivity level) so it survives tab switches. Issue #342.
+    var mapPermissionSheetDismissed by remember { mutableStateOf(false) }
+    var mapPermissionCardDismissed by remember { mutableStateOf(false) }
+
+    // Access SettingsViewModel to get theme preference
+    val settingsViewModel: network.libertychat.app.viewmodel.SettingsViewModel =
+        androidx.hilt.navigation.compose
+            .hiltViewModel()
+
+    // Collect settings state (includes theme preference)
+    val settingsState by settingsViewModel.state.collectAsState()
+
+    // Access MapViewModel at navigation level so "Locate on Map" can set pending focus
+    val mapViewModel: MapViewModel = hiltViewModel()
+
+    // Access OnboardingViewModel to check onboarding status
+    val onboardingViewModel: OnboardingViewModel = hiltViewModel()
+    val onboardingState by onboardingViewModel.state.collectAsState()
+    val needsIdentityUnlock by onboardingViewModel.needsIdentityUnlock.collectAsState()
+
+    // Determine start destination based on onboarding + unlock status.
+    // Held null until onboardingState finishes loading from DataStore, then
+    // latched to the resolved route. The NavHost isn't rendered until this
+    // is non-null, so the splash screen covers the async load and the user
+    // never sees the Welcome wizard flash for a frame before the redirect.
+    var startDestination by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(onboardingState.isLoading, onboardingState.hasCompletedOnboarding, needsIdentityUnlock) {
+        if (onboardingState.isLoading || startDestination != null) return@LaunchedEffect
+        startDestination =
+            when {
+                onboardingState.hasCompletedOnboarding && needsIdentityUnlock -> Screen.IdentityUnlock.route
+                onboardingState.hasCompletedOnboarding -> Screen.Chats.route
+                else -> Screen.Welcome.route
+            }
+    }
+
+    // If `needsIdentityUnlock` flips after the NavHost has already started (e.g.
+    // a later identity decryption failure), redirect to the unlock screen. The
+    // currentDestination null-check gates on the NavHost actually having called
+    // setGraph() — without it we can fire in the recomposition window between
+    // `startDestination` resolving and the NavHost branch materializing, and
+    // `navController.graph` throws IllegalStateException. In that window the
+    // first LaunchedEffect has already picked IdentityUnlock as the start
+    // destination, so no redirect is needed here.
+    LaunchedEffect(onboardingState.hasCompletedOnboarding, needsIdentityUnlock) {
+        if (startDestination == null) return@LaunchedEffect
+        val currentDestination = navController.currentDestination ?: return@LaunchedEffect
+        if (!onboardingState.hasCompletedOnboarding) return@LaunchedEffect
+        if (needsIdentityUnlock && currentDestination.route != Screen.IdentityUnlock.route) {
+            Log.d("ColumbaNavigation", "Redirecting to IdentityUnlock (key decryption failed)")
+            navController.navigate(Screen.IdentityUnlock.route) {
+                popUpTo(navController.graph.startDestinationId) { inclusive = true }
+            }
+        }
+    }
+
+    // Notification permission is now handled in OnboardingPagerScreen
+
+    // State for pending contact add from deep link
+    var pendingContactAdd by remember { mutableStateOf<String?>(null) }
+
+    val exitCallFlow: () -> Unit = {
+        val previousRoute = navController.previousBackStackEntry?.destination?.route
+        val currentRoute = navController.currentDestination?.route
+        val popped = navController.popBackStack()
+
+        if ((!popped || previousRoute == Screen.Welcome.route) && onboardingState.hasCompletedOnboarding) {
+            Log.d("ColumbaNavigation", "Call flow finished without valid return destination, navigating to Chats")
+            navController.navigate(Screen.Chats.route) {
+                if (!popped && currentRoute != null) {
+                    popUpTo(currentRoute) { inclusive = true }
+                } else {
+                    popUpTo(Screen.Welcome.route) { inclusive = true }
+                }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // Handle pending navigation from intents
+    LaunchedEffect(pendingNavigation.value) {
+        pendingNavigation.value?.let { navigation ->
+            try {
+                when (navigation) {
+                    is PendingNavigation.AnnounceDetail -> {
+                        val encodedHash = Uri.encode(navigation.destinationHash)
+                        navController.navigate("announce_detail/$encodedHash")
+                        Log.d("ColumbaNavigation", "Navigated to announce detail: ${navigation.destinationHash}")
+                    }
+                    is PendingNavigation.Conversation -> {
+                        val encodedHash = Uri.encode(navigation.destinationHash)
+                        val encodedName = Uri.encode(navigation.peerName)
+                        navController.navigate("messaging/$encodedHash/$encodedName")
+                        Log.d("ColumbaNavigation", "Navigated to conversation: ${navigation.peerName}")
+                    }
+                    is PendingNavigation.AddContact -> {
+                        // Navigate to contacts tab and trigger add contact dialog
+                        selectedTab = 1 // Contacts tab
+                        navController.navigate(Screen.Contacts.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                        pendingContactAdd = navigation.lxmaUrl
+                        Log.d("ColumbaNavigation", "Navigated to contacts for deep link: ${navigation.lxmaUrl}")
+                    }
+                    is PendingNavigation.ImportIdentityFromText -> {
+                        // Navigate to Identity Manager with pre-filled Base32 key
+                        val encodedKey = Uri.encode(navigation.base32Text)
+                        navController.navigate("identity_manager?base32Key=$encodedKey")
+                        Log.d("ColumbaNavigation", "Navigated to identity import from shared text")
+                    }
+                    is PendingNavigation.SharedText -> {
+                        sharedTextViewModel.setText(navigation.text)
+
+                        selectedTab = 0
+                        val poppedToChats = navController.popBackStack(Screen.Chats.route, inclusive = false)
+                        if (!poppedToChats) {
+                            navController.navigate(Screen.Chats.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        Log.d("ColumbaNavigation", "Handled shared text intent")
+                    }
+                    is PendingNavigation.SharedImage -> {
+                        sharedImageViewModel.setImages(navigation.uris)
+
+                        selectedTab = 0
+                        val poppedToChats = navController.popBackStack(Screen.Chats.route, inclusive = false)
+                        if (!poppedToChats) {
+                            navController.navigate(Screen.Chats.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                        Log.d("ColumbaNavigation", "Handled shared image intent (${navigation.uris.size} images)")
+                    }
+                    is PendingNavigation.IncomingCall -> {
+                        // Navigate to incoming call screen
+                        val encodedHash = Uri.encode(navigation.identityHash)
+                        navController.navigate("incoming_call/$encodedHash")
+                        Log.d("ColumbaNavigation", "Navigated to incoming call: ${navigation.identityHash.take(16)}...")
+                    }
+                    is PendingNavigation.AnswerCall -> {
+                        // Set flag to prevent callState observer from overriding navigation
+                        isAnsweringCall = true
+                        // Navigate to voice call screen with auto-answer flag
+                        val encodedHash = Uri.encode(navigation.identityHash)
+                        val route = "voice_call/$encodedHash?autoAnswer=true"
+                        Log.w("ColumbaNavigation", "📞 AnswerCall handler - navigating to $route")
+                        Log.w("ColumbaNavigation", "📞 Current backstack: ${navController.currentBackStackEntry?.destination?.route}")
+                        navController.navigate(route) {
+                            launchSingleTop = true
+                        }
+                        Log.w("ColumbaNavigation", "📞 After navigation, current: ${navController.currentBackStackEntry?.destination?.route}")
+                    }
+                    is PendingNavigation.InterfaceStats -> {
+                        // Navigate to interface stats screen
+                        val targetRoute = "interface_stats/${navigation.interfaceId}"
+                        val currentRoute = navController.currentBackStackEntry?.destination?.route
+                        val currentArgs = navController.currentBackStackEntry?.arguments
+                        val currentInterfaceId = currentArgs?.getLong("interfaceId")
+
+                        if (currentRoute == "interface_stats/{interfaceId}" && currentInterfaceId == navigation.interfaceId) {
+                            // Already on the SAME interface's stats screen - just signal reconnect
+                            Log.d("ColumbaNavigation", "Already on stats screen for interface ${navigation.interfaceId}, skipping navigation")
+                        } else {
+                            // Navigate to the (different) interface's stats screen
+                            navController.navigate(targetRoute) {
+                                // Pop the current stats screen if we're switching between interfaces
+                                if (currentRoute == "interface_stats/{interfaceId}") {
+                                    popUpTo("interface_stats/{interfaceId}") { inclusive = true }
+                                }
+                                launchSingleTop = true
+                            }
+                            Log.d("ColumbaNavigation", "Navigated to interface stats: ${navigation.interfaceId}")
+                        }
+                    }
+                    is PendingNavigation.UsbDeviceAction -> {
+                        // Navigate to USB device action screen
+                        val route =
+                            "usb_device_action" +
+                                "?usbDeviceId=${navigation.usbDeviceId}" +
+                                "&usbVendorId=${navigation.vendorId}" +
+                                "&usbProductId=${navigation.productId}" +
+                                "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
+                        navController.navigate(route)
+                        Log.d("ColumbaNavigation", "Navigated to USB device action: ${navigation.usbDeviceId}")
+                    }
+                    is PendingNavigation.RNodeWizardWithUsb -> {
+                        // Navigate to RNode wizard with USB pre-selected
+                        val route =
+                            "rnode_wizard?connectionType=usb" +
+                                "&usbDeviceId=${navigation.usbDeviceId}" +
+                                "&usbVendorId=${navigation.vendorId}" +
+                                "&usbProductId=${navigation.productId}" +
+                                "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
+                        navController.navigate(route)
+                        Log.d("ColumbaNavigation", "Navigated to RNode wizard with USB: ${navigation.usbDeviceId}")
+                    }
+                    is PendingNavigation.DirectFlash -> {
+                        // Navigate directly to flasher with skip-detection mode
+                        val route =
+                            "rnode_flasher?skipDetection=true" +
+                                "&usbDeviceId=${navigation.usbDeviceId}" +
+                                "&usbVendorId=${navigation.vendorId}" +
+                                "&usbProductId=${navigation.productId}" +
+                                "&usbDeviceName=${Uri.encode(navigation.deviceName)}"
+                        navController.navigate(route)
+                        Log.d("ColumbaNavigation", "Navigated to flasher (direct): ${navigation.usbDeviceId}")
+                    }
+                    is PendingNavigation.NomadNetBrowser -> {
+                        val encoded = Uri.encode(navigation.path)
+                        navController.navigate("nomadnet_browser/${navigation.nodeHash}?path=$encoded")
+                        Log.d("ColumbaNavigation", "Navigated to NomadNet browser: ${navigation.nodeHash}")
+                    }
+                }
+                // Only clear on success so a failed navigation can be retried
+                pendingNavigation.value = null
+            } catch (e: Exception) {
+                Log.e("ColumbaNavigation", "Failed to navigate from pending intent: $navigation", e)
+            }
+        }
+    }
+
+    // Bluetooth permission state
+    var showPermissionBottomSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Shared flag with BluetoothPermissionController to know if we've already
+    // triggered a runtime permission request in a previous run.
+    val bluetoothPrefs =
+        remember(context) {
+            context.getSharedPreferences("bluetooth_permission_prefs", Context.MODE_PRIVATE)
+        }
+    var hasRequestedBluetoothOnce by remember {
+        mutableStateOf(
+            bluetoothPrefs.getBoolean("hasRequestedBluetoothPermissions", false),
+        )
+    }
+
+    // Permission launcher
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestMultiplePermissions(),
+        ) { permissions ->
+            // Check if any BLE permissions were granted
+            val blePermissions =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    listOf(
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.BLUETOOTH_CONNECT,
+                        Manifest.permission.BLUETOOTH_ADVERTISE,
+                    )
+                } else {
+                    emptyList()
+                }
+
+            val blePermissionsGranted =
+                permissions.filter { (permission, granted) ->
+                    permission in blePermissions && granted
+                }
+
+            // If any BLE permissions were just granted, restart BLE interface
+            if (blePermissionsGranted.isNotEmpty()) {
+                Log.d("ColumbaNavigation", "BLE permissions granted, restarting BLE interface")
+                val restartIntent =
+                    Intent(context, ReticulumService::class.java).apply {
+                        action = "network.libertychat.app.RESTART_BLE"
+                    }
+                context.startService(restartIntent)
+            }
+
+            val allGranted = permissions.values.all { it }
+            if (!allGranted) {
+                // User denied some permissions - they can still use the app,
+                // but BLE features won't work
+                Log.d("ColumbaNavigation", "Some permissions denied")
+                hasRequestedBluetoothOnce = true
+                bluetoothPrefs.edit().putBoolean("hasRequestedBluetoothPermissions", true).apply()
+            }
+        }
+
+    // Check BLE permissions after onboarding is completed.
+    // Only show if a Bluetooth-requiring interface (AndroidBLE or RNode) is enabled.
+    // Don't show during onboarding - it's handled in OnboardingPagerScreen.
+    val hasEnabledBluetoothInterface by interfaceRepository.hasEnabledBluetoothInterface.collectAsState(
+        initial = false,
+    )
+    LaunchedEffect(
+        onboardingState.hasCompletedOnboarding,
+        hasEnabledBluetoothInterface,
+        splashFinished.value,
+    ) {
+        // Only show permission sheet if activity is still active (at least STARTED)
+        // to prevent BadTokenException when showing ModalBottomSheet
+        if (!LifecycleGuard.isActiveForWindows(lifecycleOwner)) return@LaunchedEffect
+        // LCS: hold until the branded splash has fully finished, so this sheet
+        // never appears over it. splashFinished is a LaunchedEffect key, so this
+        // re-runs and fires the moment the splash completes.
+        if (!splashFinished.value) return@LaunchedEffect
+        if (!onboardingState.hasCompletedOnboarding) return@LaunchedEffect
+        if (!hasEnabledBluetoothInterface) return@LaunchedEffect
+        if (BlePermissionManager.hasAllPermissions(context)) return@LaunchedEffect
+
+        showPermissionBottomSheet = true
+    }
+
+    // Track current navigation state
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    // Synchronize selectedTab with current route when navigating back
+    LaunchedEffect(currentRoute) {
+        Log.d("ColumbaNavigation", "📍 currentRoute changed to: $currentRoute")
+        selectedTab =
+            when (currentRoute) {
+                Screen.Chats.route -> 0
+                Screen.Contacts.route -> 1
+                Screen.Map.route -> 2
+                Screen.Settings.route -> 3
+                else -> selectedTab // Keep current selection for nested screens
+            }
+    }
+
+    // Observe call state for incoming calls and navigate to IncomingCallScreen.
+    // Composable functions can't @Inject, so the RnsTelephony seam singleton is
+    // reached through Hilt's RnsTelephonyEntryPoint. Replaces the A.9-era
+    // CallCoordinatorEntryPoint now that the call observable surface lives on
+    // RnsTelephony and survives the AIDL boundary.
+    val telephony = remember(context) {
+        EntryPointAccessors
+            .fromApplication(context.applicationContext, RnsTelephonyEntryPoint::class.java)
+            .telephony()
+    }
+    val callState by telephony.callState.collectAsState()
+
+    LaunchedEffect(callState) {
+        when (val state = callState) {
+            is CallState.Incoming -> {
+                val identityHash = state.identityHash
+                Log.i("MainActivity", "📞 Incoming call detected, currentRoute=$currentRoute, isAnsweringCall=$isAnsweringCall")
+                val encodedHash = Uri.encode(identityHash)
+                // Only navigate if not already on a call screen and not answering from notification
+                val isOnCallScreen =
+                    currentRoute?.startsWith("incoming_call/") == true ||
+                        currentRoute?.startsWith("voice_call/") == true
+                if (!isOnCallScreen && !isAnsweringCall) {
+                    Log.i("MainActivity", "📞 Navigating to IncomingCallScreen: $identityHash")
+                    // Dismiss the notification — the user is now looking at the call screen
+                    CallNotificationHelper(context).cancelIncomingCallNotification()
+                    navController.navigate("incoming_call/$encodedHash")
+                } else {
+                    Log.i("MainActivity", "📞 Skipping navigation (onCallScreen=$isOnCallScreen, isAnsweringCall=$isAnsweringCall)")
+                }
+            }
+            else -> {
+                // Reset the answering flag when call state changes from Incoming
+                if (isAnsweringCall) {
+                    isAnsweringCall = false
+                }
+            }
+        }
+    }
+
+    // Screens that should hide the bottom navigation bar
+    val hideBottomNavScreens =
+        listOf(
+            Screen.Welcome.route,
+            "interface_management",
+            "ble_connection_status",
+            "theme_management",
+            "offline_maps",
+        )
+    val hideBottomNavPrefixes =
+        listOf(
+            "offline_map_download",
+            "messaging/",
+            "announce_detail/",
+            "message_detail/",
+            "theme_editor",
+            "rnode_wizard",
+            "tcp_client_wizard",
+            "rnode_flasher",
+            "usb_device_action",
+            "voice_call/",
+            "incoming_call/",
+            "interface_stats/",
+            "nomadnet_browser/",
+        )
+    val shouldShowBottomNav =
+        currentRoute != null &&
+            currentRoute !in hideBottomNavScreens &&
+            hideBottomNavPrefixes.none { currentRoute.startsWith(it) }
+
+    val screens =
+        listOf(
+            Screen.Chats,
+            Screen.Contacts,
+            Screen.Map,
+            Screen.Settings,
+        )
+
+    // Double-back-to-exit state: first back press on a root tab shows a toast,
+    // second press within 2 seconds finishes the activity.
+    // The BackHandler is placed inside each root tab's composable() so it takes
+    // priority over NavHost's internal back-stack popping between tabs.
+    var backPressedOnce by remember(currentRoute) { mutableStateOf(false) }
+
+    // Auto-reset the flag after 2 seconds
+    LaunchedEffect(backPressedOnce) {
+        if (backPressedOnce) {
+            kotlinx.coroutines.delay(2000)
+            backPressedOnce = false
+        }
+    }
+
+    @Composable
+    fun DoubleBackToExitHandler(route: String) {
+        BackHandler(enabled = currentRoute == route) {
+            if (backPressedOnce) {
+                (context as? ComponentActivity)?.finish()
+            } else {
+                backPressedOnce = true
+                Toast.makeText(context, "Press back again to exit", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    ColumbaTheme(selectedTheme = settingsState.selectedTheme) {
+        // Prompt for precise location when the user has enabled location sharing
+        // and chosen precise precision but only approximate access is granted.
+        // Fires on app start, after a settings import, and when sharing/precision
+        // changes — all surface as the persisted settings (issues #855, #991).
+        // Gated on locationSharingEnabled so users who never opted into sharing
+        // aren't nagged (issue #991). Hosted inside ColumbaTheme so the sheet
+        // matches the app's light/dark theme.
+        network.libertychat.app.ui.components.PreciseLocationPermissionPrompt(
+            locationSharingEnabled = settingsState.locationSharingEnabled,
+            locationPrecisionRadius = settingsState.locationPrecisionRadius,
+            // LCS: also hold until the branded splash finishes, so the sheet
+            // never appears over it.
+            enabled =
+                !settingsState.isLoading &&
+                    onboardingState.hasCompletedOnboarding &&
+                    splashFinished.value,
+            dismissed = settingsState.preciseLocationPromptDismissed,
+            onDismiss = { settingsViewModel.dismissPreciseLocationPrompt() },
+        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
+            Scaffold(
+                bottomBar = {
+                    if (shouldShowBottomNav) {
+                        NavigationBar {
+                            screens.forEachIndexed { index, screen ->
+                                NavigationBarItem(
+                                    icon = { Icon(screen.icon, contentDescription = null) },
+                                    label = { Text(screen.title) },
+                                    selected = selectedTab == index,
+                                    onClick = {
+                                        selectedTab = index
+                                        navController.navigate(screen.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                },
+            ) { _ ->
+                // Inner screens have their own Scaffolds with TopAppBars that handle content padding
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    OfflineModeBanner(
+                        networkStatus = settingsState.networkStatus,
+                        isRestarting = settingsState.isRestarting,
+                        onReconnect = { settingsViewModel.restartService() },
+                        hasCompletedOnboarding = onboardingState.hasCompletedOnboarding,
+                    )
+                    val resolvedStartDestination = startDestination
+                    if (resolvedStartDestination == null) {
+                        Box(modifier = Modifier.weight(1f))
+                    } else {
+                        NavHost(
+                            modifier = Modifier.weight(1f),
+                            navController = navController,
+                            startDestination = resolvedStartDestination,
+                            enterTransition = { fadeIn(tween(150)) },
+                            exitTransition = { fadeOut(tween(75)) },
+                            popEnterTransition = { fadeIn(tween(150)) },
+                            popExitTransition = { fadeOut(tween(75)) },
+                        ) {
+                            composable(Screen.Welcome.route) {
+                                OnboardingPagerScreen(
+                                    onOnboardingComplete = { navigateToRNodeWizard ->
+                                        navController.navigate(Screen.Chats.route) {
+                                            popUpTo(Screen.Welcome.route) { inclusive = true }
+                                        }
+                                        // Navigate to RNode wizard if LoRa Radio was selected
+                                        if (navigateToRNodeWizard) {
+                                            navController.navigate("rnode_wizard")
+                                        }
+                                    },
+                                    onImportData = {
+                                        navController.navigate("migration")
+                                    },
+                                )
+                            }
+
+                            composable(Screen.IdentityUnlock.route) {
+                                network.libertychat.app.ui.screens.IdentityUnlockScreen(
+                                    onResolved = {
+                                        // ColumbaApplication bailed out of Reticulum init when
+                                        // the key decrypt failed at cold-start. Now that the
+                                        // re-wrap put a usable encryptedKeyData back on the row,
+                                        // kick the service so the native stack comes up with
+                                        // the restored identity — otherwise the user lands on
+                                        // Chats with read-only history and sends silently fail.
+                                        settingsViewModel.restartService()
+                                        navController.navigate(Screen.Chats.route) {
+                                            popUpTo(Screen.IdentityUnlock.route) { inclusive = true }
+                                        }
+                                    },
+                                )
+                            }
+
+                            composable(Screen.Chats.route) {
+                                DoubleBackToExitHandler(Screen.Chats.route)
+                                ChatsScreen(
+                                    onChatClick = { destinationHash, peerName ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                    onViewPeerDetails = { peerHash ->
+                                        val encodedHash = Uri.encode(peerHash)
+                                        navController.navigate("announce_detail/$encodedHash")
+                                    },
+                                    onLocateOnMap = { peerHash ->
+                                        mapViewModel.focusOnContact(peerHash)
+                                        navController.navigate(Screen.Map.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    onNavigateToQrScanner = {
+                                        navController.navigate("qr_scanner")
+                                    },
+                                    settingsViewModel = settingsViewModel,
+                                )
+                            }
+
+                            composable(
+                                route = "${Screen.Announces.route}?filterType={filterType}",
+                                arguments =
+                                    listOf(
+                                        navArgument("filterType") {
+                                            type = NavType.StringType
+                                            nullable = true
+                                            defaultValue = null
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val filterType = backStackEntry.arguments?.getString("filterType")
+                                AnnounceStreamScreen(
+                                    initialFilterType = filterType,
+                                    onPeerClick = { destinationHash, _ ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        navController.navigate("announce_detail/$encodedHash")
+                                    },
+                                    onStartChat = { destinationHash, peerName ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                )
+                            }
+
+                            composable(Screen.Contacts.route) {
+                                DoubleBackToExitHandler(Screen.Contacts.route)
+                                val contactsViewModel: ContactsViewModel = hiltViewModel()
+                                ContactsScreen(
+                                    onContactClick = { destinationHash, displayName ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        navController.navigate("announce_detail/$encodedHash")
+                                    },
+                                    onViewPeerDetails = { destinationHash ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        navController.navigate("announce_detail/$encodedHash")
+                                    },
+                                    onLocateOnMap = { peerHash ->
+                                        mapViewModel.focusOnContact(peerHash)
+                                        navController.navigate(Screen.Map.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                    onNavigateToQrScanner = {
+                                        navController.navigate("qr_scanner")
+                                    },
+                                    pendingDeepLinkContact = pendingContactAdd,
+                                    onDeepLinkContactProcessed = {
+                                        pendingContactAdd = null
+                                    },
+                                    onNavigateToConversation = { destinationHash ->
+                                        val contacts = contactsViewModel.contacts.value
+                                        val contact = contacts.find { it.destinationHash == destinationHash }
+                                        val peerName = contact?.displayName ?: destinationHash.take(16)
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                    onStartChat = { destinationHash, peerName ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                )
+                            }
+
+                            composable(Screen.Map.route) {
+                                DoubleBackToExitHandler(Screen.Map.route)
+                                MapScreen(
+                                    viewModel = mapViewModel,
+                                    onNavigateToConversation = { destinationHash ->
+                                        // Navigate to messaging screen with the contact
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        // Use a placeholder name - the messaging screen will fetch the actual name
+                                        navController.navigate("messaging/$encodedHash/Contact")
+                                    },
+                                    onNavigateToOfflineMaps = {
+                                        navController.navigate("offline_maps")
+                                    },
+                                    onNavigateToRNodeWizardWithParams = { frequency, bandwidth, sf, cr ->
+                                        navController.navigate(
+                                            "rnode_wizard?loraFrequency=${frequency ?: -1L}" +
+                                                "&loraBandwidth=${bandwidth ?: -1}" +
+                                                "&loraSf=${sf ?: -1}" +
+                                                "&loraCr=${cr ?: -1}",
+                                        )
+                                    },
+                                    permissionSheetDismissed = mapPermissionSheetDismissed,
+                                    onPermissionSheetDismissed = { mapPermissionSheetDismissed = true },
+                                    permissionCardDismissed = mapPermissionCardDismissed,
+                                    onPermissionCardDismissed = { mapPermissionCardDismissed = true },
+                                )
+                            }
+
+                            // Map with focus location (for discovered interfaces)
+                            composable(
+                                route =
+                                    "map_focus?lat={lat}&lon={lon}&label={label}&type={type}&height={height}" +
+                                        "&reachableOn={reachableOn}&port={port}&frequency={frequency}&bandwidth={bandwidth}" +
+                                        "&sf={sf}&cr={cr}&modulation={modulation}&status={status}&lastHeard={lastHeard}&hops={hops}",
+                                arguments =
+                                    listOf(
+                                        navArgument("lat") {
+                                            type = NavType.FloatType
+                                            defaultValue = 0f
+                                        },
+                                        navArgument("lon") {
+                                            type = NavType.FloatType
+                                            defaultValue = 0f
+                                        },
+                                        navArgument("label") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("type") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("height") {
+                                            type = NavType.FloatType
+                                            defaultValue = Float.NaN
+                                        },
+                                        navArgument("reachableOn") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("port") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("frequency") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                        navArgument("bandwidth") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("sf") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("cr") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("modulation") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("status") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("lastHeard") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                        navArgument("hops") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val lat = backStackEntry.arguments?.getFloat("lat")?.toDouble()
+                                val lon = backStackEntry.arguments?.getFloat("lon")?.toDouble()
+                                val label = backStackEntry.arguments?.getString("label")
+                                val type = backStackEntry.arguments?.getString("type")
+                                val height = backStackEntry.arguments?.getFloat("height")?.toDouble()
+                                val reachableOn = backStackEntry.arguments?.getString("reachableOn")
+                                val port = backStackEntry.arguments?.getInt("port")
+                                val frequency = backStackEntry.arguments?.getLong("frequency")
+                                val bandwidth = backStackEntry.arguments?.getInt("bandwidth")
+                                val sf = backStackEntry.arguments?.getInt("sf")
+                                val cr = backStackEntry.arguments?.getInt("cr")
+                                val modulation = backStackEntry.arguments?.getString("modulation")
+                                val status = backStackEntry.arguments?.getString("status")
+                                val lastHeard = backStackEntry.arguments?.getLong("lastHeard")
+                                val hops = backStackEntry.arguments?.getInt("hops")
+
+                                // Build FocusInterfaceDetails if we have valid lat/lon
+                                val focusDetails =
+                                    buildFocusInterfaceDetails(
+                                        lat = lat,
+                                        lon = lon,
+                                        label = label,
+                                        type = type,
+                                        height = height,
+                                        reachableOn = reachableOn,
+                                        port = port,
+                                        frequency = frequency,
+                                        bandwidth = bandwidth,
+                                        sf = sf,
+                                        cr = cr,
+                                        modulation = modulation,
+                                        status = status,
+                                        lastHeard = lastHeard,
+                                        hops = hops,
+                                    )
+
+                                MapScreen(
+                                    viewModel = mapViewModel,
+                                    onNavigateToConversation = { destinationHash ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        navController.navigate("messaging/$encodedHash/Contact")
+                                    },
+                                    onNavigateToOfflineMaps = {
+                                        navController.navigate("offline_maps")
+                                    },
+                                    onNavigateToRNodeWizardWithParams = { frequency, bandwidth, sf, cr ->
+                                        navController.navigate(
+                                            "rnode_wizard?loraFrequency=${frequency ?: -1L}" +
+                                                "&loraBandwidth=${bandwidth ?: -1}" +
+                                                "&loraSf=${sf ?: -1}" +
+                                                "&loraCr=${cr ?: -1}",
+                                        )
+                                    },
+                                    focusLatitude = if (lat != 0.0) lat else null,
+                                    focusLongitude = if (lon != 0.0) lon else null,
+                                    focusLabel = label?.ifEmpty { null },
+                                    focusInterfaceDetails = focusDetails,
+                                    permissionSheetDismissed = mapPermissionSheetDismissed,
+                                    onPermissionSheetDismissed = { mapPermissionSheetDismissed = true },
+                                    permissionCardDismissed = mapPermissionCardDismissed,
+                                    onPermissionCardDismissed = { mapPermissionCardDismissed = true },
+                                )
+                            }
+
+                            composable(Screen.Identity.route) {
+                                IdentityScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    settingsViewModel = settingsViewModel,
+                                    onNavigateToBleStatus = {
+                                        navController.navigate("ble_connection_status")
+                                    },
+                                    onNavigateToInterfaceStats = { interfaceId ->
+                                        navController.navigate("interface_stats/$interfaceId")
+                                    },
+                                    onNavigateToInterfaceManagement = {
+                                        navController.navigate("interface_management")
+                                    },
+                                )
+                            }
+
+                            composable(Screen.Settings.route) {
+                                DoubleBackToExitHandler(Screen.Settings.route)
+                                SettingsScreen(
+                                    viewModel = settingsViewModel,
+                                    crashReportManager = crashReportManager,
+                                    onNavigateToInterfaces = {
+                                        navController.navigate("interface_management")
+                                    },
+                                    onNavigateToBleConnections = {
+                                        navController.navigate("ble_connection_status")
+                                    },
+                                    onNavigateToIdentity = {
+                                        navController.navigate("my_identity")
+                                    },
+                                    onNavigateToNetworkStatus = {
+                                        navController.navigate("network_status")
+                                    },
+                                    onNavigateToIdentityManager = {
+                                        navController.navigate("identity_manager")
+                                    },
+                                    onNavigateToNotifications = {
+                                        navController.navigate("notification_settings")
+                                    },
+                                    onNavigateToCustomThemes = {
+                                        navController.navigate("theme_management")
+                                    },
+                                    onNavigateToMigration = {
+                                        navController.navigate("migration")
+                                    },
+                                    onNavigateToApkSharing = {
+                                        navController.navigate("apk_sharing")
+                                    },
+                                    onNavigateToAnnounces = { filterType ->
+                                        selectedTab = 1 // Announces tab
+                                        val route =
+                                            if (filterType != null) {
+                                                "${Screen.Announces.route}?filterType=$filterType"
+                                            } else {
+                                                Screen.Announces.route
+                                            }
+                                        navController.navigate(route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = false // Don't restore state so filter applies
+                                        }
+                                    },
+                                    onNavigateToFlasher = {
+                                        navController.navigate("rnode_flasher")
+                                    },
+                                    onNavigateToBlockedUsers = {
+                                        navController.navigate("blocked_users")
+                                    },
+                                )
+                            }
+
+                            composable(
+                                route =
+                                    "usb_device_action" +
+                                        "?usbDeviceId={usbDeviceId}" +
+                                        "&usbVendorId={usbVendorId}" +
+                                        "&usbProductId={usbProductId}" +
+                                        "&usbDeviceName={usbDeviceName}",
+                                arguments =
+                                    listOf(
+                                        navArgument("usbDeviceId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbVendorId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbProductId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbDeviceName") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                            nullable = true
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
+                                val usbVendorId = backStackEntry.arguments?.getInt("usbVendorId") ?: -1
+                                val usbProductId = backStackEntry.arguments?.getInt("usbProductId") ?: -1
+                                val usbDeviceName = backStackEntry.arguments?.getString("usbDeviceName") ?: "USB Device"
+
+                                // State for disable transport operation
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+                                var isDisablingTransport by androidx.compose.runtime.remember {
+                                    androidx.compose.runtime.mutableStateOf(false)
+                                }
+                                var disableTransportResult: Boolean? by androidx.compose.runtime.remember {
+                                    androidx.compose.runtime.mutableStateOf(null)
+                                }
+
+                                network.libertychat.app.ui.screens.UsbDeviceActionScreen(
+                                    deviceName = usbDeviceName,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onFlashFirmware = {
+                                        val route =
+                                            "rnode_flasher" +
+                                                "?usbDeviceId=$usbDeviceId" +
+                                                "&usbVendorId=$usbVendorId" +
+                                                "&usbProductId=$usbProductId" +
+                                                "&usbDeviceName=${Uri.encode(usbDeviceName)}"
+                                        navController.navigate(route) {
+                                            popUpTo("usb_device_action") { inclusive = true }
+                                        }
+                                    },
+                                    onConfigureRNode = {
+                                        val route =
+                                            "rnode_wizard?connectionType=usb" +
+                                                "&usbDeviceId=$usbDeviceId" +
+                                                "&usbVendorId=$usbVendorId" +
+                                                "&usbProductId=$usbProductId" +
+                                                "&usbDeviceName=${Uri.encode(usbDeviceName)}"
+                                        navController.navigate(route) {
+                                            popUpTo("usb_device_action") { inclusive = true }
+                                        }
+                                    },
+                                    onConfigureTransport = {
+                                        val route =
+                                            "rnode_wizard?connectionType=usb" +
+                                                "&transportMode=true" +
+                                                "&usbDeviceId=$usbDeviceId" +
+                                                "&usbVendorId=$usbVendorId" +
+                                                "&usbProductId=$usbProductId" +
+                                                "&usbDeviceName=${Uri.encode(usbDeviceName)}"
+                                        navController.navigate(route) {
+                                            popUpTo("usb_device_action") { inclusive = true }
+                                        }
+                                    },
+                                    onDisableTransport = {
+                                        isDisablingTransport = true
+                                        coroutineScope.launch {
+                                            val flasher =
+                                                network.libertychat.app.rns.host.flasher
+                                                    .RNodeFlasher(context)
+                                            val success = flasher.tncModeController.disableTncMode(usbDeviceId)
+                                            isDisablingTransport = false
+                                            disableTransportResult = success
+                                        }
+                                    },
+                                    isDisablingTransport = isDisablingTransport,
+                                    disableTransportResult = disableTransportResult,
+                                    onDismissDisableResult = { disableTransportResult = null },
+                                )
+                            }
+
+                            composable(
+                                route =
+                                    "rnode_flasher?skipDetection={skipDetection}&tncConfigOnly={tncConfigOnly}" +
+                                        "&usbDeviceId={usbDeviceId}" +
+                                        "&usbVendorId={usbVendorId}&usbProductId={usbProductId}&usbDeviceName={usbDeviceName}",
+                                arguments =
+                                    listOf(
+                                        navArgument("skipDetection") {
+                                            type = NavType.BoolType
+                                            defaultValue = false
+                                        },
+                                        navArgument("tncConfigOnly") {
+                                            type = NavType.BoolType
+                                            defaultValue = false
+                                        },
+                                        navArgument("usbDeviceId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbVendorId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbProductId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbDeviceName") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                            nullable = true
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val skipDetection = backStackEntry.arguments?.getBoolean("skipDetection") ?: false
+                                val tncConfigOnly = backStackEntry.arguments?.getBoolean("tncConfigOnly") ?: false
+                                val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
+                                RNodeFlasherScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onComplete = { navController.popBackStack() },
+                                    onNavigateToRNodeWizard = {
+                                        navController.navigate("rnode_wizard")
+                                    },
+                                    skipDetection = skipDetection,
+                                    tncConfigOnly = tncConfigOnly,
+                                    preselectedUsbDeviceId = if (usbDeviceId > 0) usbDeviceId else null,
+                                )
+                            }
+
+                            composable("interface_management") {
+                                InterfaceManagementScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToRNodeWizard = { interfaceId ->
+                                        if (interfaceId != null) {
+                                            navController.navigate("rnode_wizard?interfaceId=$interfaceId")
+                                        } else {
+                                            navController.navigate("rnode_wizard")
+                                        }
+                                    },
+                                    onNavigateToTcpClientWizard = { interfaceId ->
+                                        if (interfaceId != null) {
+                                            navController.navigate("tcp_client_wizard?interfaceId=$interfaceId")
+                                        } else {
+                                            navController.navigate("tcp_client_wizard")
+                                        }
+                                    },
+                                    onNavigateToInterfaceStats = { interfaceId ->
+                                        navController.navigate("interface_stats/$interfaceId")
+                                    },
+                                    onNavigateToDiscoveredInterfaces = {
+                                        navController.navigate("discovered_interfaces")
+                                    },
+                                )
+                            }
+
+                            composable("discovered_interfaces") {
+                                DiscoveredInterfacesScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToTcpClientWizard = { host, port, name, ifacNet, ifacKey ->
+                                        val encodedHost = Uri.encode(host)
+                                        val encodedName = Uri.encode(name)
+                                        val ifacNetParam =
+                                            if (!ifacNet.isNullOrEmpty()) "&ifacNetname=${Uri.encode(ifacNet)}" else ""
+                                        val ifacKeyParam =
+                                            if (!ifacKey.isNullOrEmpty()) "&ifacNetkey=${Uri.encode(ifacKey)}" else ""
+                                        navController.navigate(
+                                            "tcp_client_wizard?host=$encodedHost&port=$port&name=$encodedName" +
+                                                ifacNetParam + ifacKeyParam,
+                                        )
+                                    },
+                                    onNavigateToMapWithInterface = { details ->
+                                        val encodedLabel = Uri.encode(details.name)
+                                        val encodedType = Uri.encode(details.type)
+                                        val encodedReachableOn = Uri.encode(details.reachableOn ?: "")
+                                        val encodedModulation = Uri.encode(details.modulation ?: "")
+                                        val encodedStatus = Uri.encode(details.status ?: "")
+                                        navController.navigate(
+                                            "map_focus?lat=${details.latitude}&lon=${details.longitude}" +
+                                                "&label=$encodedLabel&type=$encodedType" +
+                                                "&height=${details.height ?: Float.NaN}" +
+                                                "&reachableOn=$encodedReachableOn&port=${details.port ?: -1}" +
+                                                "&frequency=${details.frequency ?: -1L}&bandwidth=${details.bandwidth ?: -1}" +
+                                                "&sf=${details.spreadingFactor ?: -1}&cr=${details.codingRate ?: -1}" +
+                                                "&modulation=$encodedModulation&status=$encodedStatus" +
+                                                "&lastHeard=${details.lastHeard ?: -1L}&hops=${details.hops ?: -1}",
+                                        )
+                                    },
+                                    onNavigateToRNodeWizardWithParams = { frequency, bandwidth, sf, cr ->
+                                        navController.navigate(
+                                            "rnode_wizard?loraFrequency=${frequency ?: -1L}" +
+                                                "&loraBandwidth=${bandwidth ?: -1}" +
+                                                "&loraSf=${sf ?: -1}" +
+                                                "&loraCr=${cr ?: -1}",
+                                        )
+                                    },
+                                )
+                            }
+
+                            composable(
+                                route =
+                                    "tcp_client_wizard?interfaceId={interfaceId}&host={host}&port={port}&name={name}" +
+                                        "&ifacNetname={ifacNetname}&ifacNetkey={ifacNetkey}",
+                                arguments =
+                                    listOf(
+                                        navArgument("interfaceId") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                        navArgument("host") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("port") {
+                                            type = NavType.IntType
+                                            defaultValue = 0
+                                        },
+                                        navArgument("name") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("ifacNetname") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                        navArgument("ifacNetkey") {
+                                            type = NavType.StringType
+                                            defaultValue = ""
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val interfaceId = backStackEntry.arguments?.getLong("interfaceId") ?: -1L
+                                val host = backStackEntry.arguments?.getString("host") ?: ""
+                                val port = backStackEntry.arguments?.getInt("port") ?: 0
+                                val name = backStackEntry.arguments?.getString("name") ?: ""
+                                val ifacNetname = backStackEntry.arguments?.getString("ifacNetname") ?: ""
+                                val ifacNetkey = backStackEntry.arguments?.getString("ifacNetkey") ?: ""
+                                TcpClientWizardScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onComplete = {
+                                        navController.navigate("interface_management") {
+                                            popUpTo("interface_management") { inclusive = true }
+                                        }
+                                    },
+                                    interfaceId = if (interfaceId > 0) interfaceId else null,
+                                    initialHost = host.ifEmpty { null },
+                                    initialPort = if (port > 0) port else null,
+                                    initialName = name.ifEmpty { null },
+                                    initialIfacNetname = ifacNetname.ifEmpty { null },
+                                    initialIfacNetkey = ifacNetkey.ifEmpty { null },
+                                )
+                            }
+
+                            composable(
+                                route =
+                                    "rnode_wizard?interfaceId={interfaceId}" +
+                                        "&connectionType={connectionType}" +
+                                        "&transportMode={transportMode}" +
+                                        "&usbDeviceId={usbDeviceId}" +
+                                        "&usbVendorId={usbVendorId}" +
+                                        "&usbProductId={usbProductId}" +
+                                        "&usbDeviceName={usbDeviceName}" +
+                                        "&loraFrequency={loraFrequency}" +
+                                        "&loraBandwidth={loraBandwidth}" +
+                                        "&loraSf={loraSf}" +
+                                        "&loraCr={loraCr}",
+                                arguments =
+                                    listOf(
+                                        navArgument("interfaceId") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                        navArgument("connectionType") {
+                                            type = NavType.StringType
+                                            nullable = true
+                                            defaultValue = null
+                                        },
+                                        navArgument("transportMode") {
+                                            type = NavType.BoolType
+                                            defaultValue = false
+                                        },
+                                        navArgument("usbDeviceId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbVendorId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbProductId") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("usbDeviceName") {
+                                            type = NavType.StringType
+                                            nullable = true
+                                            defaultValue = null
+                                        },
+                                        navArgument("loraFrequency") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                        navArgument("loraBandwidth") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("loraSf") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                        navArgument("loraCr") {
+                                            type = NavType.IntType
+                                            defaultValue = -1
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val interfaceId = backStackEntry.arguments?.getLong("interfaceId") ?: -1L
+                                val connectionType = backStackEntry.arguments?.getString("connectionType")
+                                val transportMode = backStackEntry.arguments?.getBoolean("transportMode") ?: false
+                                val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
+                                val usbVendorId = backStackEntry.arguments?.getInt("usbVendorId") ?: -1
+                                val usbProductId = backStackEntry.arguments?.getInt("usbProductId") ?: -1
+                                val usbDeviceName = backStackEntry.arguments?.getString("usbDeviceName")
+                                val loraFrequency = backStackEntry.arguments?.getLong("loraFrequency") ?: -1L
+                                val loraBandwidth = backStackEntry.arguments?.getInt("loraBandwidth") ?: -1
+                                val loraSf = backStackEntry.arguments?.getInt("loraSf") ?: -1
+                                val loraCr = backStackEntry.arguments?.getInt("loraCr") ?: -1
+                                network.libertychat.app.ui.screens.rnode.RNodeWizardScreen(
+                                    editingInterfaceId = if (interfaceId >= 0) interfaceId else null,
+                                    preselectedConnectionType = connectionType,
+                                    preselectedUsbDeviceId = if (usbDeviceId >= 0) usbDeviceId else null,
+                                    preselectedUsbVendorId = if (usbVendorId >= 0) usbVendorId else null,
+                                    preselectedUsbProductId = if (usbProductId >= 0) usbProductId else null,
+                                    preselectedUsbDeviceName = usbDeviceName,
+                                    preselectedLoraFrequency = if (loraFrequency > 0) loraFrequency else null,
+                                    preselectedLoraBandwidth = if (loraBandwidth > 0) loraBandwidth else null,
+                                    preselectedLoraSf = if (loraSf > 0) loraSf else null,
+                                    preselectedLoraCr = if (loraCr > 0) loraCr else null,
+                                    transportMode = transportMode,
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onComplete = {
+                                        if (transportMode) {
+                                            navController.popBackStack()
+                                        } else {
+                                            navController.navigate("interface_management") {
+                                                popUpTo("interface_management") { inclusive = true }
+                                            }
+                                        }
+                                    },
+                                )
+                            }
+
+                            composable(
+                                route = "interface_stats/{interfaceId}",
+                                arguments =
+                                    listOf(
+                                        navArgument("interfaceId") {
+                                            type = NavType.LongType
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                network.libertychat.app.ui.screens.InterfaceStatsScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToEdit = { interfaceId, interfaceType ->
+                                        // Route to appropriate wizard based on interface type
+                                        val route =
+                                            when (interfaceType) {
+                                                "TCPClient" -> "tcp_client_wizard?interfaceId=$interfaceId"
+                                                "RNode" -> "rnode_wizard?interfaceId=$interfaceId"
+                                                else -> "rnode_wizard?interfaceId=$interfaceId"
+                                            }
+                                        navController.navigate(route)
+                                    },
+                                )
+                            }
+
+                            composable("notification_settings") {
+                                NotificationSettingsScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable("blocked_users") {
+                                BlockedUsersScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable("theme_management") {
+                                ThemeManagementScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onCreateTheme = {
+                                        navController.navigate("theme_editor")
+                                    },
+                                    onEditTheme = { themeId ->
+                                        navController.navigate("theme_editor/$themeId")
+                                    },
+                                    onApplyTheme = { themeId ->
+                                        settingsViewModel.applyCustomTheme(themeId)
+                                    },
+                                )
+                            }
+
+                            composable("theme_editor") {
+                                ThemeEditorScreen(
+                                    themeId = null,
+                                    onBackClick = { navController.popBackStack() },
+                                    onSave = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable(
+                                route = "theme_editor/{themeId}",
+                                arguments =
+                                    listOf(
+                                        navArgument("themeId") { type = NavType.LongType },
+                                    ),
+                            ) { backStackEntry ->
+                                val themeId = backStackEntry.arguments?.getLong("themeId")
+
+                                ThemeEditorScreen(
+                                    themeId = themeId,
+                                    onBackClick = { navController.popBackStack() },
+                                    onSave = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable("ble_connection_status") {
+                                BleConnectionStatusScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable(
+                                "identity_manager?base32Key={base32Key}",
+                                arguments =
+                                    listOf(
+                                        navArgument("base32Key") {
+                                            type = NavType.StringType
+                                            nullable = true
+                                            defaultValue = null
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val base32Key = backStackEntry.arguments?.getString("base32Key")
+                                IdentityManagerScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    prefilledBase32Key = base32Key,
+                                )
+                            }
+
+                            composable("migration") {
+                                MigrationScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onImportComplete = {
+                                        // Service restart is handled by MigrationViewModel,
+                                        // just navigate to chats after import completes
+                                        navController.navigate("chats") {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    },
+                                )
+                            }
+
+                            composable("apk_sharing") {
+                                ApkSharingScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable("my_identity") {
+                                MyIdentityScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    settingsViewModel = settingsViewModel,
+                                    onNavigateToIdentityManager = {
+                                        navController.navigate("identity_manager")
+                                    },
+                                )
+                            }
+
+                            composable("network_status") {
+                                IdentityScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    settingsViewModel = settingsViewModel,
+                                    onNavigateToBleStatus = {
+                                        navController.navigate("ble_connection_status")
+                                    },
+                                    onNavigateToInterfaceStats = { interfaceId ->
+                                        navController.navigate("interface_stats/$interfaceId")
+                                    },
+                                    onNavigateToInterfaceManagement = {
+                                        navController.navigate("interface_management")
+                                    },
+                                )
+                            }
+
+                            composable("qr_scanner") {
+                                val contactsViewModel: ContactsViewModel = hiltViewModel()
+                                QrScannerScreen(
+                                    onBackClick = { navController.popBackStack() },
+                                    onQrScanned = { qrData ->
+                                        // Contact addition now handled by confirmation dialog
+                                    },
+                                    onNavigateToConversation = { destinationHash ->
+                                        // Contact already exists - navigate to conversation
+                                        val contacts = contactsViewModel.contacts.value
+                                        val contact = contacts.find { it.destinationHash == destinationHash }
+                                        val peerName = contact?.displayName ?: destinationHash.take(16)
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                    contactsViewModel = contactsViewModel,
+                                )
+                            }
+
+                            composable(
+                                route = "messaging/{destinationHash}/{peerName}",
+                                arguments =
+                                    listOf(
+                                        navArgument("destinationHash") { type = NavType.StringType },
+                                        navArgument("peerName") { type = NavType.StringType },
+                                    ),
+                            ) { backStackEntry ->
+                                val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
+                                val peerName = backStackEntry.arguments?.getString("peerName").orEmpty()
+
+                                MessagingScreen(
+                                    destinationHash = destinationHash,
+                                    peerName = peerName,
+                                    onBackClick = { navController.popBackStack() },
+                                    onPeerClick = {
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        navController.navigate("announce_detail/$encodedHash")
+                                    },
+                                    onViewMessageDetails = { messageId ->
+                                        val encodedId = Uri.encode(messageId)
+                                        navController.navigate("message_detail/$encodedId")
+                                    },
+                                    onVoiceCall = { profileCode, linkSpeedBps ->
+                                        val encodedHash = Uri.encode(destinationHash)
+                                        // -1 means "not measured"; NavType.LongType has no nullable form.
+                                        val speedArg = linkSpeedBps ?: -1L
+                                        navController.navigate(
+                                            "voice_call/$encodedHash?profileCode=$profileCode&linkSpeedBps=$speedArg",
+                                        )
+                                    },
+                                    onLocateOnMap = { peerHash ->
+                                        mapViewModel.focusOnContact(peerHash)
+                                        navController.navigate(Screen.Map.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                    },
+                                )
+                            }
+
+                            composable(
+                                route = "message_detail/{messageId}",
+                                arguments =
+                                    listOf(
+                                        navArgument("messageId") { type = NavType.StringType },
+                                    ),
+                            ) { backStackEntry ->
+                                val messageId = backStackEntry.arguments?.getString("messageId").orEmpty()
+
+                                MessageDetailScreen(
+                                    messageId = messageId,
+                                    onBackClick = { navController.popBackStack() },
+                                )
+                            }
+
+                            composable(
+                                route = "announce_detail/{destinationHash}",
+                                arguments =
+                                    listOf(
+                                        navArgument("destinationHash") { type = NavType.StringType },
+                                    ),
+                            ) { backStackEntry ->
+                                val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
+
+                                AnnounceDetailScreen(
+                                    destinationHash = destinationHash,
+                                    onBackClick = { navController.popBackStack() },
+                                    onViewAnnounce = { hash ->
+                                        navController.navigate("announce_detail/${Uri.encode(hash)}")
+                                    },
+                                    onStartChat = { destHash, peerName ->
+                                        // Navigate back to chats tab
+                                        selectedTab = 0
+                                        navController.navigate(Screen.Chats.route) {
+                                            popUpTo(navController.graph.startDestinationId) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
+                                        // Then navigate to the messaging screen
+                                        val encodedHash = Uri.encode(destHash)
+                                        val encodedName = Uri.encode(peerName)
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                    onBrowseNode = { destHash ->
+                                        navController.navigate("nomadnet_browser/$destHash")
+                                    },
+                                )
+                            }
+
+                            // NomadNet Browser screen
+                            composable(
+                                route = "nomadnet_browser/{destinationHash}?path={path}",
+                                arguments =
+                                    listOf(
+                                        navArgument("destinationHash") { type = NavType.StringType },
+                                        navArgument("path") {
+                                            type = NavType.StringType
+                                            defaultValue = "/page/index.mu"
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val destHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
+                                val path = backStackEntry.arguments?.getString("path") ?: "/page/index.mu"
+                                NomadNetBrowserScreen(
+                                    destinationHash = destHash,
+                                    initialPath = path,
+                                    onBackClick = { navController.popBackStack() },
+                                    onOpenConversation = { conversationHash ->
+                                        val encodedHash = Uri.encode(conversationHash)
+                                        val encodedName = Uri.encode(conversationHash.take(12))
+                                        navController.navigate("messaging/$encodedHash/$encodedName")
+                                    },
+                                )
+                            }
+
+                            // Offline Maps management screen
+                            composable("offline_maps") {
+                                OfflineMapsScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onNavigateToDownload = { navController.navigate("offline_map_download") },
+                                    onNavigateToUpdate = { regionId ->
+                                        navController.navigate("offline_map_download?updateRegionId=$regionId")
+                                    },
+                                )
+                            }
+
+                            // Offline Map download wizard (with optional update parameter)
+                            composable(
+                                route = "offline_map_download?updateRegionId={updateRegionId}",
+                                arguments =
+                                    listOf(
+                                        navArgument("updateRegionId") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val updateRegionId = backStackEntry.arguments?.getLong("updateRegionId") ?: -1L
+                                OfflineMapDownloadScreen(
+                                    onNavigateBack = { navController.popBackStack() },
+                                    onDownloadComplete = { navController.popBackStack() },
+                                    updateRegionId = if (updateRegionId > 0) updateRegionId else null,
+                                )
+                            }
+
+                            // Voice Call Screen (outgoing/active call)
+                            composable(
+                                route =
+                                    "voice_call/{destinationHash}?autoAnswer={autoAnswer}" +
+                                        "&profileCode={profileCode}&linkSpeedBps={linkSpeedBps}",
+                                arguments =
+                                    listOf(
+                                        navArgument("destinationHash") { type = NavType.StringType },
+                                        navArgument("autoAnswer") {
+                                            type = NavType.BoolType
+                                            defaultValue = false
+                                        },
+                                        navArgument("profileCode") {
+                                            type = NavType.IntType
+                                            defaultValue = -1 // -1 means use default
+                                        },
+                                        navArgument("linkSpeedBps") {
+                                            type = NavType.LongType
+                                            defaultValue = -1L // -1 means not measured
+                                        },
+                                    ),
+                            ) { backStackEntry ->
+                                val destinationHash = backStackEntry.arguments?.getString("destinationHash").orEmpty()
+                                val autoAnswer = backStackEntry.arguments?.getBoolean("autoAnswer") ?: false
+                                val profileCodeArg = backStackEntry.arguments?.getInt("profileCode") ?: -1
+                                val profileCode = if (profileCodeArg == -1) null else profileCodeArg
+                                val linkSpeedArg = backStackEntry.arguments?.getLong("linkSpeedBps") ?: -1L
+
+                                VoiceCallScreen(
+                                    destinationHash = destinationHash,
+                                    onEndCall = exitCallFlow,
+                                    autoAnswer = autoAnswer,
+                                    profileCode = profileCode,
+                                    linkSpeedBps = linkSpeedArg.takeIf { it > 0 },
+                                )
+                            }
+
+                            // Incoming Call Screen
+                            composable(
+                                route = "incoming_call/{identityHash}",
+                                arguments =
+                                    listOf(
+                                        navArgument("identityHash") { type = NavType.StringType },
+                                    ),
+                            ) { backStackEntry ->
+                                val identityHash = backStackEntry.arguments?.getString("identityHash").orEmpty()
+
+                                IncomingCallScreen(
+                                    identityHash = identityHash,
+                                    onCallAnswered = {
+                                        // Navigate to voice call screen when answered
+                                        val encodedHash = Uri.encode(identityHash)
+                                        navController.navigate("voice_call/$encodedHash") {
+                                            popUpTo("incoming_call/$identityHash") { inclusive = true }
+                                        }
+                                    },
+                                    onCallDeclined = exitCallFlow,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Bluetooth permission bottom sheet
+                // Only show if activity is at least STARTED to prevent BadTokenException
+                // when ModalBottomSheet tries to create popup window with invalid token
+                if (showPermissionBottomSheet && LifecycleGuard.isActiveForWindows(lifecycleOwner)) {
+                    val currentStatus =
+                        if (BlePermissionManager.hasAllPermissions(context)) {
+                            BlePermissionManager.PermissionStatus.Granted
+                        } else {
+                            BlePermissionManager.checkPermissionStatus(context)
+                        }
+
+                    val useAppSettings =
+                        hasRequestedBluetoothOnce &&
+                            currentStatus is BlePermissionManager.PermissionStatus.Denied
+
+                    BlePermissionBottomSheet(
+                        onDismiss = { showPermissionBottomSheet = false },
+                        onRequestPermissions = {
+                            showPermissionBottomSheet = false
+                            if (useAppSettings) {
+                                // Open app settings so the user can manually enable permissions.
+                                val intent =
+                                    Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", context.packageName, null),
+                                    ).apply {
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                context.startActivity(intent)
+                            } else {
+                                val permissions = BlePermissionManager.getRequiredPermissions()
+                                permissionLauncher.launch(permissions.toTypedArray())
+                            }
+                        },
+                        sheetState = sheetState,
+                        primaryActionLabel = if (useAppSettings) "Open Settings" else "Grant Permissions",
+                    )
+                }
+
+                // LCS: the one-time crash-reporting opt-in popup is removed.
+                // LCS ships the noSentry flavor, so the prompt could only ever
+                // appear as a dead end — and an unprompted dialog asking to send
+                // data off-device is not something Liberty Chat should show. The
+                // toggle remains available in Settings -> Advanced for anyone
+                // building the sentry flavor deliberately.
+            }
+        }
+
+        // LCS: the branded splash — logo and wordmark on white.
+        //
+        // Declared LAST inside ColumbaTheme, AFTER the Surface. That
+        // ordering is the whole fix: siblings in the same window paint in
+        // declaration order, so while this sat above the Surface it was
+        // drawn first and the app's own background painted straight over
+        // it — the splash was rendering every launch, just underneath
+        // everything, which is why the screen came up blank white.
+        //
+        // Still not a Dialog: a Dialog needs its own window, and the frame
+        // or two that takes to attach lets the app show through as the
+        // system splash lifts.
+        network.libertychat.app.ui.components.LcsBrandedSplashOverlay(
+            show = splashDismissed.value,
+            onFinished = { splashFinished.value = true },
+        )
+    }
+}

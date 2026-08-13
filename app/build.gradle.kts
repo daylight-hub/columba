@@ -106,11 +106,11 @@ fun getReproducibleBuildTimestamp(): Long {
 val (versionCodeValue, versionNameValue) = getVersionFromTag()
 
 android {
-    namespace = "network.columba.app"
+    namespace = "network.libertychat.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "network.columba.app"
+        applicationId = "network.libertychat.app"
         minSdk = 24
         targetSdk = 35
         versionCode = versionCodeValue
@@ -161,7 +161,7 @@ android {
             isDefault = true
             // Distinct package + label so the EXPERIMENTAL Kotlin backend can be
             // installed side-by-side with the recommended Python backend (which
-            // keeps the base `network.columba.app`). The launcher icon is also
+            // keeps the base `network.libertychat.app`). The launcher icon is also
             // badged — see src/kotlinBackend/res/.
             applicationIdSuffix = ".kt"
             versionNameSuffix = "-kt"
@@ -457,7 +457,7 @@ dependencies {
     implementation(libs.lxst.kt)
     // :rns-api — the backend-seam contract (value types, sub-interfaces, AIDL).
     // Was reaching :app transitively through :reticulum until A.12 deleted that
-    // module; declared directly now since :app imports network.columba.app.rns.api.*
+    // module; declared directly now since :app imports network.libertychat.app.rns.api.*
     // throughout. :rns-host (below) still brings the peripheral types + the
     // reticulum-kt/lxmf-kt/lxst-kt/usb-serial stack via its api() edges.
     implementation(project(":rns-api"))

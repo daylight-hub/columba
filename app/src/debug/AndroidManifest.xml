@@ -7,7 +7,7 @@
     <application>
         <!-- Test host for Compose instrumented tests (no launcher icon) -->
         <activity
-            android:name="network.columba.app.test.TestHostActivity"
+            android:name="network.libertychat.app.test.TestHostActivity"
             android:exported="true" />
 
         <!-- Disable LeakCanary's "Leaks" launcher icon -->
@@ -20,26 +20,26 @@
              harness drives via `adb shell am broadcast`. See TestReceiver.kt
              for the full action contract. Compiled out of release builds. -->
         <receiver
-            android:name="network.columba.app.test.TestReceiver"
+            android:name="network.libertychat.app.test.TestReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="network.columba.test.GET_DEST" />
-                <action android:name="network.columba.test.HAS_PATH" />
-                <action android:name="network.columba.test.SEND_DIRECT" />
-                <action android:name="network.columba.test.SEND_OPP" />
-                <action android:name="network.columba.test.SEND_PROP" />
-                <action android:name="network.columba.test.GET_MSG_STATE" />
-                <action android:name="network.columba.test.GET_RX" />
-                <action android:name="network.columba.test.RX_CLEAR" />
-                <action android:name="network.columba.test.ANNOUNCE" />
-                <action android:name="network.columba.test.LIST_INTERFACES" />
-                <action android:name="network.columba.test.DISABLE_ALL_INTERFACES" />
-                <action android:name="network.columba.test.DISABLE_INTERFACE" />
-                <action android:name="network.columba.test.ENABLE_INTERFACE" />
-                <action android:name="network.columba.test.ADD_TCP_CLIENT" />
-                <action android:name="network.columba.test.REMOVE_INTERFACE" />
-                <action android:name="network.columba.test.SET_PROP_NODE" />
-                <action android:name="network.columba.test.SYNC_PROP" />
+                <action android:name="network.libertychat.test.GET_DEST" />
+                <action android:name="network.libertychat.test.HAS_PATH" />
+                <action android:name="network.libertychat.test.SEND_DIRECT" />
+                <action android:name="network.libertychat.test.SEND_OPP" />
+                <action android:name="network.libertychat.test.SEND_PROP" />
+                <action android:name="network.libertychat.test.GET_MSG_STATE" />
+                <action android:name="network.libertychat.test.GET_RX" />
+                <action android:name="network.libertychat.test.RX_CLEAR" />
+                <action android:name="network.libertychat.test.ANNOUNCE" />
+                <action android:name="network.libertychat.test.LIST_INTERFACES" />
+                <action android:name="network.libertychat.test.DISABLE_ALL_INTERFACES" />
+                <action android:name="network.libertychat.test.DISABLE_INTERFACE" />
+                <action android:name="network.libertychat.test.ENABLE_INTERFACE" />
+                <action android:name="network.libertychat.test.ADD_TCP_CLIENT" />
+                <action android:name="network.libertychat.test.REMOVE_INTERFACE" />
+                <action android:name="network.libertychat.test.SET_PROP_NODE" />
+                <action android:name="network.libertychat.test.SYNC_PROP" />
             </intent-filter>
         </receiver>
     </application>

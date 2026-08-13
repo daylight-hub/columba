@@ -31,7 +31,7 @@ outbound payload.
 
 | Peer | Send surface | Receive verification |
 |---|---|---|
-| **Columba** (Android, emulator) | `adb shell am broadcast` against the debug-only `TestReceiver` (`network.columba.test.SEND_*`) | `logcat` `rx_msg source=stream …` / `rx_location source=stream …` lines (hex-escaped, single-token) |
+| **Columba** (Android, emulator) | `adb shell am broadcast` against the debug-only `TestReceiver` (`network.libertychat.test.SEND_*`) | `logcat` `rx_msg source=stream …` / `rx_location source=stream …` lines (hex-escaped, single-token) |
 | **Sideband** (Python, headless on test host) | direct `SidebandCore.send_message(...)` / `send_with_fields(...)` calls from the test process | (a) `sqlite3` query against `app_storage/sideband.db` for the inbound row, OR (b) an LXMRouter-level inbound *tap* that captures the raw LXMessage before Sideband's filters can drop it (used for telemetry-only frames + format-mismatched fields) |
 
 Both peers share the host `rnsd`'s shared instance (port 37428) — same
@@ -169,7 +169,7 @@ Most spurious failures trace to one of:
 1. **`rnsd` / `lxmd` / `nomadnet` host stack wedged**. Verify via
    `lxmd --status --timeout 5` and `rnpath -t`. If a daemon's
    unresponsive, `launchctl unload && launchctl load …` the matching
-   plist and restart Columba on the emulator (`adb shell am force-stop network.columba.app.debug && monkey …`).
+   plist and restart Columba on the emulator (`adb shell am force-stop network.libertychat.app.debug && monkey …`).
 2. **Columba's RNS instance has stale paths**. Symptom: Columba's send
    stalls on `requesting path` despite Sideband being announced.
    Fix: `setup_emulator.sh` + force-stop + relaunch.

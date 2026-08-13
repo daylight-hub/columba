@@ -45,7 +45,7 @@ def _columba_has_send_reply(columba_peer) -> bool:
         for line in columba_peer._read_logcat_lines():
             # We don't care about success — only that the receiver
             # acknowledged the action (i.e. it's in the `when` branch).
-            if "rx_broadcast action=network.columba.test.SEND_REPLY" in line:
+            if "rx_broadcast action=network.libertychat.test.SEND_REPLY" in line:
                 # A second confirmation: the dispatch must produce
                 # *some* downstream log (msg_sent, error, etc.) within
                 # the wait window. If we only see the rx_broadcast and
@@ -131,7 +131,7 @@ def test_reply_columba_to_meshchatx_wire_format(meshchatx_interop):
     if not _columba_has_send_reply(pair.columba):
         pytest.skip(
             "Columba TestReceiver does not expose SEND_REPLY yet. "
-            "Wire it via `network.columba.test.SEND_REPLY` to enable."
+            "Wire it via `network.libertychat.test.SEND_REPLY` to enable."
         )
 
     anchor_content = f"mcx_anchor_{int(time.time() * 1000)}"

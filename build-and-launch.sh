@@ -8,7 +8,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-APP_PACKAGE="network.columba.app"
+APP_PACKAGE="network.libertychat.app"
 MAIN_ACTIVITY="${APP_PACKAGE}.MainActivity"
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 

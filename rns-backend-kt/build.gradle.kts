@@ -19,7 +19,7 @@ plugins {
 }
 
 android {
-    namespace = "network.columba.app.rns.backend.kt"
+    namespace = "network.libertychat.app.rns.backend.kt"
     compileSdk = 36
 
     defaultConfig {
