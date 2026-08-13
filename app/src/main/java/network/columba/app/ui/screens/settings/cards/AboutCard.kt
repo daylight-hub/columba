@@ -192,7 +192,7 @@ fun AboutCard(
                 )
                 TextButton(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/daylight-hub/columba/blob/liberty-chat/LICENSE.md".toUri())
+                        val intent = Intent(Intent.ACTION_VIEW, "https://github.com/daylight-hub/libertychat/blob/liberty-chat/LICENSE.md".toUri())
                         context.startActivity(intent)
                     },
                 ) {

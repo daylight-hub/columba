@@ -440,7 +440,7 @@ class MigrationExporter
             val exportDir = File(context.cacheDir, EXPORT_DIR).also { it.mkdirs() }
             val dateFormat = SimpleDateFormat("yyyy-MM-dd_HHmmss", Locale.US)
             val timestamp = dateFormat.format(Date())
-            val exportFile = File(exportDir, "columba_export_$timestamp.columba")
+            val exportFile = File(exportDir, "libertychat_export_$timestamp.libertychat")
 
             ZipOutputStream(FileOutputStream(exportFile)).use { zipOut ->
                 zipOut.putNextEntry(ZipEntry(MANIFEST_FILENAME))
