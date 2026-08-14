@@ -57,7 +57,6 @@ class MessageCollector
         private val identityRepository: IdentityRepository,
         private val notificationHelper: NotificationHelper,
         private val peerIconDao: PeerIconDao,
-        private val activeConversationManager: ActiveConversationManager,
         private val settingsRepository: SettingsRepository,
         @ApplicationContext private val appContext: Context,
     ) {
@@ -70,10 +69,14 @@ class MessageCollector
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
         /**
-         * LCS: autoplay an inbound PTT clip, matching Sideband's behaviour in
-         * `core.py::_lxm_ingest` -> `ptt_event`: play only when PTT is enabled
-         * and the conversation is already on screen, so a voice message in the
-         * thread you are reading just speaks instead of buzzing.
+         * LCS: autoplay an inbound PTT clip whenever push-to-talk is enabled.
+         *
+         * Matches Sideband, which calls `ptt_event(message)` for any inbound
+         * `FIELD_AUDIO` when `ptt_enabled` is set (`core.py`). Note it does NOT
+         * require the conversation to be open — that check only decides whether
+         * a notification is also posted. This previously gated playback on the
+         * thread being on screen, which made a received clip silent unless the
+         * user happened to be looking at that exact conversation.
          *
          * Deliberately fire-and-forget on the collector's own scope — playback
          * lasts seconds and must not stall the message-collection loop behind
@@ -85,7 +88,6 @@ class MessageCollector
             fieldsJson: String?,
         ) {
             if (fieldsJson == null) return
-            if (activeConversationManager.activeConversation.value != sourceHash) return
             if (!settingsRepository.pttEnabledFlow.first()) return
 
             val (mode, payload) = parseAudioField(fieldsJson) ?: return
@@ -208,7 +210,6 @@ class MessageCollector
                                         messagePreview = receivedMessage.content.take(100),
                                         isFavorite = isFavorite,
                                     )
-                                    maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
                                     Log.d(TAG, "Posted notification for already-persisted unread message")
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to post notification for already-persisted message", e)
@@ -319,6 +320,16 @@ class MessageCollector
 
                             conversationRepository.saveMessage(sourceHash, peerName, dataMessage, publicKey)
                             Log.d(TAG, "Message saved to database for peer ${sourceHash.take(16)} (hasPublicKey=${publicKey != null})")
+
+                            // LCS: autoplay an inbound PTT clip.
+                            //
+                            // This is the NEW-message path. The other call to this
+                            // function sits in the already-persisted duplicate
+                            // branch above, which only runs for messages the app
+                            // has seen before — so on its own it never fired for a
+                            // genuinely new voice message, which is why autoplay
+                            // appeared to stop working.
+                            maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
 
                             // Check if sender is a saved peer (favorite)
                             val isFavorite =
