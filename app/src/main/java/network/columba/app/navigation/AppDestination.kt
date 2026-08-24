@@ -22,6 +22,8 @@ enum class AppDestination(
     WELCOME("welcome", backContract = BackContract.ENTRY_GATE),
     IDENTITY_UNLOCK("identity_unlock", backContract = BackContract.ENTRY_GATE),
     CHATS("chats", backContract = BackContract.TOP_LEVEL),
+    CALL_DETAILS("call_details/{callAttemptId}", "call_details/test-attempt"),
+
     ANNOUNCES("announce_stream?filterType={filterType}", "announce_stream?filterType=all"),
     CONTACTS("contacts", backContract = BackContract.TOP_LEVEL),
     MAP("map", backContract = BackContract.TOP_LEVEL),
@@ -53,11 +55,11 @@ enum class AppDestination(
         completionTargetRoute = "interface_management",
     ),
     RNODE_WIZARD(
-        routePattern = "rnode_wizard?interfaceId={interfaceId}&connectionType={connectionType}" +
+        routePattern = "rnode_wizard?interfaceId={interfaceId}&repairPairing={repairPairing}&connectionType={connectionType}" +
             "&transportMode={transportMode}&usbDeviceId={usbDeviceId}&usbVendorId={usbVendorId}" +
             "&usbProductId={usbProductId}&usbDeviceName={usbDeviceName}&loraFrequency={loraFrequency}" +
             "&loraBandwidth={loraBandwidth}&loraSf={loraSf}&loraCr={loraCr}",
-        sampleRoute = "rnode_wizard?interfaceId=-1&connectionType=&transportMode=false&usbDeviceId=-1" +
+        sampleRoute = "rnode_wizard?interfaceId=-1&repairPairing=false&connectionType=&transportMode=false&usbDeviceId=-1" +
             "&usbVendorId=-1&usbProductId=-1&usbDeviceName=&loraFrequency=-1" +
             "&loraBandwidth=-1&loraSf=-1&loraCr=-1",
         completionContract = CompletionContract.SHOW_RESULT,

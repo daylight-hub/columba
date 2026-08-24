@@ -22,6 +22,7 @@ import network.columba.app.rns.api.model.BatteryProfile
 import network.columba.app.rns.api.model.CallState
 import network.columba.app.rns.api.model.ConversationLinkResult
 import network.columba.app.rns.api.model.DeliveryMethod
+import network.columba.app.rns.api.model.DeliveryStatusEventStream
 import network.columba.app.rns.api.model.DeliveryStatusUpdate
 import network.columba.app.rns.api.model.DestinationType
 import network.columba.app.rns.api.model.Direction
@@ -99,6 +100,12 @@ class NativeRnsBackendImpl(
      * allowed through (preserves the pre-feature behaviour).
      */
     private val callPrivacyBridge: CallPrivacyBridge? = null,
+    /**
+     * Service-local call lifecycle admission boundary for native telephony.
+     * Supplied by the kotlinBackend Hilt module. Null in unit-test mode →
+     * native incoming admission is unavailable (call managers not constructed).
+     */
+    private val callLifecycleRecorder: network.columba.app.rns.api.call.CallLifecycleRecorder? = null,
 ) : network.columba.app.rns.api.RnsCore,
     network.columba.app.rns.api.RnsLxmf,
     network.columba.app.rns.api.RnsTelephony,
@@ -250,6 +257,9 @@ class NativeRnsBackendImpl(
     private val blockedDestinations =
         java.util.concurrent.ConcurrentHashMap
             .newKeySet<String>()
+    private val blockedIdentities =
+        java.util.concurrent.ConcurrentHashMap
+            .newKeySet<String>()
     private val blackholedIdentities =
         java.util.concurrent.ConcurrentHashMap
             .newKeySet<String>()
@@ -270,7 +280,7 @@ class NativeRnsBackendImpl(
 
     private val _announces = MutableSharedFlow<AnnounceEvent>(extraBufferCapacity = 64)
     private val _messages = MutableSharedFlow<ReceivedMessage>(extraBufferCapacity = 64)
-    private val _deliveryStatus = MutableSharedFlow<DeliveryStatusUpdate>(extraBufferCapacity = 64)
+    private val deliveryStatusEvents = DeliveryStatusEventStream()
     private val _locationTelemetryFlow = MutableSharedFlow<LocationTelemetry>(extraBufferCapacity = 64)
     private val _reactionReceivedFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
     private val _packets = MutableSharedFlow<ReceivedPacket>(extraBufferCapacity = 16)
@@ -344,7 +354,7 @@ class NativeRnsBackendImpl(
             routerProvider = { router },
             deliveryIdentityProvider = { deliveryIdentity },
             deliveryDestinationProvider = { deliveryDestination },
-            deliveryStatusFlow = _deliveryStatus,
+            deliveryStatusEvents = deliveryStatusEvents,
             scopeProvider = { scope },
         )
     }
@@ -359,6 +369,8 @@ class NativeRnsBackendImpl(
                     destinationHash = destHash,
                     content = content,
                     deliveryMethod = method,
+                    originatingIdentityHash =
+                        requireNotNull(deliveryIdentity?.hash) { "Delivery identity not initialized" }.toHex(),
                     options = NativeMessageSender.MessageOptions(extraFields = extraFields),
                 )
             },
@@ -427,11 +439,6 @@ class NativeRnsBackendImpl(
 
         router!!.registerDeliveryCallback { message ->
             handleIncomingMessage(message)
-        }
-
-        router!!.registerFailedDeliveryCallback { message ->
-            val hash = message.hash?.toHex() ?: return@registerFailedDeliveryCallback
-            _deliveryStatus.tryEmit(DeliveryStatusUpdate(hash, "failed", System.currentTimeMillis()))
         }
 
         return identity
@@ -766,13 +773,18 @@ class NativeRnsBackendImpl(
                     hops: Int,
                     receivingInterfaceName: String?,
                     matchedAspect: String?,
-                    // Added to RichAnnounceHandler in reticulum-kt v0.0.22 (conformance
-                    // work). Columba's announce handling doesn't need the announce-packet
-                    // hash, but the override must match the interface signature.
                     announcePacketHash: ByteArray?,
                 ): Boolean {
                     if (matchedAspect == null) return false // unknown aspect — not an app we handle
-                    handleAnnounce(matchedAspect, destinationHash, announcedIdentity, appData, hops, receivingInterfaceName)
+                    handleAnnounce(
+                        matchedAspect,
+                        destinationHash,
+                        announcedIdentity,
+                        appData,
+                        hops,
+                        receivingInterfaceName,
+                        announcePacketHash,
+                    )
                     return true
                 }
             },
@@ -862,6 +874,7 @@ class NativeRnsBackendImpl(
         appData: ByteArray?,
         announceHops: Int = 0,
         receivingInterfaceName: String? = null,
+        announcePacketHash: ByteArray? = null,
     ) {
         val destHex = destinationHash.toHex()
         if (blockedDestinations.contains(destHex) || blackholedIdentities.contains(announcedIdentity.hexHash)) return
@@ -885,6 +898,7 @@ class NativeRnsBackendImpl(
                 stampCostFlexibility = stampMeta.second,
                 peeringCost = stampMeta.third,
                 receivingInterface = receivingInterfaceName,
+                announcePacketHash = announcePacketHash,
             )
 
         _announces.tryEmit(event)
@@ -1053,7 +1067,7 @@ class NativeRnsBackendImpl(
 
     override fun observeMessages(): Flow<ReceivedMessage> = _messages.asSharedFlow()
 
-    override fun observeDeliveryStatus(): Flow<DeliveryStatusUpdate> = _deliveryStatus.asSharedFlow()
+    override fun observeDeliveryStatus(): Flow<DeliveryStatusUpdate> = deliveryStatusEvents.events
 
     // ==================== Phase 1: Path & Transport Queries ====================
 
@@ -1223,6 +1237,8 @@ class NativeRnsBackendImpl(
             destinationHash = destinationHash,
             content = content,
             deliveryMethod = DeliveryMethod.DIRECT,
+            originatingIdentityHash =
+                requireNotNull(deliveryIdentity?.hash) { "Delivery identity not initialized" }.toHex(),
             options =
                 NativeMessageSender.MessageOptions(
                     imageData = imageData,
@@ -1251,6 +1267,8 @@ class NativeRnsBackendImpl(
             destinationHash = destinationHash,
             content = content,
             deliveryMethod = deliveryMethod,
+            originatingIdentityHash =
+                requireNotNull(deliveryIdentity?.hash) { "Delivery identity not initialized" }.toHex(),
             options =
                 NativeMessageSender.MessageOptions(
                     tryPropagationOnFail = tryPropagationOnFail,
@@ -2047,6 +2065,10 @@ class NativeRnsBackendImpl(
                 context = ctx,
                 deliveryIdentity = identity,
                 transport = callTransport,
+                recorder =
+                    requireNotNull(callLifecycleRecorder) {
+                        "CallLifecycleRecorder is required when native telephony is initialized"
+                    },
                 callPrivacyBridge = callPrivacyBridge,
             )
         manager.profilePublisher = ::publishActiveProfileCode
@@ -2280,6 +2302,12 @@ class NativeRnsBackendImpl(
             Log.d(TAG, "Unblocked destination: ${destinationHashHex.take(16)}")
         }
 
+    override suspend fun blockIdentity(identityHashHex: String): Result<Unit> =
+        runCatching { blockedIdentities.add(identityHashHex.lowercase()); Unit }
+
+    override suspend fun unblockIdentity(identityHashHex: String): Result<Unit> =
+        runCatching { blockedIdentities.remove(identityHashHex.lowercase()); Unit }
+
     override suspend fun blackholeIdentity(identityHashHex: String): Result<Unit> =
         runCatching {
             blackholedIdentities.add(identityHashHex)
@@ -2313,6 +2341,12 @@ class NativeRnsBackendImpl(
      * (matches the noise-floor sentinel today's UI assumes).
      */
     override fun getRNodeRssi(): Int = -100
+
+    /**
+     * No RNode battery read in the Kotlin backend (deferred). Returns the
+     * absent sentinel so the shared UI needs no "unsupported backend" branch.
+     */
+    override suspend fun getRNodeBattery(): Int = -1
 
     /**
      * JSON snapshot of BLE peers. Empty array when no peers are connected.

@@ -23,9 +23,6 @@ import network.columba.app.repository.SettingsRepository
 import network.columba.app.rns.api.RnsCore
 import network.columba.app.rns.api.RnsLxmf
 import network.columba.app.rns.host.util.PeerNameResolver
-import network.columba.app.ui.model.parseAudioField
-import network.columba.app.util.Codec2Codec
-import network.columba.app.util.VoiceMessagePlayer
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -57,9 +54,10 @@ class MessageCollector
         private val identityRepository: IdentityRepository,
         private val notificationHelper: NotificationHelper,
         private val peerIconDao: PeerIconDao,
-        private val activeConversationManager: ActiveConversationManager,
-        private val settingsRepository: SettingsRepository,
-        @ApplicationContext private val appContext: Context,
+        // LCS: retained for the PTT autoplay rebuild in the follow-up commit.
+        @Suppress("unused") private val activeConversationManager: ActiveConversationManager,
+        @Suppress("unused") private val settingsRepository: SettingsRepository,
+        @Suppress("unused") @ApplicationContext private val appContext: Context,
     ) {
         companion object {
             private const val TAG = "MessageCollector"
@@ -69,41 +67,10 @@ class MessageCollector
         // Application-scoped coroutine for background message collection
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        /**
-         * LCS: autoplay an inbound PTT clip, matching Sideband's behaviour in
-         * `core.py::_lxm_ingest` -> `ptt_event`: play only when PTT is enabled
-         * and the conversation is already on screen, so a voice message in the
-         * thread you are reading just speaks instead of buzzing.
-         *
-         * Deliberately fire-and-forget on the collector's own scope — playback
-         * lasts seconds and must not stall the message-collection loop behind
-         * it. Notification suppression is already handled: NotificationHelper
-         * bails out for the active conversation on its own.
-         */
-        private suspend fun maybeAutoplayVoiceMessage(
-            sourceHash: String,
-            fieldsJson: String?,
-        ) {
-            if (fieldsJson == null) return
-            if (activeConversationManager.activeConversation.value != sourceHash) return
-            if (!settingsRepository.pttEnabledFlow.first()) return
-
-            val (mode, payload) = parseAudioField(fieldsJson) ?: return
-            if (!VoiceMessagePlayer.canPlay(mode)) {
-                // Most commonly a Codec2 clip on a build without the native
-                // decoder, or a mode outside the Sideband-interoperable set.
-                Log.i(
-                    TAG,
-                    "Inbound voice message in unplayable mode $mode " +
-                        "(codec2Native=${Codec2Codec.isAvailable})",
-                )
-                return
-            }
-            scope.launch {
-                runCatching { VoiceMessagePlayer.play(appContext, mode, payload) }
-                    .onFailure { Log.e(TAG, "Autoplay failed for mode $mode", it) }
-            }
-        }
+        // LCS: PTT autoplay is rebuilt in a follow-up commit on upstream's
+        // VoiceMessagePlayer. The previous implementation depended on the LCS
+        // Codec2Codec / VoiceMessagePlayer pair, which this merge removed in
+        // favour of upstream's recorder and player.
 
         // Track processed message IDs to avoid duplicates
         private val processedMessageIds = ConcurrentHashMap.newKeySet<String>()
@@ -208,7 +175,6 @@ class MessageCollector
                                         messagePreview = receivedMessage.content.take(100),
                                         isFavorite = isFavorite,
                                     )
-                                    maybeAutoplayVoiceMessage(sourceHash, receivedMessage.fieldsJson)
                                     Log.d(TAG, "Posted notification for already-persisted unread message")
                                 } catch (e: Exception) {
                                     Log.e(TAG, "Failed to post notification for already-persisted message", e)

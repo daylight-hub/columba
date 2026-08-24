@@ -538,6 +538,15 @@ class ConversationRepository
             return messageDao.getMessageById(messageId, activeIdentity.identityHash)
         }
 
+        /** Resolve a message under immutable local-identity provenance. */
+        suspend fun getMessageById(
+            messageId: String,
+            originatingIdentityHash: String,
+        ): MessageEntity? {
+            if (originatingIdentityHash.isBlank()) return null
+            return messageDao.getMessageById(messageId, originatingIdentityHash)
+        }
+
         /**
          * Get IDs of recent received messages for the active identity.
          * Used to pre-seed the notification dedup cache at startup so that
@@ -563,6 +572,29 @@ class ConversationRepository
             messageDao.updateMessageStatus(messageId, activeIdentity.identityHash, status)
             android.util.Log.d("ConversationRepository", "Updated message $messageId status to $status")
         }
+
+        suspend fun applyDeliveryStatus(
+            messageId: String,
+            status: String,
+        ): Boolean {
+            val activeIdentity = localIdentityDao.getActiveIdentitySync() ?: return false
+            return messageDao.applyDeliveryStatus(messageId, activeIdentity.identityHash, status) > 0
+        }
+
+        /**
+         * Atomically applies an advisory callback to its immutable originating identity and
+         * returns the exact resulting outgoing row for identity-scoped UI side effects.
+         */
+        suspend fun applyDeliveryStatus(
+            messageId: String,
+            status: String,
+            originatingIdentityHash: String,
+        ): MessageEntity? =
+            messageDao.applyDeliveryStatusAndGet(
+                messageId = messageId,
+                identityHash = originatingIdentityHash,
+                status = status,
+            )
 
         private fun ConversationEntity.toConversation() =
             Conversation(
@@ -617,6 +649,18 @@ class ConversationRepository
         ) {
             val activeIdentity = localIdentityDao.getActiveIdentitySync() ?: return
             messageDao.updateSentInterface(messageId, activeIdentity.identityHash, sentInterface)
+        }
+
+        /**
+         * Update the sent interface for an advisory event's immutable originating identity.
+         */
+        suspend fun updateMessageSentInterface(
+            messageId: String,
+            sentInterface: String?,
+            originatingIdentityHash: String,
+        ) {
+            if (originatingIdentityHash.isBlank()) return
+            messageDao.updateSentInterface(messageId, originatingIdentityHash, sentInterface)
         }
 
         /**
@@ -972,43 +1016,38 @@ class ConversationRepository
                 while (keys.hasNext()) {
                     val key = keys.next()
                     val value = fields.opt(key)
+                    val handled = extractSpecialAttachmentField(messageId, key, value, modifiedFields)
 
-                    // Special handling for field 5 (file attachments array)
-                    // Extract each file's data separately, keep metadata inline
-                    if (key == "5" && value is JSONArray) {
-                        val extractedArray = extractFileAttachmentsForSent(messageId, value)
-                        modifiedFields.put("5", extractedArray)
-                        continue
-                    }
+                    if (!handled) {
+                        // Get string representation of value for size check
+                        val valueStr = value?.toString().orEmpty()
 
-                    // Get string representation of value for size check
-                    val valueStr = value?.toString().orEmpty()
-
-                    if (valueStr.length > AttachmentStorageManager.SIZE_THRESHOLD) {
-                        // Save large field to disk
-                        val filePath = attachmentStorage.saveAttachment(messageId, key, valueStr)
-                        if (filePath != null) {
-                            // Replace with file reference
-                            val refObj =
-                                JSONObject().apply {
-                                    put(AttachmentStorageManager.FILE_REF_KEY, filePath)
-                                }
-                            modifiedFields.put(key, refObj)
-                            android.util.Log.i(
-                                "ConversationRepository",
-                                "Extracted field '$key' (${valueStr.length} chars) to disk: $filePath",
-                            )
+                        if (valueStr.length > AttachmentStorageManager.SIZE_THRESHOLD) {
+                            // Save large field to disk
+                            val filePath = attachmentStorage.saveAttachment(messageId, key, valueStr)
+                            if (filePath != null) {
+                                // Replace with file reference
+                                val refObj =
+                                    JSONObject().apply {
+                                        put(AttachmentStorageManager.FILE_REF_KEY, filePath)
+                                    }
+                                modifiedFields.put(key, refObj)
+                                android.util.Log.i(
+                                    "ConversationRepository",
+                                    "Extracted field '$key' (${valueStr.length} chars) to disk: $filePath",
+                                )
+                            } else {
+                                // Save failed, keep original (may still fail at load, but at least try)
+                                modifiedFields.put(key, value)
+                                android.util.Log.w(
+                                    "ConversationRepository",
+                                    "Failed to extract field '$key', keeping inline",
+                                )
+                            }
                         } else {
-                            // Save failed, keep original (may still fail at load, but at least try)
+                            // Keep small fields inline
                             modifiedFields.put(key, value)
-                            android.util.Log.w(
-                                "ConversationRepository",
-                                "Failed to extract field '$key', keeping inline",
-                            )
                         }
-                    } else {
-                        // Keep small fields inline
-                        modifiedFields.put(key, value)
                     }
                 }
 
@@ -1022,6 +1061,40 @@ class ConversationRepository
                 android.util.Log.e("ConversationRepository", "Error extracting attachments", e)
                 fieldsJson // Return original on error
             }
+        }
+
+        @Suppress("ReturnCount")
+        private fun extractSpecialAttachmentField(
+            messageId: String,
+            key: String,
+            value: Any?,
+            modifiedFields: JSONObject,
+        ): Boolean {
+            if (key == "5" && value is JSONArray) {
+                modifiedFields.put("5", extractFileAttachmentsForSent(messageId, value))
+                return true
+            }
+            if (key != "7") return false
+            if (value !is JSONArray) return false
+            if (value.length() < 2) return false
+
+            val payload = value.optString(1, "")
+            if (payload.length <= AttachmentStorageManager.SIZE_THRESHOLD) {
+                modifiedFields.put("7", value)
+                return true
+            }
+            val filePath = attachmentStorage.saveAttachment(messageId, "7_audio", payload)
+            if (filePath == null) {
+                modifiedFields.put("7", value)
+                return true
+            }
+            modifiedFields.put(
+                "7",
+                JSONArray()
+                    .put(value.optInt(0, -1))
+                    .put(JSONObject().put(AttachmentStorageManager.FILE_REF_KEY, filePath)),
+            )
+            return true
         }
 
         /**

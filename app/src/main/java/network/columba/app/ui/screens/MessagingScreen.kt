@@ -1,9 +1,11 @@
 package network.columba.app.ui.screens
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -117,6 +119,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -148,7 +151,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -160,7 +167,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
@@ -178,10 +190,16 @@ import network.columba.app.rns.api.BackendCapabilities.Support
 import network.columba.app.rns.api.model.Direction
 import network.columba.app.rns.api.model.TransferProgressUpdate
 import network.columba.app.ui.components.AttachmentPanel
+import network.columba.app.ui.components.VoiceMessageBubble
+import network.columba.app.ui.components.VoiceDraftPreview
+import network.columba.app.ui.components.VoiceRecordingControls
 import network.columba.app.ui.components.CodecSelectionDialog
+import network.columba.app.ui.components.QualityOption
+import network.columba.app.ui.components.QualitySelectionDialog
 import network.columba.app.ui.components.FileAttachmentCard
 import network.columba.app.ui.components.FileAttachmentOptionsSheet
 import network.columba.app.ui.components.FileAttachmentPreviewRow
+import network.columba.app.ui.components.findActivity
 import network.columba.app.ui.components.FullEmojiPickerDialog
 import network.columba.app.ui.components.ImageOptionsSheet
 import network.columba.app.ui.components.ImageQualitySelectionDialog
@@ -189,6 +207,7 @@ import network.columba.app.ui.components.LocationPermissionBottomSheet
 import network.columba.app.ui.components.LocalCapabilities
 import network.columba.app.ui.components.MarkdownMessageText
 import network.columba.app.ui.components.MessageTransferProgress
+import network.columba.app.ui.components.MessageStatusIndicator
 import network.columba.app.ui.components.QuickShareLocationBottomSheet
 import network.columba.app.ui.components.ReactionDisplayRow
 import network.columba.app.ui.components.ReactionModeOverlay
@@ -203,6 +222,12 @@ import network.columba.app.ui.components.simpleVerticalScrollbar
 import network.columba.app.ui.model.CodecProfile
 import network.columba.app.ui.model.LocationSharingState
 import network.columba.app.ui.model.MessageRenderer
+import network.columba.app.audio.VoiceMessagePlayer
+import network.columba.app.audio.VoiceMessageMetadata
+import network.columba.app.audio.VoiceMessagePlayerState
+import network.columba.app.audio.VoiceMessageFormat
+import tech.torlando.lxst.recording.RecorderState
+import network.columba.app.ui.model.AudioAttachmentUi
 import network.columba.app.ui.theme.MeshConnected
 import network.columba.app.ui.theme.MeshOffline
 import network.columba.app.ui.util.rememberLifecycleTickerMillis
@@ -219,13 +244,13 @@ import network.columba.app.viewmodel.ContactToggleResult
 import network.columba.app.viewmodel.MessagingViewModel
 import network.columba.app.viewmodel.SharedImageViewModel
 import network.columba.app.viewmodel.SharedTextViewModel
+import android.Manifest
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import network.columba.app.ui.components.VoiceMessageBubble
 
 private const val URL_ANNOTATION_TAG = "url"
-
+private const val VOICE_PREVIEW_KEY = "voice-recording-preview"
 @Composable
 private fun LinkifiedMessageText(
     text: String,
@@ -447,6 +472,8 @@ fun MessagingScreen(
     val totalAttachmentSize by viewModel.totalAttachmentSize.collectAsStateWithLifecycle()
     val isProcessingFile by viewModel.isProcessingFile.collectAsStateWithLifecycle()
     val isSending by viewModel.isSending.collectAsStateWithLifecycle()
+    val voiceRecordingState by viewModel.voiceRecordingState.collectAsStateWithLifecycle()
+    val isVoiceRecordingBlockedByCall by viewModel.isVoiceRecordingBlockedByCall.collectAsStateWithLifecycle()
 
     // Observe loaded image IDs to trigger recomposition when images become available
     val loadedImageIds by viewModel.loadedImageIds.collectAsStateWithLifecycle()
@@ -465,11 +492,10 @@ fun MessagingScreen(
     // Codec selection dialog state
     var showCodecSelectionDialog by remember { mutableStateOf(false) }
 
-    // LCS: which voice message is currently playing / decoding, for the bubble.
-    val playingVoiceMessageId by viewModel.playingVoiceMessageId.collectAsStateWithLifecycle()
-    val loadingVoiceMessageId by viewModel.loadingVoiceMessageId.collectAsStateWithLifecycle()
     var recommendedCodecProfile by remember { mutableStateOf(CodecProfile.DEFAULT) }
     var isProbingLinkSpeed by remember { mutableStateOf(false) }
+    var showVoiceMessageQualityDialog by remember { mutableStateOf(false) }
+    var voiceMessageFormat by remember(destinationHash) { mutableStateOf(VoiceMessageFormat.DEFAULT) }
 
     // Location permission launcher
     val locationPermissionLauncher =
@@ -661,42 +687,33 @@ fun MessagingScreen(
             }
         }
 
-    // LCS: push-to-talk voice messages (hold the mic button to record, release to send)
+    // LCS: push-to-talk voice messages (hold the mic button to record, release
+    // to send). The button behaviour and placement are unchanged; what changed
+    // is the engine underneath — this now drives upstream's VoiceMessageRecorder
+    // rather than the LCS MediaRecorder implementation, which means Codec2 is
+    // recorded natively and the clip goes out as FIELD_AUDIO through upstream's
+    // pipeline.
+    //
+    // The Advanced Settings bandwidth switch maps onto upstream's format enum:
+    // off (low bandwidth, for LoRa) -> Codec2 1200, on -> Opus. Both are modes
+    // Sideband decodes, so the toggle keeps meaning exactly what it did.
     val pttEnabled by settingsViewModel.pttEnabled.collectAsStateWithLifecycle()
     val pttHighBandwidth by settingsViewModel.pttHighBandwidth.collectAsStateWithLifecycle()
-    var pttSession by remember { mutableStateOf<network.columba.app.util.PttRecorder.Session?>(null) }
-    val isRecordingPtt = pttSession != null
+    val voiceRecordingState by viewModel.voiceRecordingState.collectAsStateWithLifecycle()
+    val isRecordingPtt = voiceRecordingState.recorderState is RecorderState.Recording
+
+    val pttFormat =
+        if (pttHighBandwidth) {
+            VoiceMessageFormat.OPUS_MEDIUM
+        } else {
+            VoiceMessageFormat.CODEC2_1200
+        }
 
     val beginPttRecording: () -> Unit = {
-        if (pttSession == null) {
-            val session =
-                network.columba.app.util.PttRecorder.start(
-                    context,
-                    network.columba.app.util.PttRecorder.profileFor(pttHighBandwidth),
-                )
-            if (session == null) {
-                Toast.makeText(context, "Couldn't start recording", Toast.LENGTH_SHORT).show()
-            } else {
-                pttSession = session
-            }
-        }
+        viewModel.requestStartVoiceRecording(format = pttFormat)
     }
     val finishPttRecording: () -> Unit = {
-        val session = pttSession
-        pttSession = null
-        if (session != null) {
-            // stopAndBuildClip suspends: the Codec2 profile encodes the whole
-            // clip on release, which is real work on a long recording.
-            scope.launch {
-                val clip = network.columba.app.util.PttRecorder.stopAndBuildClip(session)
-                if (clip == null) {
-                    Toast.makeText(context, "Too short — hold to record", Toast.LENGTH_SHORT).show()
-                } else {
-                    // Attach + send atomically on release, matching Sideband's PTT behaviour.
-                    viewModel.sendVoiceMessage(destinationHash, clip.attachment, clip.lxmfAudioMode)
-                }
-            }
-        }
+        viewModel.requestStopVoiceRecording()
     }
     val pttPermissionLauncher =
         rememberLauncherForActivityResult(
@@ -712,7 +729,7 @@ fun MessagingScreen(
     // Make sure a recording never outlives the screen.
     DisposableEffect(Unit) {
         onDispose {
-            pttSession?.let { network.columba.app.util.PttRecorder.cancel(it) }
+            viewModel.requestCancelVoiceRecording()
         }
     }
 
@@ -787,7 +804,7 @@ fun MessagingScreen(
 
     // Track IME (keyboard) visibility
     val density = LocalDensity.current
-    val imeBottomInset = WindowInsets.ime.getBottom(density)
+    val imeBottomInset = LocalMessagingImeBottomInsetOverride.current ?: WindowInsets.ime.getBottom(density)
     val imeIsVisible = imeBottomInset > 0
 
     // Attachment panel state machine
@@ -830,6 +847,72 @@ fun MessagingScreen(
                 viewModel.loadRecentPhotos(context)
             }
         }
+
+    var showVoiceControls by remember { mutableStateOf(false) }
+    var audioPermissionPermanentlyDenied by remember { mutableStateOf(false) }
+    LaunchedEffect(destinationHash, viewModel) {
+        viewModel.composerSendResult.collect { result ->
+            if (
+                result.destinationHash == destinationHash &&
+                result.clearComposer &&
+                messageText == result.submittedText
+            ) {
+                messageText = ""
+                showVoiceControls = false
+            }
+        }
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val audioPermissionLauncher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+        ) { granted ->
+            if (granted) {
+                audioPermissionPermanentlyDenied = false
+                showVoiceControls = true
+                viewModel.requestStartVoiceRecording(voiceMessageFormat)
+            } else {
+                val activity = runCatching { context.findActivity() }.getOrNull()
+                audioPermissionPermanentlyDenied =
+                    activity != null &&
+                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    val voicePlayer = remember { VoiceMessagePlayer(context, scope) }
+    val voicePlayerState by voicePlayer.state.collectAsStateWithLifecycle()
+    val voiceMetadata by voicePlayer.metadata.collectAsStateWithLifecycle()
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer =
+            LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> {
+                        if (
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                            PackageManager.PERMISSION_GRANTED
+                        ) {
+                            audioPermissionPermanentlyDenied = false
+                        }
+                    }
+                    Lifecycle.Event.ON_STOP -> viewModel.requestCancelActiveVoiceRecording()
+                    else -> Unit
+                }
+            }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            voicePlayer.close()
+            viewModel.requestCancelActiveVoiceRecording()
+        }
+    }
+
+    val cancelActiveVoiceRecording = {
+        voicePlayer.close()
+        viewModel.requestCancelVoiceRecording()
+        showVoiceControls = false
+    }
+    BackHandler(enabled = showVoiceControls && voiceRecordingState.selectedRecording == null) {
+        cancelActiveVoiceRecording()
+    }
 
     // Back handler: dismiss panel on back press
     BackHandler(enabled = inputPanelMode == InputPanelMode.PANEL) {
@@ -934,6 +1017,11 @@ fun MessagingScreen(
             listState.scrollToItem(0) // Instant scroll to index 0 (newest message)
         }
     }
+
+    // A notification can be posted while Columba is backgrounded even when this conversation
+    // remains composed. Re-assert visibility on every resume so that notification is dismissed
+    // and the newly visible messages are marked read.
+    ConversationVisibilityEffect(destinationHash, viewModel::onConversationVisible)
 
     // Load messages for this peer
     LaunchedEffect(destinationHash) {
@@ -1093,7 +1181,14 @@ fun MessagingScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(
+                        onClick = {
+                            if (showVoiceControls && voiceRecordingState.selectedRecording == null) {
+                                cancelActiveVoiceRecording()
+                            }
+                            onBackClick()
+                        },
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -1402,16 +1497,24 @@ fun MessagingScreen(
                                             isImageLoading = needsImageLoading,
                                             fontScale = messageFontScale,
                                             timestampTick = timestampTick,
+                                            voicePlayerState =
+                                                voicePlayerState.takeIf { it.messageKey == displayMessage.id }
+                                                    ?: VoiceMessagePlayerState(),
+                                            voiceMetadata = voiceMetadata[displayMessage.id],
+                                            onVoiceMetadataNeeded = { attachment ->
+                                                voicePlayer.prepareMetadata(displayMessage.id, attachment)
+                                            },
+                                            onVoiceMetadataCancelled = voicePlayer::cancelMetadata,
+                                            onVoiceToggle = {
+                                                displayMessage.audioAttachment?.let { attachment ->
+                                                    voicePlayer.toggle(displayMessage.id, attachment)
+                                                }
+                                            },
                                             onViewDetails = onViewMessageDetails,
                                             onRetry = { viewModel.retryFailedMessage(message.id) },
                                             onFileAttachmentTap = { messageId, fileIndex, filename ->
                                                 selectedFileInfo = Triple(messageId, fileIndex, filename)
                                                 showFileOptionsSheet = true
-                                            },
-                                            playingMessageId = playingVoiceMessageId,
-                                            loadingAudioMessageId = loadingVoiceMessageId,
-                                            onVoiceMessageTap = { messageId ->
-                                                viewModel.toggleVoiceMessagePlayback(messageId)
                                             },
                                             onReply = { viewModel.setReplyTo(message.id) },
                                             onReplyPreviewClick = { replyToId ->
@@ -1452,8 +1555,42 @@ fun MessagingScreen(
                     )
                 }
 
-                // Message Input Bar - at bottom of Column
-                MessageInputBar(
+                if (showVoiceControls && voiceRecordingState.selectedRecording == null) {
+                    VoiceRecordingControls(
+                        state = voiceRecordingState,
+                        hasPermission =
+                            androidx.core.content.ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO,
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED,
+                        permissionPermanentlyDenied = audioPermissionPermanentlyDenied,
+                        isSupported = viewModel.isVoiceMessageSupported,
+                        isBlockedByCall = isVoiceRecordingBlockedByCall,
+                        onRequestPermission = {
+                            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        },
+                        onOpenPermissionSettings = {
+                            context.startActivity(
+                                Intent(
+                                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                    Uri.fromParts("package", context.packageName, null),
+                                ),
+                            )
+                        },
+                        onStart = {
+                            voicePlayer.close()
+                            viewModel.requestStartVoiceRecording(voiceMessageFormat)
+                        },
+                        onStop = { viewModel.requestStopVoiceRecording() },
+                        onCancel = {
+                            voicePlayer.close()
+                            viewModel.requestCancelVoiceRecording()
+                            showVoiceControls = false
+                        },
+                    )
+                } else {
+                    // Message Input Bar - at bottom of Column
+                    MessageInputBar(
                     modifier =
                         Modifier
                             .fillMaxWidth(),
@@ -1471,10 +1608,43 @@ fun MessagingScreen(
                     selectedFileAttachments = selectedFileAttachments,
                     totalAttachmentSize = totalAttachmentSize,
                     onRemoveFileAttachment = { index -> viewModel.removeFileAttachment(index) },
+                    hasVoiceAttachment = voiceRecordingState.selectedRecording != null,
+                    voiceAttachmentDurationMillis = voiceRecordingState.selectedRecording?.durationMillis,
+                    voicePreviewState =
+                        voicePlayerState.takeIf { it.messageKey == VOICE_PREVIEW_KEY }
+                            ?: VoiceMessagePlayerState(),
+                    onVoicePreviewToggle = {
+                        voiceRecordingState.selectedRecording?.file?.let { file ->
+                            voicePlayer.toggleFile(
+                                VOICE_PREVIEW_KEY,
+                                file,
+                                voiceRecordingState.selectedFormat ?: VoiceMessageFormat.DEFAULT,
+                            )
+                        }
+                    },
+                    onRemoveVoiceAttachment = {
+                        voicePlayer.close()
+                        viewModel.requestRemoveVoiceRecording()
+                        showVoiceControls = false
+                    },
                     onSendClick = {
-                        if (messageText.isNotBlank() || selectedImageData != null || selectedFileAttachments.isNotEmpty()) {
-                            viewModel.sendMessage(destinationHash, messageText.trim())
-                            messageText = ""
+                        val hasComposerContent =
+                            listOf(
+                                messageText.isNotBlank(),
+                                selectedImageData != null,
+                                selectedFileAttachments.isNotEmpty(),
+                                voiceRecordingState.selectedRecording != null,
+                            ).any { it }
+                        if (hasComposerContent) {
+                            voicePlayer.close()
+                            val wasVoiceMessage = voiceRecordingState.selectedRecording != null
+                            viewModel.sendMessage(destinationHash, messageText)
+                            inputPanelMode =
+                                inputPanelModeAfterSend(
+                                    currentMode = inputPanelMode,
+                                    wasVoiceMessage = wasVoiceMessage,
+                                    imeIsVisible = imeIsVisible,
+                                )
                         }
                     },
                     isSending = isSending,
@@ -1505,7 +1675,8 @@ fun MessagingScreen(
                         }
                     },
                     isAttachmentPanelActive = inputPanelMode == InputPanelMode.PANEL,
-                )
+                    )
+                }
 
                 // Bottom space: attachment panel, keyboard spacer, or nothing
                 when (inputPanelMode) {
@@ -1554,13 +1725,22 @@ fun MessagingScreen(
                                 }
                                 inputPanelMode = InputPanelMode.NONE
                             },
-                            modifier = Modifier.navigationBarsPadding(),
-                        )
-                    }
+                        onVoiceClick = {
+                            showVoiceMessageQualityDialog = true
+                            inputPanelMode = InputPanelMode.NONE
+                        },
+                        modifier = Modifier.navigationBarsPadding(),
+                    )
+                }
                     InputPanelMode.KEYBOARD -> {
                         // Manual IME spacer replaces .imePadding()
                         val imeHeightDp = with(density) { imeBottomInset.toDp() }
-                        Spacer(modifier = Modifier.height(imeHeightDp))
+                        Spacer(
+                            modifier =
+                                Modifier
+                                    .height(imeHeightDp)
+                                    .testTag("messageKeyboardSpacer"),
+                        )
                     }
                     InputPanelMode.NONE -> {
                         // Nav bar padding only when nothing else is showing
@@ -1876,6 +2056,42 @@ fun MessagingScreen(
         )
     }
 
+    if (showVoiceMessageQualityDialog) {
+        QualitySelectionDialog(
+            title = stringResource(R.string.voice_message_quality_dialog_title),
+            subtitle = stringResource(R.string.voice_message_quality_dialog_subtitle),
+            options =
+                VoiceMessageFormat.OUTBOUND_OPTIONS.map { format ->
+                    QualityOption(
+                        format,
+                        stringResource(format.displayNameRes),
+                        stringResource(format.descriptionRes),
+                    )
+                },
+            initialSelection = voiceMessageFormat,
+            recommendedOption = VoiceMessageFormat.DEFAULT,
+            linkState = conversationLinkState,
+            confirmButtonText = stringResource(R.string.voice_message_quality_dialog_record),
+            onDismiss = { showVoiceMessageQualityDialog = false },
+            onConfirm = { format ->
+                showVoiceMessageQualityDialog = false
+                voiceMessageFormat = format
+                showVoiceControls = true
+                when {
+                    !viewModel.isVoiceMessageSupported -> Unit
+                    isVoiceRecordingBlockedByCall -> Unit
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO,
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED ->
+                        viewModel.requestStartVoiceRecording(format)
+                    audioPermissionPermanentlyDenied -> Unit
+                    else -> audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                }
+            },
+        )
+    }
+
     // Codec selection dialog for voice calls. Fires the link-speed
     // probe via LaunchedEffect when the dialog enters composition (and
     // re-fires on re-open). isProbingLinkSpeed flips to false when the
@@ -1893,17 +2109,22 @@ fun MessagingScreen(
             onDismiss = { showCodecSelectionDialog = false },
             onProfileSelected = { profile, halfDuplex ->
                 showCodecSelectionDialog = false
-                onVoiceCall(
-                    profile.code,
-                    conversationLinkState?.let { link ->
-                        CodecProfile.getConservativeBandwidthBps(
-                            expectedRateBps = link.expectedRateBps,
-                            establishmentRateBps = link.establishmentRateBps,
-                            nextHopBitrateBps = link.nextHopBitrateBps,
-                        )
-                    },
-                    halfDuplex,
-                )
+                // Upstream releases the microphone before dialling — the voice
+                // recorder now owns it, so a live recording would block the call.
+                scope.launch {
+                    withContext(Dispatchers.IO) { viewModel.cancelActiveVoiceRecording() }
+                    onVoiceCall(
+                        profile.code,
+                        conversationLinkState?.let { link ->
+                            CodecProfile.getConservativeBandwidthBps(
+                                expectedRateBps = link.expectedRateBps,
+                                establishmentRateBps = link.establishmentRateBps,
+                                nextHopBitrateBps = link.nextHopBitrateBps,
+                            )
+                        },
+                        halfDuplex,
+                    )
+                }
             },
         )
     }
@@ -1951,14 +2172,15 @@ fun MessageBubble(
     transferProgress: TransferProgressUpdate? = null,
     isImageLoading: Boolean = false,
     fontScale: Float = 1.0f,
-    @Suppress("UNUSED_PARAMETER") timestampTick: Long = 0L,
+    timestampTick: Long = System.currentTimeMillis(),
+    voicePlayerState: VoiceMessagePlayerState = VoiceMessagePlayerState(),
+    voiceMetadata: VoiceMessageMetadata? = null,
+    onVoiceMetadataNeeded: (AudioAttachmentUi) -> Unit = {},
+    onVoiceMetadataCancelled: (String) -> Unit = {},
+    onVoiceToggle: () -> Unit = {},
     onViewDetails: (messageId: String) -> Unit = {},
     onRetry: () -> Unit = {},
     onFileAttachmentTap: (messageId: String, fileIndex: Int, filename: String) -> Unit = { _, _, _ -> },
-    // LCS: voice-message replay. Null playingMessageId means nothing is playing.
-    playingMessageId: String? = null,
-    loadingAudioMessageId: String? = null,
-    onVoiceMessageTap: (messageId: String) -> Unit = { },
     onReply: () -> Unit = {},
     onReplyPreviewClick: (replyToMessageId: String) -> Unit = {},
     onReact: (emoji: String) -> Unit = {},
@@ -2118,14 +2340,13 @@ fun MessageBubble(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = formatTimestamp(message.receivedAt ?: message.timestamp),
+                            text = formatTimestamp(message.receivedAt ?: message.timestamp, timestampTick),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White,
                         )
                         if (isFromMe) {
-                            Text(
-                                text = getMessageStatusIcon(message.status),
-                                style = MaterialTheme.typography.labelSmall,
+                            MessageStatusIndicator(
+                                status = message.status,
                                 color = Color.White,
                             )
                         }
@@ -2357,22 +2578,58 @@ fun MessageBubble(
                             }
                         }
 
-                        // Display file attachments if present (LXMF field 5 = FILE_ATTACHMENTS)
-                        // LCS: voice message (LXMF FIELD_AUDIO). Rendered above
-                        // the text because a PTT message's "text" is the single
-                        // placeholder space Sideband sends for attachment-only
-                        // messages — the bubble is the actual content.
-                        if (message.hasAudio && message.audioMode != null) {
+                        message.audioAttachment?.let { audio ->
+                            DisposableEffect(message.id, audio) {
+                                if (audio.isPlayable) onVoiceMetadataNeeded(audio)
+                                onDispose { onVoiceMetadataCancelled(message.id) }
+                            }
                             VoiceMessageBubble(
-                                audioMode = message.audioMode,
-                                isPlayable =
-                                    network.columba.app.util.VoiceMessagePlayer
-                                        .canPlay(message.audioMode),
-                                isPlaying = playingMessageId == message.id,
-                                isLoading = loadingAudioMessageId == message.id,
-                                onTogglePlayback = { onVoiceMessageTap(message.id) },
+                                title = stringResource(R.string.message_voice_bubble_title),
+                                state =
+                                    if (audio.isPlayable) {
+                                        voicePlayerState
+                                    } else {
+                                        VoiceMessagePlayerState(error = "unsupported")
+                                    },
+                                onToggle = onVoiceToggle,
+                                durationMillis = audio.durationMs?.toInt() ?: voiceMetadata?.durationMs,
+                                waveformLevels = voiceMetadata?.waveformLevels.orEmpty(),
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(
+                                modifier =
+                                    Modifier.height(
+                                        if (message.hasFileAttachments || message.content.isNotBlank()) 8.dp else 4.dp,
+                                    ),
+                            )
+                        }
+
+                        // Display file attachments if present (LXMF field 5 = FILE_ATTACHMENTS)
+                        // Voice message (LXMF FIELD_AUDIO) — upstream's bubble,
+                        // which carries waveform, duration and an unsupported
+                        // state the LCS one did not have.
+                        message.audioAttachment?.let { audio ->
+                            DisposableEffect(message.id, audio) {
+                                if (audio.isPlayable) onVoiceMetadataNeeded(audio)
+                                onDispose { onVoiceMetadataCancelled(message.id) }
+                            }
+                            VoiceMessageBubble(
+                                title = stringResource(R.string.message_voice_bubble_title),
+                                state =
+                                    if (audio.isPlayable) {
+                                        voicePlayerState
+                                    } else {
+                                        VoiceMessagePlayerState(error = "unsupported")
+                                    },
+                                onToggle = onVoiceToggle,
+                                durationMillis = audio.durationMs?.toInt() ?: voiceMetadata?.durationMs,
+                                waveformLevels = voiceMetadata?.waveformLevels.orEmpty(),
+                            )
+                            Spacer(
+                                modifier =
+                                    Modifier.height(
+                                        if (message.hasFileAttachments || message.content.isNotBlank()) 8.dp else 4.dp,
+                                    ),
+                            )
                         }
 
                         if (message.hasFileAttachments) {
@@ -2391,18 +2648,21 @@ fun MessageBubble(
                             }
                         }
 
-                        if (message.renderer == MessageRenderer.MARKDOWN) {
-                            MarkdownMessageText(
-                                markdown = message.content,
-                                isFromMe = isFromMe,
-                                fontScale = fontScale,
-                            )
-                        } else {
-                            LinkifiedMessageText(
-                                text = message.content,
-                                isFromMe = isFromMe,
-                                fontScale = fontScale,
-                            )
+                        if (message.content.isNotBlank()) {
+                            if (message.renderer == MessageRenderer.MARKDOWN) {
+                                MarkdownMessageText(
+                                    markdown = message.content,
+                                    isFromMe = isFromMe,
+                                    fontScale = fontScale,
+                                )
+                            } else {
+                                LinkifiedMessageText(
+                                    text = message.content,
+                                    isFromMe = isFromMe,
+                                    fontScale = fontScale,
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
                         }
                         transferProgress?.let { progress ->
                             Spacer(modifier = Modifier.height(8.dp))
@@ -2414,7 +2674,7 @@ fun MessageBubble(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = formatTimestamp(message.receivedAt ?: message.timestamp),
+                                text = formatTimestamp(message.receivedAt ?: message.timestamp, timestampTick),
                                 style = MaterialTheme.typography.labelSmall,
                                 color =
                                     if (isFromMe) {
@@ -2424,9 +2684,8 @@ fun MessageBubble(
                                     },
                             )
                             if (isFromMe) {
-                                Text(
-                                    text = getMessageStatusIcon(message.status),
-                                    style = MaterialTheme.typography.labelSmall,
+                                MessageStatusIndicator(
+                                    status = message.status,
                                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                                 )
                             }
@@ -2535,6 +2794,11 @@ fun MessageInputBar(
     selectedFileAttachments: List<FileAttachment> = emptyList(),
     totalAttachmentSize: Int = 0,
     onRemoveFileAttachment: (Int) -> Unit = {},
+    hasVoiceAttachment: Boolean = false,
+    voiceAttachmentDurationMillis: Long? = null,
+    voicePreviewState: VoiceMessagePlayerState = VoiceMessagePlayerState(),
+    onVoicePreviewToggle: () -> Unit = {},
+    onRemoveVoiceAttachment: () -> Unit = {},
     onSendClick: () -> Unit,
     isSending: Boolean = false,
     onAttachmentPanelToggle: () -> Unit = {},
@@ -2647,6 +2911,15 @@ fun MessageInputBar(
                 }
             }
 
+            voiceAttachmentDurationMillis?.let { durationMillis ->
+                VoiceDraftPreview(
+                    durationMillis = durationMillis,
+                    state = voicePreviewState,
+                    onToggle = onVoicePreviewToggle,
+                    onRemove = onRemoveVoiceAttachment,
+                )
+            }
+
             // Character count display
             val remaining = ValidationConstants.MAX_MESSAGE_LENGTH - messageText.length
             if (remaining < 100) {
@@ -2667,7 +2940,10 @@ fun MessageInputBar(
             // shared by the send button and the bare-Enter key handler below.
             val canSend =
                 !isSending &&
-                    (messageText.isNotBlank() || selectedImageData != null || selectedFileAttachments.isNotEmpty())
+                    (
+                        messageText.isNotBlank() || selectedImageData != null ||
+                            selectedFileAttachments.isNotEmpty() || hasVoiceAttachment
+                    )
 
             Row(
                 modifier =
@@ -2838,7 +3114,13 @@ fun MessageInputBar(
                 FilledIconButton(
                     onClick = onSendClick,
                     enabled = canSend,
-                    modifier = Modifier.size(48.dp),
+                    modifier =
+                        Modifier
+                            .size(48.dp)
+                            .semantics {
+                                contentDescription = "Send message"
+                                if (isSending) stateDescription = "Sending message"
+                            },
                     shape = CircleShape,
                     colors =
                         IconButtonDefaults.filledIconButtonColors(
@@ -2857,7 +3139,7 @@ fun MessageInputBar(
                     } else {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send message",
+                            contentDescription = null,
                         )
                     }
                 }
@@ -2896,10 +3178,10 @@ fun EmptyMessagesState() {
     }
 }
 
-private enum class InputPanelMode { NONE, KEYBOARD, PANEL }
-
-private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
+private fun formatTimestamp(
+    timestamp: Long,
+    now: Long,
+): String {
     val diff = now - timestamp
 
     return when {
@@ -3204,26 +3486,6 @@ private fun formatFileSize(bytes: Long): String =
         bytes < 1024 * 1024 -> "${bytes / 1024} KB"
         bytes < 1024 * 1024 * 1024 -> String.format(java.util.Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
         else -> String.format(java.util.Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
-    }
-
-/**
- * Get the status icon character for a message status.
- *
- * @param status The message status string
- * @return Unicode character representing the status:
- *   - "○" (hollow circle) for pending - message created, waiting to send
- *   - "✓" (single check) for sent/retrying_propagated/propagated - transmitted or stored on relay
- *   - "✓✓" (double check) for delivered - delivered and acknowledged by recipient
- *   - "!" (exclamation) for failed - delivery failed
- *   - "" (empty) for unknown status
- */
-internal fun getMessageStatusIcon(status: String): String =
-    when (status) {
-        "pending" -> "○"
-        "sent", "retrying_propagated", "propagated" -> "✓"
-        "delivered" -> "✓✓"
-        "failed" -> "!"
-        else -> ""
     }
 
 @Composable

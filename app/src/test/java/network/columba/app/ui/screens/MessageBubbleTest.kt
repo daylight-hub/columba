@@ -1,6 +1,7 @@
 package network.columba.app.ui.screens
 
 import android.app.Application
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -13,6 +14,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import network.columba.app.test.MessagingTestFixtures
 import network.columba.app.test.RegisterComponentActivityRule
+import network.columba.app.audio.VoiceMessagePlayerState
+import network.columba.app.ui.model.AudioAttachmentMode
+import network.columba.app.ui.model.AudioAttachmentUi
 import network.columba.app.ui.model.MessageRenderer
 import network.columba.app.ui.model.MessageUi
 import network.columba.app.ui.theme.ColumbaTheme
@@ -38,6 +42,60 @@ class MessageBubbleTest {
     val ruleChain: RuleChain = RuleChain.outerRule(registerActivityRule).around(composeRule)
 
     val composeTestRule get() = composeRule
+
+    @Test
+    fun `audio attachment renders playable voice bubble`() {
+        var toggled = false
+        val message =
+            MessagingTestFixtures.createSentMessage().copy(
+                content = "",
+                audioAttachment =
+                    AudioAttachmentUi(
+                        mode = AudioAttachmentMode.AM_OPUS_OGG,
+                        isPlayable = true,
+                    ),
+            )
+        composeTestRule.setContent {
+            val clipboardManager = LocalClipboardManager.current
+            MessageBubble(
+                message = message,
+                isFromMe = true,
+                clipboardManager = clipboardManager,
+                voicePlayerState = VoiceMessagePlayerState(durationMs = 3_000),
+                onVoiceToggle = { toggled = true },
+            )
+        }
+
+        composeTestRule.onNodeWithText("Voice message").assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Play voice message").performClick()
+        assertTrue(toggled)
+    }
+
+    @Test
+    fun `timestamp tick refreshes an already composed message bubble`() {
+        val messageTimestamp = System.currentTimeMillis()
+        val timestampTick = mutableLongStateOf(messageTimestamp)
+        val message = MessagingTestFixtures.createSentMessage(timestamp = messageTimestamp)
+
+        composeTestRule.setContent {
+            val clipboardManager = LocalClipboardManager.current
+            MessageBubble(
+                message = message,
+                isFromMe = true,
+                clipboardManager = clipboardManager,
+                timestampTick = timestampTick.longValue,
+            )
+        }
+
+        composeTestRule.onNodeWithText("Just now").assertIsDisplayed()
+
+        composeTestRule.runOnIdle {
+            timestampTick.longValue = messageTimestamp + 60_000L
+        }
+
+        composeTestRule.onNodeWithText("1 min ago").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Just now").assertDoesNotExist()
+    }
 
     // ========== Missing Image Placeholder Tests ==========
 

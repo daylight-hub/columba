@@ -25,6 +25,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Chat
@@ -78,6 +79,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import network.columba.app.data.database.entity.InterfaceEntity
 import network.columba.app.di.RnsTelephonyEntryPoint
+import network.columba.app.navigation.activeCallRoute
+import network.columba.app.navigation.callDetailsDestination
+import network.columba.app.navigation.callDetailsRoute
 import network.columba.app.navigation.AppDestination
 import network.columba.app.navigation.ConversationNavigation
 import network.columba.app.navigation.appComposable
@@ -125,6 +129,7 @@ import network.columba.app.ui.screens.offlinemaps.OfflineMapsScreen
 import network.columba.app.ui.screens.onboarding.OnboardingPagerScreen
 import network.columba.app.ui.screens.tcpclient.TcpClientWizardScreen
 import network.columba.app.ui.theme.ColumbaTheme
+import network.columba.app.ui.theme.ThemeMode
 import network.columba.app.ui.util.LifecycleGuard
 import network.columba.app.util.CrashReportManager
 import network.columba.app.util.InterfaceReconnectSignal
@@ -1237,7 +1242,10 @@ fun ColumbaNavigation(
         }
     }
 
-    ColumbaTheme(selectedTheme = settingsState.selectedTheme) {
+    ColumbaTheme(
+        darkTheme = settingsState.themeMode.resolveDark(isSystemInDarkTheme()),
+        selectedTheme = settingsState.selectedTheme,
+    ) {
         // Prompt for precise location when the user has enabled location sharing
         // and chosen precise precision but only approximate access is granted.
         // Fires on app start, after a settings import, and when sharing/precision
@@ -1366,12 +1374,22 @@ fun ColumbaNavigation(
                                             restoreState = true
                                         }
                                     },
+                                    onCallHistoryClick = { callAttemptId ->
+                                        navController.navigate(callDetailsRoute(callAttemptId))
+                                    },
+                                    onActiveCallHistoryClick = { callAttemptId, localIdentityHash, remoteIdentityHash, profileCode ->
+                                        navController.navigate(
+                                            activeCallRoute(callAttemptId, remoteIdentityHash, profileCode, localIdentityHash),
+                                        )
+                                    },
                                     onNavigateToQrScanner = {
                                         navController.navigate("qr_scanner")
                                     },
                                     settingsViewModel = settingsViewModel,
                                 )
                             }
+
+                            callDetailsDestination(navController)
 
                             appComposable(
                                 AppDestination.ANNOUNCES,
@@ -1771,6 +1789,11 @@ fun ColumbaNavigation(
                                             navController.navigate("rnode_wizard")
                                         }
                                     },
+                                    onNavigateToRNodePairingRepair = { interfaceId ->
+                                        navController.navigate(
+                                            "rnode_wizard?interfaceId=$interfaceId&repairPairing=true",
+                                        )
+                                    },
                                     onNavigateToTcpClientWizard = { interfaceId ->
                                         if (interfaceId != null) {
                                             navController.navigate("tcp_client_wizard?interfaceId=$interfaceId")
@@ -1888,6 +1911,10 @@ fun ColumbaNavigation(
                                             type = NavType.LongType
                                             defaultValue = -1L
                                         },
+                                        navArgument("repairPairing") {
+                                            type = NavType.BoolType
+                                            defaultValue = false
+                                        },
                                         navArgument("connectionType") {
                                             type = NavType.StringType
                                             nullable = true
@@ -1933,6 +1960,7 @@ fun ColumbaNavigation(
                                     ),
                             ) { backStackEntry ->
                                 val interfaceId = backStackEntry.arguments?.getLong("interfaceId") ?: -1L
+                                val repairPairing = backStackEntry.arguments?.getBoolean("repairPairing") ?: false
                                 val connectionType = backStackEntry.arguments?.getString("connectionType")
                                 val transportMode = backStackEntry.arguments?.getBoolean("transportMode") ?: false
                                 val usbDeviceId = backStackEntry.arguments?.getInt("usbDeviceId") ?: -1
@@ -1945,6 +1973,7 @@ fun ColumbaNavigation(
                                 val loraCr = backStackEntry.arguments?.getInt("loraCr") ?: -1
                                 network.columba.app.ui.screens.rnode.RNodeWizardScreen(
                                     editingInterfaceId = if (interfaceId >= 0) interfaceId else null,
+                                    repairPairing = repairPairing,
                                     preselectedConnectionType = connectionType,
                                     preselectedUsbDeviceId = if (usbDeviceId >= 0) usbDeviceId else null,
                                     preselectedUsbVendorId = if (usbVendorId >= 0) usbVendorId else null,
@@ -2020,6 +2049,7 @@ fun ColumbaNavigation(
                             appComposable(AppDestination.THEME_EDITOR_NEW) {
                                 ThemeEditorScreen(
                                     themeId = null,
+                                    initialDarkTheme = settingsState.themeMode.resolveDark(isSystemInDarkTheme()),
                                     onBackClick = { navController.popBackStack() },
                                     onSave = { navController.popBackStack() },
                                 )
@@ -2036,6 +2066,7 @@ fun ColumbaNavigation(
 
                                 ThemeEditorScreen(
                                     themeId = themeId,
+                                    initialDarkTheme = settingsState.themeMode.resolveDark(isSystemInDarkTheme()),
                                     onBackClick = { navController.popBackStack() },
                                     onSave = { navController.popBackStack() },
                                 )

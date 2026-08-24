@@ -2,6 +2,7 @@ package network.columba.app.rns.backend.py
 
 import android.util.Log
 import com.chaquo.python.PyObject
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -50,6 +51,9 @@ class PythonRnsTransportAdmin(
         /** Noise-floor sentinel the contract documents for "no RNode connected". */
         const val RNODE_RSSI_ABSENT = -100
 
+        /** Absent-sentinel for "no RNode battery reading yet / no RNode connected". */
+        const val RNODE_BATTERY_ABSENT = -1
+
         /** Empty JSON array — the contract's documented "no BLE peers" value. */
         const val EMPTY_JSON_ARRAY = "[]"
     }
@@ -61,12 +65,31 @@ class PythonRnsTransportAdmin(
     private val _interfaceStatusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 16)
     private val _bleConnectionsFlow = MutableSharedFlow<String>(replay = 1, extraBufferCapacity = 16)
     private val _debugInfoFlow = MutableSharedFlow<String>(extraBufferCapacity = 64)
-    private val _interfaceStatusFlow = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    private val _interfaceStatusFlow =
+        MutableSharedFlow<String>(
+            replay = 1,
+            extraBufferCapacity = 1,
+            onBufferOverflow = BufferOverflow.DROP_OLDEST,
+        )
 
     override val interfaceStatusChanged: SharedFlow<Unit> = _interfaceStatusChanged.asSharedFlow()
     override val bleConnectionsFlow: SharedFlow<String> = _bleConnectionsFlow.asSharedFlow()
     override val debugInfoFlow: SharedFlow<String> = _debugInfoFlow.asSharedFlow()
     override val interfaceStatusFlow: SharedFlow<String> = _interfaceStatusFlow.asSharedFlow()
+
+    /** Publish one replayable RNode status delta without re-entering Python. */
+    fun publishRNodeOnlineStatus(
+        interfaceName: String,
+        isOnline: Boolean,
+    ) {
+        val payload =
+            JSONObject()
+                .put("updates", JSONObject().put(interfaceName, isOnline))
+                .toString()
+        check(_interfaceStatusFlow.tryEmit(payload)) {
+            "Unable to publish replayable RNode status update"
+        }
+    }
 
     // ===== BLE peer connection details (Network Status "BLE Connections" card) =====
     // The host wires the live KotlinBLEBridge in via attachBleSource() right after
@@ -326,6 +349,33 @@ class PythonRnsTransportAdmin(
         return RNODE_RSSI_ABSENT
     }
 
+    override suspend fun getRNodeBattery(): Int {
+        // RNode battery is a KISS data-channel scalar (CMD_STAT_BAT 0x27) read
+        // into ColumbaRNodeInterface.r_stat_bat by its read loop. Find the live
+        // interface on the RNS Transport and read it. Returns RNODE_BATTERY_ABSENT
+        // (-1) when there is no RNode interface or no frame received yet - same
+        // "sentinel, no UI branch" contract as getRNodeRssi.
+        //
+        // NOTE: this is a LIVE fetch (deliberately NOT the getRNodeRssi stub,
+        // which returns the sentinel unconditionally). Battery changes slowly,
+        // so callers poll on a slow cadence.
+        return pyCall {
+            val interfaces = transport()["interfaces"] ?: return@pyCall RNODE_BATTERY_ABSENT
+            val rnodeIfaces = runtime.python.builtins.callAttr("list", interfaces).asList()
+            val rnode = rnodeIfaces.firstOrNull { iface ->
+                runCatching {
+                    runtime.python.builtins.callAttr("type", iface)["__name__"]?.toString()
+                }.getOrNull() == "ColumbaRNodeInterface"
+            } ?: return@pyCall RNODE_BATTERY_ABSENT
+            // get_battery() returns Python None until the first 0x27 frame. Chaquopy
+            // wraps None as a NON-NULL PyObject, so toJava(Int) on it would throw -
+            // guard with takeIfNotNone() (PythonExt.kt) to fold None into null.
+            runCatching {
+                rnode.callAttr("get_battery").takeIfNotNone()?.toJava(Int::class.javaObjectType)
+            }.getOrNull() ?: RNODE_BATTERY_ABSENT
+        }
+    }
+
     // ==================== BLE ====================
 
     override fun getBleConnectionDetails(): String =
@@ -349,12 +399,15 @@ class PythonRnsTransportAdmin(
 
     /**
      * Enumerate `RNS.Transport.interfaces` into the same per-interface shape
-     * `NativeRnsBackendImpl.getDebugInfo()` emits — `{name, type, online,
-     * parent_name, can_send, rx_bytes, tx_bytes}`. `name` is the configured
-     * interface name (`interface.name` — the RNS config `[[section]]` header),
-     * matching `NativeRnsBackendImpl`'s `iface.name` and what the UI keys its
-     * online-status overlay on (`InterfaceEntity.name`). Per-interface reads
-     * are wrapped so one malformed interface can't blank the whole list.
+     * `NativeRnsBackendImpl.getDebugInfo()` emits, plus the optional Python
+     * runtime status reason and live RNode battery: `{name, type, online,
+     * parent_name, can_send, rx_bytes, tx_bytes, status_reason, battery?}`.
+     * `battery` is present only on a live `ColumbaRNodeInterface` with a valid
+     * 0-100 reading. `name` is the configured interface name (`interface.name` -
+     * the RNS config `[[section]]` header), matching `NativeRnsBackendImpl`'s
+     * `iface.name` and what the UI keys its online-status and battery overlays on
+     * (`InterfaceEntity.name`). Per-interface reads are wrapped so one malformed
+     * interface can't blank the whole list.
      */
     private fun collectInterfaces(): List<Map<String, Any>> =
         runCatching {
@@ -389,6 +442,11 @@ class PythonRnsTransportAdmin(
                             ?.takeIf { it.toString() != "None" }
                             ?.get("name")?.toString()
                     }.getOrNull()
+                    val statusReason = runCatching {
+                        iface["status_reason"]
+                            ?.takeIf { it.toString() != "None" }
+                            ?.toString()
+                    }.getOrNull().orEmpty()
                     linkedMapOf<String, Any>(
                         "name" to uiName,
                         "type" to uiType,
@@ -397,7 +455,19 @@ class PythonRnsTransportAdmin(
                         "can_send" to (iface["OUT"]?.toJava(Boolean::class.javaObjectType) ?: false),
                         "rx_bytes" to (iface["rxb"]?.toJava(Long::class.javaObjectType) ?: 0L),
                         "tx_bytes" to (iface["txb"]?.toJava(Long::class.javaObjectType) ?: 0L),
-                    )
+                        "status_reason" to statusReason,
+                    ).apply {
+                        // Battery belongs to a specific live ColumbaRNodeInterface.
+                        // Keep it on that interface's existing debug-info row so UI
+                        // cards cannot accidentally reuse the first RNode's reading.
+                        if (pyClassName == "ColumbaRNodeInterface") {
+                            runCatching {
+                                iface.callAttr("get_battery")
+                                    .takeIfNotNone()
+                                    ?.toJava(Int::class.javaObjectType)
+                            }.getOrNull()?.takeIf { it in 0..100 }?.let { put("battery", it) }
+                        }
+                    }
                 }.getOrElse {
                     Log.w(TAG, "getDebugInfo: skipping an interface (attr read failed)", it)
                     null

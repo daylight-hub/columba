@@ -32,7 +32,7 @@ jobs:
           python-version: "3.11"
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.3.0
         with:
           cache-read-only: false
 
@@ -61,6 +61,25 @@ jobs:
         run: |
           ./gradlew :app:assembleNoSentryPythonBackendRelease --no-daemon --stacktrace
           echo "✓ Release APKs built"
+
+      - name: Build Release AAB (Play Store)
+        # Reuses compiled classes/resources from the assemble step above, so
+        # this is fast (~1m) despite the multi-flavor project. Only the
+        # pythonBackend flavor is built: it's the appId (network.columba.app)
+        # registered with the Play Console listing — kotlinBackend (`.kt`
+        # suffix) isn't published there.
+        timeout-minutes: 15
+        env:
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+        run: |
+          ./gradlew :app:bundleSentryPythonBackendRelease --no-daemon --stacktrace
+          echo "✓ Release AAB built successfully"
 
       - name: Extract signing certificate fingerprints
         id: cert
@@ -97,6 +116,15 @@ jobs:
           ls -la libertychat-*.apk
           echo "✓ Renamed APKs"
 
+      - name: Rename AAB with version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cp app/build/outputs/bundle/sentryPythonBackendRelease/app-sentry-pythonBackend-release.aab \
+            "libertychat-${VERSION}-official-rns-py.aab"
+          sha256sum "libertychat-${VERSION}-official-rns-py.aab" > "libertychat-${VERSION}-official-rns-py.aab.sha256"
+          echo "✓ Renamed AAB"
+
       - name: Generate SHA256 checksums
         run: |
           for apk in libertychat-*.apk; do sha256sum "$apk" > "${apk}.sha256"; done
@@ -114,9 +142,14 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: Liberty Chat ${{ steps.version.outputs.version }}
+          # The .aab isn't linked from the body below (users can't sideload
+          # it — it's Play Console upload material only) but still rides
+          # along as a release asset: those don't count against Actions
+          # storage quota the way workflow artifacts do.
           files: |
             libertychat-*.apk
             libertychat-*.apk.sha256
+            libertychat-*.aab
           draft: true
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
           body: |
@@ -125,6 +158,27 @@ jobs:
             Messaging and voice over LXMF / Reticulum (Bluetooth LE, TCP, or RNode
             LoRa), distributed by Liberty Communication Systems, Inc. Built on
             Columba (MPL 2.0).
+
+            ### What's new in this release
+            <!-- LCS: edit this list before publishing the draft. Keep it to
+                 user-visible changes; the commit log covers the rest. -->
+            - Voice messages rebuilt on the upstream recorder: Codec2 is now
+              recorded natively rather than transcoded, with a quality picker
+              offering Codec2 1200/2400/3200 and Opus medium/high/maximum
+            - Voice message bubbles show a waveform, duration and playback
+              progress, and clearly mark clips this device cannot decode
+            - Push-to-talk clips remain fully interoperable with Sideband — the
+              Advanced Settings bandwidth switch still selects Codec2 for LoRa
+              or Opus for Wi-Fi/TCP
+            - RNode Bluetooth recovers after toggling the adapter, and stale
+              pairings are repaired automatically
+            - RNode battery level shown on the interface card and in the
+              persistent notification
+            - Message delivery state survives app restarts, with delivery
+              proofs preserved and propagation-node handoff reconciled
+            - Transfer progress reporting fixed for outgoing resources and
+              relayed messages
+            - Notification icon corrected to a proper monochrome silhouette
 
             ### Installation
             Download the APK matching your phone's CPU. Most modern phones are

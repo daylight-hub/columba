@@ -29,9 +29,14 @@ import network.columba.app.ui.model.CodecProfile
  */
 @Composable
 fun CodecSelectionDialog(
+    title: String = "Select Call Quality",
+    subtitle: String = "Choose a codec profile based on your connection speed",
+    profiles: List<CodecProfile> = CodecProfile.entries,
+    initialProfile: CodecProfile? = null,
     recommendedProfile: CodecProfile = CodecProfile.DEFAULT,
     linkState: ConversationLinkManager.LinkState? = null,
     isProbing: Boolean = false,
+    confirmButtonText: String = "Call",
     onDismiss: () -> Unit,
     onProfileSelected: (CodecProfile, Boolean) -> Unit,
 ) {
@@ -43,7 +48,7 @@ fun CodecSelectionDialog(
         }
 
     val options =
-        CodecProfile.entries.map { profile ->
+        profiles.map { profile ->
             QualityOption(
                 value = profile,
                 displayName = profile.displayName,
@@ -54,14 +59,14 @@ fun CodecSelectionDialog(
         }
 
     QualitySelectionDialog(
-        title = "Select Call Quality",
-        subtitle = "Choose a codec profile based on your connection speed",
+        title = title,
+        subtitle = subtitle,
         options = options,
-        initialSelection = recommendedProfile,
+        initialSelection = (initialProfile ?: recommendedProfile).takeIf(profiles::contains) ?: profiles.first(),
         recommendedOption = recommendedProfile,
         linkState = linkState,
         isProbing = isProbing,
-        confirmButtonText = "Call",
+        confirmButtonText = confirmButtonText,
         halfDuplex = halfDuplex,
         onHalfDuplexChange = { halfDuplex = it },
         onConfirm = { profile -> onProfileSelected(profile, halfDuplex) },
