@@ -51,6 +51,47 @@ jobs:
           git tag -f "$TAG_NAME"
           echo "Building Liberty Chat $VERSION"
 
+      - name: Collect changes since the previous release
+        id: changelog
+        run: |
+          # The previous LCS release tag, excluding the one just created here.
+          #
+          # Upstream Columba tags (v2.0.9, v1.4.x, ...) are genuinely in this
+          # history because the branch merges upstream, and their numbering
+          # overlaps ours — v2.0.9 sorts above our v2.0.4 and would be picked as
+          # the baseline, producing a release body listing months of unrelated
+          # upstream work. Version sorting alone cannot separate them, so match
+          # on the tagged commit's author instead: LCS releases are tagged on
+          # daylight-hub commits, upstream's on torlando-tech ones.
+          PREV_TAG=""
+          for CANDIDATE in $(git tag --merged HEAD --sort=-v:refname \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -v "^${{ steps.version.outputs.tag }}$"); do
+            AUTHOR="$(git log -1 --format='%an' "$CANDIDATE" 2>/dev/null)"
+            if [ "$AUTHOR" = "daylight-hub" ]; then
+              PREV_TAG="$CANDIDATE"
+              break
+            fi
+          done
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous release tag found; listing the last 20 commits."
+            RANGE="-20"
+          else
+            echo "Previous release: $PREV_TAG"
+            RANGE="${PREV_TAG}..HEAD"
+          fi
+
+          # Subject lines only, merge commits dropped (they restate their branch
+          # name and read as noise in a release body).
+          {
+            echo "changes<<CHANGELOG_EOF"
+            git log --no-merges --pretty=format:'- %s' $RANGE
+            echo ""
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "prev=$PREV_TAG" >> "$GITHUB_OUTPUT"
+
       - name: Build Release APK (no-Sentry, Python backend)
         timeout-minutes: 40
         env:
@@ -159,26 +200,10 @@ jobs:
             LoRa), distributed by Liberty Communication Systems, Inc. Built on
             Columba (MPL 2.0).
 
-            ### What's new in this release
-            <!-- LCS: edit this list before publishing the draft. Keep it to
-                 user-visible changes; the commit log covers the rest. -->
-            - Voice messages rebuilt on the upstream recorder: Codec2 is now
-              recorded natively rather than transcoded, with a quality picker
-              offering Codec2 1200/2400/3200 and Opus medium/high/maximum
-            - Voice message bubbles show a waveform, duration and playback
-              progress, and clearly mark clips this device cannot decode
-            - Push-to-talk clips remain fully interoperable with Sideband — the
-              Advanced Settings bandwidth switch still selects Codec2 for LoRa
-              or Opus for Wi-Fi/TCP
-            - RNode Bluetooth recovers after toggling the adapter, and stale
-              pairings are repaired automatically
-            - RNode battery level shown on the interface card and in the
-              persistent notification
-            - Message delivery state survives app restarts, with delivery
-              proofs preserved and propagation-node handoff reconciled
-            - Transfer progress reporting fixed for outgoing resources and
-              relayed messages
-            - Notification icon corrected to a proper monochrome silhouette
+            ### What's new since ${{ steps.changelog.outputs.prev }}
+            <!-- Generated from the commits since the previous release tag.
+                 Trim this to the user-visible changes before publishing. -->
+            ${{ steps.changelog.outputs.changes }}
 
             ### Installation
             Download the APK matching your phone's CPU. Most modern phones are

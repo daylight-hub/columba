@@ -28,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import com.chaquo.python.PyObject
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -188,6 +189,18 @@ class KotlinUSBBridge(
     // Kotlin listeners
     private val connectionListeners = mutableListOf<UsbConnectionListener>()
 
+    /**
+     * LCS: python-side connection-state callback.
+     *
+     * `columba_rnode_interface.py` registers this from `_start_usb()` behind a
+     * `hasattr(self.usb_bridge, "setOnConnectionStateChanged")` guard. Before
+     * this existed the guard was simply false, so the interface never learned
+     * that a USB RNode had been unplugged — it stayed "connected" from python's
+     * point of view and nothing ever started the reconnect loop. That is why
+     * unplug/replug required a full Restart Reticulum to recover.
+     */
+    private var onConnectionStateChangedPy: PyObject? = null
+
     // Permission request callbacks
     private val pendingPermissionCallbacks = mutableMapOf<Int, (Boolean) -> Unit>()
 
@@ -243,6 +256,7 @@ class KotlinUSBBridge(
                             // Only notify if it's a supported device
                             if (SUPPORTED_VIDS.contains(dev.vendorId)) {
                                 notifyListeners { it.onUsbConnected(dev.deviceId) }
+                                notifyConnectionStateChangedPy(true, dev.deviceId)
                             }
                         }
                     }
@@ -268,6 +282,7 @@ class KotlinUSBBridge(
                                 Log.d(TAG, "Device ID mismatch - NOT calling handleDisconnect()")
                             }
                             notifyListeners { it.onUsbDisconnected(detachedDeviceId) }
+                            notifyConnectionStateChangedPy(false, detachedDeviceId)
                         }
                     }
                 }
@@ -315,6 +330,33 @@ class KotlinUSBBridge(
     fun notifyBluetoothPin(pin: String) {
         Log.d(TAG, "Bluetooth PIN received: $pin")
         onBluetoothPinReceivedKotlin?.invoke(pin)
+    }
+
+    /**
+     * LCS: set the python connection-state callback.
+     *
+     * Mirrors `KotlinRNodeBridge.setOnConnectionStateChanged`, which is what the
+     * BLE path uses and why BLE reconnect already worked.
+     *
+     * Callback signature on the python side:
+     *   `def _on_usb_connection_state_changed(self, connected: bool, device_id: int)`
+     */
+    fun setOnConnectionStateChanged(callback: PyObject) {
+        onConnectionStateChangedPy = callback
+    }
+
+    private fun notifyConnectionStateChangedPy(
+        connected: Boolean,
+        deviceId: Int,
+    ) {
+        val callback = onConnectionStateChangedPy ?: return
+        try {
+            callback.callAttr("__call__", connected, deviceId)
+        } catch (e: Exception) {
+            // A python-side failure must never take down the USB broadcast
+            // receiver or the detach handling that follows it.
+            Log.e(TAG, "Python USB connection-state callback threw", e)
+        }
     }
 
     /**
