@@ -527,6 +527,44 @@ class RNodeReconnectTests(unittest.TestCase):
         interface.usb_product_id = None
         self.assertIn("1001", interface._reconnect_target_label())
 
+    def test_usb_attach_while_offline_starts_reconnect(self):
+        """Plugging an RNode back in must trigger a connection attempt.
+
+        The attach branch previously only logged. The logged repro was: RNode
+        absent at interface start -> connect fails -> interface offline; user
+        plugs it in -> bridge reports the attach -> nothing happens. Recovery
+        needed a full Restart Reticulum.
+        """
+        interface = self.new_interface()
+        interface.connection_mode = self.Interface.MODE_USB
+        interface.online = False
+        interface.usb_device_id = 1002
+        interface.usb_vendor_id = 0x303A
+        interface.usb_product_id = 0x1001
+
+        started = []
+        interface._start_reconnection_loop = lambda: started.append(True)
+
+        interface._on_usb_connection_state_changed(True, 1002)
+
+        self.assertEqual([True], started, "USB attach while offline must start a connect attempt")
+
+    def test_usb_attach_while_online_is_a_noop(self):
+        """A spurious attach for a working interface must not disturb it."""
+        interface = self.new_interface()
+        interface.connection_mode = self.Interface.MODE_USB
+        interface.online = True
+        interface.usb_device_id = 1002
+        interface.usb_vendor_id = 0x303A
+        interface.usb_product_id = 0x1001
+
+        started = []
+        interface._start_reconnection_loop = lambda: started.append(True)
+
+        interface._on_usb_connection_state_changed(True, 1002)
+
+        self.assertEqual([], started, "attach while already online must not reconnect")
+
 
 if __name__ == "__main__":
     unittest.main()

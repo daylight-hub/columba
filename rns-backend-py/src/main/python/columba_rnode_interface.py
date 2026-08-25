@@ -638,6 +638,23 @@ class ColumbaRNodeInterface(Interface):
             RNS.log("Cannot start USB mode - KotlinUSBBridge not available", RNS.LOG_ERROR)
             return False
 
+        # LCS: register the connection-state callback BEFORE attempting to
+        # connect, not after a successful one.
+        #
+        # It used to be registered only after connect() returned true, which
+        # made recovery impossible in the case that matters most: if the RNode
+        # is absent when the interface starts (or is unplugged during startup),
+        # connect() fails, we return early, and the callback is never
+        # registered — so the later USB *attach* is delivered to a bridge that
+        # has nobody listening, and the interface stays offline until the user
+        # restarts Reticulum. Registering up front means an attach can always
+        # reach us.
+        try:
+            if hasattr(self.usb_bridge, "setOnConnectionStateChanged"):
+                self.usb_bridge.setOnConnectionStateChanged(self._on_usb_connection_state_changed)
+        except Exception as e:  # noqa: BLE001
+            RNS.log(f"ColumbaRNodeInterface: USB state callback registration failed (non-fatal): {e}", RNS.LOG_DEBUG)
+
         # Try to find device by VID/PID first (stable identifiers)
         # Device ID can change between plug/unplug cycles, so VID/PID is preferred
         if self.usb_vendor_id is not None and self.usb_product_id is not None:
@@ -666,12 +683,11 @@ class ColumbaRNodeInterface(Interface):
             RNS.log(f"Failed to connect to USB device {self.usb_device_id}", RNS.LOG_ERROR)
             return False
 
-        # Optional callbacks — see start() above for rationale.
+        # Optional callbacks — see start() above for rationale. The
+        # connection-state callback is registered earlier, before connect().
         try:
             if hasattr(self.usb_bridge, "setOnDataReceived"):
                 self.usb_bridge.setOnDataReceived(self._on_data_received)
-            if hasattr(self.usb_bridge, "setOnConnectionStateChanged"):
-                self.usb_bridge.setOnConnectionStateChanged(self._on_usb_connection_state_changed)
         except Exception as e:  # noqa: BLE001
             RNS.log(f"ColumbaRNodeInterface: optional USB callback registration failed (non-fatal): {e}", RNS.LOG_DEBUG)
 
@@ -710,6 +726,14 @@ class ColumbaRNodeInterface(Interface):
         RNS.log(f"[{self.name}] _on_usb_connection_state_changed called: connected={connected}, device_id={device_id}, my_device_id={self.usb_device_id}", RNS.LOG_INFO)
         if connected:
             RNS.log(f"[{self.name}] USB device connected: {device_id}", RNS.LOG_INFO)
+            # LCS: a plug event is the cue to (re)establish the port. Previously
+            # this branch only logged, so plugging an RNode back in did nothing
+            # — the attach broadcast reached the bridge, the bridge told us, and
+            # we ignored it. Only act when we are actually offline, so a
+            # spurious attach for an already-working interface is a no-op.
+            if not self.online:
+                RNS.log(f"[{self.name}] USB attach while offline — attempting to connect", RNS.LOG_INFO)
+                self._start_reconnection_loop()
         else:
             RNS.log(f"[{self.name}] USB device disconnected: {device_id}, setting online=False", RNS.LOG_WARNING)
             self._set_online(False)
