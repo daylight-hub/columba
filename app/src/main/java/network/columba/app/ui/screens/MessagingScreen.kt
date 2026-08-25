@@ -711,8 +711,11 @@ fun MessagingScreen(
     val beginPttRecording: () -> Unit = {
         viewModel.requestStartVoiceRecording(format = pttFormat)
     }
+    // PTT is release-to-send: stop the recorder and send the clip in one step,
+    // rather than leaving a draft in the composer the way the attachment-panel
+    // voice flow does.
     val finishPttRecording: () -> Unit = {
-        viewModel.requestStopVoiceRecording()
+        viewModel.stopVoiceRecordingAndSend(destinationHash)
     }
     val pttPermissionLauncher =
         rememberLauncherForActivityResult(
@@ -2603,34 +2606,6 @@ fun MessageBubble(
                         }
 
                         // Display file attachments if present (LXMF field 5 = FILE_ATTACHMENTS)
-                        // Voice message (LXMF FIELD_AUDIO) — upstream's bubble,
-                        // which carries waveform, duration and an unsupported
-                        // state the LCS one did not have.
-                        message.audioAttachment?.let { audio ->
-                            DisposableEffect(message.id, audio) {
-                                if (audio.isPlayable) onVoiceMetadataNeeded(audio)
-                                onDispose { onVoiceMetadataCancelled(message.id) }
-                            }
-                            VoiceMessageBubble(
-                                title = stringResource(R.string.message_voice_bubble_title),
-                                state =
-                                    if (audio.isPlayable) {
-                                        voicePlayerState
-                                    } else {
-                                        VoiceMessagePlayerState(error = "unsupported")
-                                    },
-                                onToggle = onVoiceToggle,
-                                durationMillis = audio.durationMs?.toInt() ?: voiceMetadata?.durationMs,
-                                waveformLevels = voiceMetadata?.waveformLevels.orEmpty(),
-                            )
-                            Spacer(
-                                modifier =
-                                    Modifier.height(
-                                        if (message.hasFileAttachments || message.content.isNotBlank()) 8.dp else 4.dp,
-                                    ),
-                            )
-                        }
-
                         if (message.hasFileAttachments) {
                             message.fileAttachments.forEach { fileAttachment ->
                                 FileAttachmentCard(

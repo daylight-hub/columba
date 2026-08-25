@@ -9,6 +9,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -113,6 +114,10 @@ fun VoiceHistoryContent(
             LazyColumn(
                 state = listState,
                 modifier = modifier.fillMaxSize(),
+                // LCS: bottom padding so the final record clears the navigation
+                // bar. Without it the last call in the list sits underneath the
+                // bottom menu icons and is unreadable/untappable.
+                contentPadding = PaddingValues(bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 if (state.hasError) {

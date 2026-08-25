@@ -124,6 +124,14 @@ class MessagingViewModel
     ) : ViewModel() {
         companion object {
             private const val TAG = "MessagingViewModel"
+
+            /**
+             * LCS: how long to wait for the encoder to flush a PTT clip before
+             * giving up on the auto-send. Generous — a long Codec2 clip on a
+             * slow device takes a moment — but bounded so a wedged encoder
+             * fails visibly in the log rather than hanging forever.
+             */
+            private const val VOICE_FINALIZE_TIMEOUT_MILLIS = 10_000L
             private const val DRAFT_SAVE_DEBOUNCE_MS = 500L
 
             /**
@@ -1747,6 +1755,37 @@ class MessagingViewModel
                     }
                 }
         }
+        /**
+         * LCS: stop a push-to-talk recording and send it immediately.
+         *
+         * PTT is hold-to-record, release-to-send — there is no draft step. That
+         * differs from upstream's attachment-panel flow, where recording leaves
+         * a draft in the composer for the user to review and send by hand.
+         *
+         * The stop is asynchronous and the finished clip only appears in
+         * recorder state once the encoder has flushed, so this waits for
+         * `selectedRecording` rather than sending straight after `stop()` —
+         * otherwise the send races the encoder and goes out with no audio.
+         * The timeout keeps a wedged encoder from hanging the send silently.
+         */
+        fun stopVoiceRecordingAndSend(destinationHash: String) {
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) {
+                    runCatching { stopVoiceRecording() }
+                        .onFailure { Log.e(TAG, "Unable to finalize PTT recording", it) }
+                }
+                val ready =
+                    withTimeoutOrNull(VOICE_FINALIZE_TIMEOUT_MILLIS) {
+                        voiceMessageRecorder.state.first { it.selectedRecording != null }
+                    }
+                if (ready == null) {
+                    Log.w(TAG, "PTT recording did not finalize in time; not sending")
+                    return@launch
+                }
+                sendMessage(destinationHash, "")
+            }
+        }
+
         fun requestStopVoiceRecording() {
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching { stopVoiceRecording() }
