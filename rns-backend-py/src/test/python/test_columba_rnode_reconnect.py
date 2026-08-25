@@ -477,6 +477,56 @@ class RNodeReconnectTests(unittest.TestCase):
         self.assertFalse(second.is_alive())
         self.assertEqual(1, max_active)
 
+    def test_usb_disconnect_starts_reconnection_loop(self):
+        """A USB RNode that is unplugged must start the same recovery loop BLE uses.
+
+        Before this, _on_usb_connection_state_changed only logged "user must
+        re-plug" and left the interface offline until the user hit Restart
+        Reticulum — the USB attach broadcast reached MainActivity, but the
+        reconnect it triggered is a no-op on the python backend.
+        """
+        interface = self.new_interface()
+        interface.connection_mode = self.Interface.MODE_USB
+        interface.target_device_name = None
+        interface.usb_device_id = 1001
+        interface.usb_vendor_id = 0x1A86
+        interface.usb_product_id = 0x55D4
+        interface._reconnecting = False
+        interface._reconnect_thread = None
+        interface._running.set()
+
+        started = []
+        interface._start_reconnection_loop = lambda: started.append(True)
+
+        interface._on_usb_connection_state_changed(False, 1001)
+
+        self.assertEqual([True], started, "USB disconnect must start the reconnection loop")
+        self.assertFalse(interface.online)
+        self.assertFalse(interface.detected)
+        self.assertFalse(interface._running.is_set(), "read loop must stop on disconnect")
+
+    def test_usb_reconnect_label_does_not_read_none(self):
+        """Reconnect logs must identify the USB device, not print 'None'.
+
+        target_device_name is BLE-only; the shared reconnect logging would
+        otherwise read "Reconnection attempt 1/30 for None" on USB.
+        """
+        interface = self.new_interface()
+        interface.connection_mode = self.Interface.MODE_USB
+        interface.target_device_name = None
+        interface.usb_device_id = 1001
+        interface.usb_vendor_id = 0x1A86
+        interface.usb_product_id = 0x55D4
+
+        label = interface._reconnect_target_label()
+        self.assertIn("0x1a86", label.lower())
+        self.assertNotIn("None", label)
+
+        # Falls back to the device id when VID/PID were never configured.
+        interface.usb_vendor_id = None
+        interface.usb_product_id = None
+        self.assertIn("1001", interface._reconnect_target_label())
+
 
 if __name__ == "__main__":
     unittest.main()

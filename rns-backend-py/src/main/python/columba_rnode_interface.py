@@ -718,7 +718,21 @@ class ColumbaRNodeInterface(Interface):
             # When the device is re-plugged, start() will create a fresh read loop
             self._running.clear()
             RNS.log(f"[{self.name}] After disconnect: online={self.online}, read loop stopped", RNS.LOG_INFO)
-            # Note: USB doesn't auto-reconnect - user must re-plug or re-select device
+
+            # LCS: start the same bounded auto-reconnect loop BLE uses. Unplugging
+            # and re-plugging a USB RNode previously left the interface offline
+            # until the user hit "Restart Reticulum", because nothing here ever
+            # started the recovery owner. (The USB attach broadcast does reach
+            # MainActivity, but the reconnect it triggers is a documented no-op
+            # on the python backend, so it never re-opened the port either.)
+            #
+            # The loop is transport-agnostic: start() dispatches on
+            # connection_mode, and _start_usb() already does the two things a
+            # re-plug specifically needs — it drops a stale handle before
+            # reconnecting, and re-resolves the device by VID/PID, since Android
+            # hands out a NEW device id on each plug cycle and the old one is
+            # dead. Retrying the cached id alone would spin forever.
+            self._start_reconnection_loop()
 
     def stop(self, cancel_reconnection=True):
         """Stop and disconnect, optionally preserving the reconnect owner."""
@@ -1476,6 +1490,19 @@ class ColumbaRNodeInterface(Interface):
                         )
         return True
 
+    def _reconnect_target_label(self):
+        """Human-readable target for reconnect logs.
+
+        target_device_name is only set for BLE/Classic; in USB mode it is None,
+        which made the shared reconnect logs read "for None". Fall back to the
+        USB identity so a re-plug is diagnosable from logcat.
+        """
+        if self.connection_mode == self.MODE_USB:
+            if self.usb_vendor_id is not None and self.usb_product_id is not None:
+                return f"USB {hex(self.usb_vendor_id)}:{hex(self.usb_product_id)}"
+            return f"USB device {self.usb_device_id}"
+        return self.target_device_name
+
     def _start_reconnection_loop(self):
         """Start a background thread to attempt reconnection."""
         with self._reconnect_lock:
@@ -1493,7 +1520,7 @@ class ColumbaRNodeInterface(Interface):
             self._reconnecting = True
             self._reconnect_thread = threading.Thread(target=self._reconnection_loop, daemon=True)
             self._reconnect_thread.start()
-        RNS.log(f"Started auto-reconnection loop for {self.target_device_name}", RNS.LOG_INFO)
+        RNS.log(f"Started auto-reconnection loop for {self._reconnect_target_label()}", RNS.LOG_INFO)
 
     def _reconnection_loop(self):
         """Background thread that attempts to reconnect to the RNode."""
@@ -1505,7 +1532,7 @@ class ColumbaRNodeInterface(Interface):
             else:
                 attempt_label = f"long-term {attempt - self._max_reconnect_attempts}"
             RNS.log(
-                f"Reconnection attempt {attempt_label} for {self.target_device_name}...",
+                f"Reconnection attempt {attempt_label} for {self._reconnect_target_label()}...",
                 RNS.LOG_INFO,
             )
 
@@ -1534,7 +1561,7 @@ class ColumbaRNodeInterface(Interface):
                             RNS.LOG_WARNING,
                         )
                         continue
-                    RNS.log(f"Successfully reconnected to {self.target_device_name}", RNS.LOG_INFO)
+                    RNS.log(f"Successfully reconnected to {self._reconnect_target_label()}", RNS.LOG_INFO)
                     return
                 else:
                     RNS.log(f"Reconnection attempt {attempt_label} failed", RNS.LOG_WARNING)
