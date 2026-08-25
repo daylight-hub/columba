@@ -259,12 +259,12 @@ class InterfaceManagementViewModel
          * fired and won't run again, so hasPendingChanges stays false and the
          * "Apply & Restart" button never appears.
          *
-         * Calling checkExternalPendingChanges() on resume ensures the flag is
+         * Calling refreshExternalPendingChanges() on resume ensures the flag is
          * read every time the management screen becomes visible, matching the
          * behaviour the user experienced in prior Liberty Chat releases.
          */
         fun onScreenResumed() {
-            checkExternalPendingChanges()
+            refreshExternalPendingChanges()
         }
 
         /**

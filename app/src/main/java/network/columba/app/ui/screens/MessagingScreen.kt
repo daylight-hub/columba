@@ -119,7 +119,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -699,7 +698,7 @@ fun MessagingScreen(
     // Sideband decodes, so the toggle keeps meaning exactly what it did.
     val pttEnabled by settingsViewModel.pttEnabled.collectAsStateWithLifecycle()
     val pttHighBandwidth by settingsViewModel.pttHighBandwidth.collectAsStateWithLifecycle()
-    val voiceRecordingState by viewModel.voiceRecordingState.collectAsStateWithLifecycle()
+    // voiceRecordingState already collected above (upstream's own recorder wiring).
     val isRecordingPtt = voiceRecordingState.recorderState is RecorderState.Recording
 
     val pttFormat =

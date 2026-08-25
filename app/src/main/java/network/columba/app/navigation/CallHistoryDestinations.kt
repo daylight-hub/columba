@@ -11,7 +11,7 @@ internal fun NavGraphBuilder.callDetailsDestination(
     navController: NavHostController,
     content: @Composable (
         onBack: () -> Unit,
-        onCallAgain: (String, Int, String) -> Unit,
+        onCallAgain: (String, Int, String, Boolean) -> Unit,
         onViewPeer: (String) -> Unit,
     ) -> Unit = { onBack, onCallAgain, onViewPeer ->
         CallDetailsScreen(onBack = onBack, onCallAgain = onCallAgain, onViewPeer = onViewPeer)

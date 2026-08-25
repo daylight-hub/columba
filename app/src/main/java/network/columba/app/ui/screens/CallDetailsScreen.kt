@@ -60,7 +60,7 @@ import network.columba.app.viewmodel.CallInitiationFailure
 @Composable
 fun CallDetailsScreen(
     onBack: () -> Unit,
-    onCallAgain: (remoteIdentityHash: String, profileCode: Int, localIdentityHash: String) -> Unit,
+    onCallAgain: (remoteIdentityHash: String, profileCode: Int, localIdentityHash: String, halfDuplex: Boolean) -> Unit,
     onViewPeer: (destinationHash: String) -> Unit,
     viewModel: CallDetailsViewModel = hiltViewModel(),
 ) {
@@ -223,11 +223,11 @@ fun CallDetailsScreen(
             recommendedProfile = recommendedProfile ?: recordedProfile,
             isProbing = codecProbeInProgress,
             onDismiss = { showCodecDialog = false },
-            onProfileSelected = { selected ->
+            onProfileSelected = { selected, halfDuplex ->
                 if (record != null && !callActionPending) {
                     callActionPending = true
                     showCodecDialog = false
-                    onCallAgain(record.remoteIdentityHash, selected.code, record.localIdentityHash)
+                    onCallAgain(record.remoteIdentityHash, selected.code, record.localIdentityHash, halfDuplex)
                 }
             },
         )
