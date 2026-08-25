@@ -136,7 +136,7 @@ class ServiceNotificationManager(
                 NotificationCompat
                     .BigTextStyle()
                     .bigText(detailText),
-            ).setSmallIcon(context.applicationInfo.icon)
+            ).setSmallIcon(smallIconRes())
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -241,7 +241,7 @@ class ServiceNotificationManager(
                 val alert =
                     NotificationCompat
                         .Builder(context, CHANNEL_ID_RNODE)
-                        .setSmallIcon(context.applicationInfo.icon)
+                        .setSmallIcon(smallIconRes())
                         .setContentTitle("RNode Disconnected")
                         .setContentText("$names lost connection. Attempting to reconnect...")
                         .setContentIntent(pendingIntent)
@@ -346,7 +346,7 @@ class ServiceNotificationManager(
                 .Builder(context, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(subtitle)
-                .setSmallIcon(context.applicationInfo.icon)
+                .setSmallIcon(smallIconRes())
                 .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -509,4 +509,26 @@ class ServiceNotificationManager(
 
         return Pair(statusText, detailText)
     }
+
+    /**
+     * LCS: resource id for the notification status-bar icon.
+     *
+     * `applicationInfo.icon` is the full-colour launcher icon, which is the
+     * wrong asset here: from Android 5 the status-bar icon is drawn as a
+     * silhouette of its alpha channel, so a fully opaque launcher icon renders
+     * as a plain white square. `ic_notification` is a white-on-transparent
+     * bell drawn for exactly this purpose.
+     *
+     * Looked up by name rather than referenced through R because that drawable
+     * lives in the `:app` module and this is a library module — adding a res
+     * directory here just to hold a duplicate copy would be more moving parts
+     * than the lookup. Falls back to the launcher icon if it is ever missing,
+     * so a notification is never lost to a bad id.
+     */
+    private fun smallIconRes(): Int =
+        context.resources
+            .getIdentifier("ic_notification", "drawable", context.packageName)
+            .takeIf { it != 0 }
+            ?: context.applicationInfo.icon
+
 }

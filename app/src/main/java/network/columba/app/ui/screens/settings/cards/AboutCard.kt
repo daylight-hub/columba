@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -40,6 +41,14 @@ import network.columba.app.util.safeOpenUrl
 import java.util.Locale
 import android.content.Intent
 import androidx.core.net.toUri
+
+/**
+ * LCS: the network guide PDF, hosted rather than bundled.
+ *
+ * Keeping it off-device avoids adding ~3 MB to every ABI split, and lets a
+ * corrected guide reach existing installs without shipping an app update.
+ */
+private const val LCS_NETWORK_GUIDE_URL = "https://lcs.network/guide"
 
 @Composable
 fun AboutCard(
@@ -110,6 +119,24 @@ fun AboutCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
+
+                // LCS: the network guide. Opens in the device browser / PDF
+                // viewer rather than shipping the file in the APK — the PDF is
+                // ~3 MB, it would inflate every ABI split, and hosting it means
+                // corrections reach existing installs without an app update.
+                OutlinedButton(
+                    onClick = {
+                        openExternalUrl(context, LCS_NETWORK_GUIDE_URL)
+                    },
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("LCS Network Guide", style = MaterialTheme.typography.bodyMedium)
+                }
             }
 
             HorizontalDivider()

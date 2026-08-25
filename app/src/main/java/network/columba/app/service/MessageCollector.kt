@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import network.columba.app.audio.VoiceMessagePlayer
 import network.columba.app.data.db.dao.PeerIconDao
 import network.columba.app.data.db.entity.ContactStatus
 import network.columba.app.data.db.entity.PeerIconEntity
@@ -23,6 +24,7 @@ import network.columba.app.repository.SettingsRepository
 import network.columba.app.rns.api.RnsCore
 import network.columba.app.rns.api.RnsLxmf
 import network.columba.app.rns.host.util.PeerNameResolver
+import network.columba.app.ui.model.parseAudioAttachment
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,10 +56,9 @@ class MessageCollector
         private val identityRepository: IdentityRepository,
         private val notificationHelper: NotificationHelper,
         private val peerIconDao: PeerIconDao,
-        // LCS: retained for the PTT autoplay rebuild in the follow-up commit.
-        @Suppress("unused") private val activeConversationManager: ActiveConversationManager,
-        @Suppress("unused") private val settingsRepository: SettingsRepository,
-        @Suppress("unused") @ApplicationContext private val appContext: Context,
+        private val activeConversationManager: ActiveConversationManager,
+        private val settingsRepository: SettingsRepository,
+        @ApplicationContext private val appContext: Context,
     ) {
         companion object {
             private const val TAG = "MessageCollector"
@@ -67,10 +68,52 @@ class MessageCollector
         // Application-scoped coroutine for background message collection
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-        // LCS: PTT autoplay is rebuilt in a follow-up commit on upstream's
-        // VoiceMessagePlayer. The previous implementation depended on the LCS
-        // Codec2Codec / VoiceMessagePlayer pair, which this merge removed in
-        // favour of upstream's recorder and player.
+        /**
+         * LCS: player used only for autoplaying inbound push-to-talk clips.
+         *
+         * Deliberately separate from the one `MessagingScreen` creates. That one
+         * is scoped to a composition and dies with the screen; autoplay has to
+         * work while the app is backgrounded or on another conversation, so it
+         * needs a player that lives as long as the collector. Both are cheap —
+         * they allocate no codec or audio device until something is played.
+         */
+        private val autoplayPlayer by lazy { VoiceMessagePlayer(appContext, scope) }
+
+        /**
+         * LCS: autoplay an inbound PTT clip whenever push-to-talk is enabled.
+         *
+         * Matches Sideband, which calls `ptt_event(message)` for any inbound
+         * `FIELD_AUDIO` when `ptt_enabled` is set (`core.py`). Note it does NOT
+         * require the conversation to be open — in Sideband that check only
+         * decides whether a notification is also posted, not whether the clip
+         * plays.
+         *
+         * Called from the new-message path only. An earlier version was wired to
+         * the already-persisted duplicate branch instead, which meant it never
+         * fired for a genuinely new message — the bug that made autoplay look
+         * broken. Re-playing an already-seen message would be wrong anyway.
+         */
+        private suspend fun maybeAutoplayVoiceMessage(
+            messageId: String,
+            fieldsJson: String?,
+        ) {
+            if (fieldsJson == null) return
+            if (!settingsRepository.pttEnabledFlow.first()) return
+
+            val attachment = parseAudioAttachment(fieldsJson) ?: return
+            if (!attachment.isPlayable) {
+                // Typically a Codec2 clip on an ABI with no libcodec2, or a mode
+                // outside the range Sideband and LCS agree on.
+                Log.i(TAG, "Inbound voice message in unplayable mode ${attachment.mode}")
+                return
+            }
+
+            // play() is fire-and-forget: it launches on the player's own scope
+            // and loads the payload off the main thread itself, so this does not
+            // stall the message-collection loop behind it.
+            runCatching { autoplayPlayer.play(messageId, attachment) }
+                .onFailure { Log.e(TAG, "Autoplay failed", it) }
+        }
 
         // Track processed message IDs to avoid duplicates
         private val processedMessageIds = ConcurrentHashMap.newKeySet<String>()
@@ -285,6 +328,8 @@ class MessageCollector
 
                             conversationRepository.saveMessage(sourceHash, peerName, dataMessage, publicKey)
                             Log.d(TAG, "Message saved to database for peer ${sourceHash.take(16)} (hasPublicKey=${publicKey != null})")
+
+                            maybeAutoplayVoiceMessage(dataMessage.id, receivedMessage.fieldsJson)
 
                             // Check if sender is a saved peer (favorite)
                             val isFavorite =
