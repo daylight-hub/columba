@@ -16,10 +16,12 @@ internal fun callAgainRoute(
     remoteIdentityHash: String,
     profileCode: Int,
     localIdentityHash: String,
+    halfDuplex: Boolean = false,
 ): String =
     "voice_call/${Uri.encode(remoteIdentityHash)}" +
         "?autoAnswer=false&profileCode=$profileCode&identityTarget=true" +
-        "&$EXPECTED_LOCAL_IDENTITY_ARGUMENT=${Uri.encode(localIdentityHash)}"
+        "&$EXPECTED_LOCAL_IDENTITY_ARGUMENT=${Uri.encode(localIdentityHash)}" +
+        "&halfDuplex=$halfDuplex"
 
 internal fun activeCallRoute(
     callAttemptId: String,

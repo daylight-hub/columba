@@ -23,8 +23,10 @@ internal fun NavGraphBuilder.callDetailsDestination(
     ) {
         content(
             { navController.popBackStack() },
-            { remoteIdentityHash, profileCode, localIdentityHash ->
-                navController.navigate(callAgainRoute(remoteIdentityHash, profileCode, localIdentityHash))
+            { remoteIdentityHash, profileCode, localIdentityHash, halfDuplex ->
+                navController.navigate(
+                    callAgainRoute(remoteIdentityHash, profileCode, localIdentityHash, halfDuplex),
+                )
             },
             { destinationHash -> navController.navigate("announce_detail/${android.net.Uri.encode(destinationHash)}") },
         )
