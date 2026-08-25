@@ -1382,8 +1382,6 @@ class MessagingViewModel
                                 }.getOrNull()
                             },
                             iconAppearance = iconAppearance,
-                            audioMode = audio?.first,
-                            audioData = audio?.second,
                         )
 
                     result
@@ -3027,8 +3025,6 @@ internal suspend fun buildFieldsJson(
     replyToMessageId: String? = null,
     reactions: Map<String, List<String>>? = null,
     cacheDir: java.io.File? = null,
-    audioMode: Int? = null,
-    audioData: ByteArray? = null,
 ): String? {
     val hasImage = imageData != null && imageFormat != null
     val hasFiles = fileAttachments.isNotEmpty()

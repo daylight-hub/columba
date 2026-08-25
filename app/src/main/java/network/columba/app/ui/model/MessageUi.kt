@@ -196,17 +196,6 @@ data class MessageUi(
      * Null for received messages or messages sent before this feature was added.
      */
     val sentInterface: String? = null,
-    /**
-     * True when the message carries an LXMF `FIELD_AUDIO` (0x07) payload —
-     * a voice message from PTT, ours or a peer's.
-     */
-    val hasAudio: Boolean = false,
-    /**
-     * LXMF `AM_*` audio mode from `FIELD_AUDIO[0]`, or null when [hasAudio] is
-     * false. Drives both the bubble's rendering and whether playback is
-     * possible at all: see `LxmfFields.isPlayableAudioMode`.
-     */
-    val audioMode: Int? = null,
 ) {
     /**
      * Whether this message should be displayed as a standalone media item without a bubble.

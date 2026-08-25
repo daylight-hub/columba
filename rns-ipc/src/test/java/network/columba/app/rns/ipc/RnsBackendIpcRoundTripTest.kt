@@ -614,8 +614,6 @@ private class FakeRnsLxmf : RnsLxmf {
         replyQuotedContent: String?,
         iconAppearance: IconAppearance?,
         extraFields: Map<Int, Any>?,
-        audioMode: Int?,
-        audioData: ByteArray?,
     ): Result<MessageReceipt> =
         recordAndAck(content, imageData, imageFormat, fileAttachments, destinationHash)
 

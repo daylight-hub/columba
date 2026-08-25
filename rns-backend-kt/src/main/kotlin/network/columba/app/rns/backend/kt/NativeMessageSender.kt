@@ -46,8 +46,6 @@ internal class NativeMessageSender(
         val replyQuotedContent: String? = null,
         val iconAppearance: IconAppearance? = null,
         val extraFields: Map<Int, Any>? = null,
-        val audioMode: Int? = null,
-        val audioData: ByteArray? = null,
     )
 
     suspend fun sendLxmfMessageWithMethod(
@@ -156,13 +154,6 @@ internal class NativeMessageSender(
                 options.fileAttachments.map { (name, data) ->
                     listOf(name, data)
                 }
-        }
-
-        if (options.audioMode != null && options.audioData != null) {
-            // FIELD_AUDIO: [mode_int, audio_bytes] — the shape Sideband's
-            // `core.py::ptt_playback` and `main.py::play_audio_field` read.
-            // Kept in lockstep with PythonRnsLxmf.
-            fields[LxmfFields.FIELD_AUDIO] = listOf(options.audioMode, options.audioData)
         }
 
         if (options.replyToMessageId != null) {

@@ -426,15 +426,11 @@ object TestController {
                 content = text,
                 sourceIdentity = identity,
                 deliveryMethod = DeliveryMethod.DIRECT,
-                // Both backends emit `FIELD_AUDIO = [mode_int, bytes]` from
-                // these two params. This used to go through `extraFields`,
-                // which silently broke: that Bundle codec only marshals
-                // scalars/String/ByteArray and `toString()`s everything else,
-                // so the list crossed the AIDL boundary as the literal text
-                // "[16, [B@...]" and test_audio.py could only ever have passed
-                // against an in-process backend.
-                audioMode = codecTag,
-                audioData = bytes,
+                // FIELD_AUDIO = [mode_int, bytes], the shape Sideband reads.
+                // extraFields is now safe for this: upstream routes it through
+                // the AttachmentBlob fd channel rather than a Bundle, so a list
+                // survives the AIDL boundary intact.
+                extraFields = mapOf(LxmfFields.FIELD_AUDIO to listOf(codecTag, bytes)),
             )
         }
     }

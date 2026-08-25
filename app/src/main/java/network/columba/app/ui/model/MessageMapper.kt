@@ -39,9 +39,6 @@ fun Message.toMessageUi(): MessageUi {
     val hasImage = hasImageField(fieldsJson)
     val cachedImage = if (hasImage) ImageCache.get(id) else null
 
-    val audioMode = parseAudioMode(fieldsJson)
-    val hasAudio = audioMode != null
-
     val hasFiles = hasFileAttachmentsField(fieldsJson)
     // DEBUG: Log file attachment detection
     if (fieldsJson?.contains("\"5\"") == true) {
@@ -64,11 +61,9 @@ fun Message.toMessageUi(): MessageUi {
     // so the raw fields have to survive into the UI model the same way an
     // undecoded image's do.
     val needsFieldsJson =
-        hasUncachedImage || hasFiles || hasAudio || hasPendingFileNotification(fieldsJson)
+        hasUncachedImage || hasFiles || audioAttachment != null || hasPendingFileNotification(fieldsJson)
 
     return MessageUi(
-        hasAudio = hasAudio,
-        audioMode = audioMode,
         id = id,
         destinationHash = destinationHash,
         content = content,
@@ -1097,48 +1092,5 @@ private fun hexStringToByteArray(hex: String): ByteArray {
     return result
 }
 
-fun parseAudioField(fieldsJson: String?): Pair<Int, ByteArray>? {
-    val array = audioFieldArray(fieldsJson, allowDiskRead = true) ?: return null
-    val mode = array.optInt(0, -1)
-    val hex = array.optString(1, "")
-    if (mode < 0 || hex.isEmpty()) return null
-    return try {
-        mode to hexStringToByteArray(hex)
-    } catch (e: Exception) {
-        Log.e(TAG, "Failed to decode audio payload for mode $mode", e)
-        null
-    }
-}
 
-internal fun parseAudioMode(fieldsJson: String?): Int? {
-    val array = audioFieldArray(fieldsJson, allowDiskRead = false) ?: return null
-    return array.optInt(0, -1).takeIf { it >= 0 }
-}
 
-private fun audioFieldArray(
-    fieldsJson: String?,
-    allowDiskRead: Boolean,
-): JSONArray? {
-    if (fieldsJson == null) return null
-    return try {
-        when (val field7 = JSONObject(fieldsJson).opt("7")) {
-            is JSONArray -> field7.takeIf { it.length() >= 2 }
-
-            is JSONObject -> {
-                if (!allowDiskRead || !field7.has(FILE_REF_KEY)) return null
-                val text = loadAttachmentFromDisk(field7.getString(FILE_REF_KEY)) ?: return null
-                // extractLargeAttachments stores value.toString(); for a
-                // JSONArray value that is the array's JSON text, not bare hex.
-                if (!text.trimStart().startsWith("[")) {
-                    Log.w(TAG, "Audio _file_ref did not contain a JSON array")
-                    return null
-                }
-                JSONArray(text).takeIf { it.length() >= 2 }
-            }
-
-            else -> null
-        }
-    } catch (e: Exception) {
-        null
-    }
-}
