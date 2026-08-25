@@ -1,0 +1,452 @@
+package network.libertychat.app.viewmodel
+
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.Destination
+import network.libertychat.app.rns.api.model.DestinationType
+import network.libertychat.app.rns.api.model.Direction
+import network.libertychat.app.rns.api.model.Identity
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.model.FailedInterface
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.InterfaceConfigManager
+import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+/**
+ * Unit tests for DebugViewModel's event-driven debug info updates.
+ *
+ * Tests that the ViewModel correctly:
+ * - Observes debugInfoFlow from RnsTransportAdmin
+ * - Parses debug info JSON and updates state
+ * - Handles malformed JSON gracefully
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class DebugViewModelEventDrivenTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    // ioDispatcher shares testDispatcher.scheduler so withContext(ioDispatcher) continuations
+    // are drained by advanceUntilIdle() — closes the race where a real Dispatchers.IO resumption
+    // could land after observeNetworkStatus() reset _debugInfo.value (see issue #883).
+    private val ioDispatcher = StandardTestDispatcher(testDispatcher.scheduler)
+
+    @Suppress("NoRelaxedMocks") // Android Context with many system service methods
+    private val mockContext: android.content.Context = mockk(relaxed = true)
+
+    private lateinit var mockRnsCore: RnsCore
+    private lateinit var mockRnsLxmf: RnsLxmf
+    private lateinit var mockRnsTransportAdmin: RnsTransportAdmin
+    private lateinit var mockSettingsRepo: SettingsRepository
+    private lateinit var mockIdentityRepo: IdentityRepository
+    private lateinit var mockInterfaceConfigManager: InterfaceConfigManager
+    private lateinit var mockInterfaceRepository: InterfaceRepository
+
+    private val debugInfoFlow = MutableSharedFlow<String>(replay = 1)
+
+    private fun buildViewModel(
+        rnsCore: RnsCore = mockRnsCore,
+        rnsLxmf: RnsLxmf = mockRnsLxmf,
+        rnsTransportAdmin: RnsTransportAdmin = mockRnsTransportAdmin,
+    ): DebugViewModel =
+        DebugViewModel(
+            mockContext,
+            rnsCore,
+            rnsLxmf,
+            rnsTransportAdmin,
+            mockSettingsRepo,
+            mockIdentityRepo,
+            mockInterfaceConfigManager,
+            mockInterfaceRepository,
+            ioDispatcher,
+        )
+
+    @Suppress("NoRelaxedMocks") // Protocol/Repository mocks with many unused methods in these tests
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+
+        mockRnsCore = mockk(relaxed = true)
+        mockRnsLxmf = mockk(relaxed = true)
+        mockRnsTransportAdmin = mockk(relaxed = true)
+        mockSettingsRepo = mockk(relaxed = true)
+        mockIdentityRepo = mockk(relaxed = true)
+        mockInterfaceConfigManager = mockk(relaxed = true)
+        mockInterfaceRepository = mockk(relaxed = true)
+
+        // Setup debugInfoFlow
+        every { mockRnsTransportAdmin.debugInfoFlow } returns debugInfoFlow
+
+        // Setup networkStatus
+        every { mockRnsCore.networkStatus } returns MutableStateFlow(NetworkStatus.READY)
+
+        // Setup getDebugInfo for initial fetch (suspend function)
+        coEvery { mockRnsTransportAdmin.getDebugInfo() } returns emptyMap()
+
+        // Setup getFailedInterfaces (suspend function)
+        coEvery { mockRnsTransportAdmin.getFailedInterfaces() } returns emptyList()
+
+        // Setup identity repository
+        coEvery { mockIdentityRepo.activeIdentity } returns flowOf(null)
+
+        // Setup LXMF identity and destination for loadIdentityData
+        val mockIdentity =
+            Identity(
+                hash = ByteArray(16) { it.toByte() },
+                publicKey = ByteArray(32) { it.toByte() },
+                privateKey = ByteArray(32) { it.toByte() },
+            )
+        val mockDestination =
+            Destination(
+                hash = ByteArray(16) { it.toByte() },
+                hexHash = "000102030405060708090a0b0c0d0e0f",
+                identity = mockIdentity,
+                direction = Direction.IN,
+                type = DestinationType.SINGLE,
+                appName = "lxmf",
+                aspects = listOf("delivery"),
+            )
+        coEvery { mockRnsLxmf.getLxmfIdentity() } returns Result.success(mockIdentity)
+        coEvery { mockRnsLxmf.getLxmfDestination() } returns Result.success(mockDestination)
+        // Also mock createIdentity in case the code falls back to it
+        coEvery { mockRnsCore.createIdentity() } returns Result.success(mockIdentity)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        clearAllMocks()
+    }
+
+    @Test
+    fun `viewModel collects from debugInfoFlow without crashing`() =
+        runTest(testDispatcher) {
+            // Given - create ViewModel (which starts observeDebugInfo in init)
+            val viewModel = buildViewModel()
+
+            // When - emit to the flow
+            val debugJson =
+                """
+                {
+                    "initialized": true,
+                    "reticulum_available": true,
+                    "storage_path": "/data/test",
+                    "interfaces": [],
+                    "transport_enabled": true
+                }
+                """.trimIndent()
+            debugInfoFlow.emit(debugJson)
+            advanceUntilIdle()
+
+            // Then - ViewModel should not crash and be accessible
+            // Note: State updates may not be observable due to viewModelScope not using testDispatcher
+            assertTrue("ViewModel should be created successfully", viewModel.debugInfo != null)
+        }
+
+    @Test
+    fun `parseAndUpdateDebugInfo handles malformed JSON gracefully`() =
+        runTest(testDispatcher) {
+            // Given
+            val viewModel = buildViewModel()
+
+            // When - emit invalid JSON
+            debugInfoFlow.emit("not valid json {{{")
+            advanceUntilIdle()
+
+            // Then - state should not crash, remains at default
+            val state = viewModel.debugInfo.value
+            // After malformed JSON, we should not throw and state may remain unchanged
+            // or have partial values - key is no crash
+            assertFalse("initialized should remain false for malformed JSON", state.initialized)
+        }
+
+    @Test
+    fun `initial state has default values before Flow emits`() =
+        runTest(testDispatcher) {
+            // Given
+            val viewModel = buildViewModel()
+
+            // Then - initial state (before any emissions)
+            val state = viewModel.debugInfo.value
+            assertFalse("initialized should default to false", state.initialized)
+            assertFalse("reticulumAvailable should default to false", state.reticulumAvailable)
+            assertEquals("storagePath should default to empty", "", state.storagePath)
+            assertTrue("interfaces should default to empty list", state.interfaces.isEmpty())
+        }
+
+    @Test
+    fun `multiple emissions to debugInfoFlow do not crash`() =
+        runTest(testDispatcher) {
+            // Given
+            val viewModel = buildViewModel()
+
+            // When - emit multiple updates rapidly
+            debugInfoFlow.emit("""{"initialized": false}""")
+            debugInfoFlow.emit("""{"initialized": true}""")
+            debugInfoFlow.emit("""{"initialized": true, "storage_path": "/test"}""")
+            advanceUntilIdle()
+
+            // Then - ViewModel should handle multiple emissions without crashing
+            assertTrue("ViewModel should handle multiple emissions", viewModel.debugInfo != null)
+        }
+
+    // ========== Non-ServiceProtocol Fallback Tests ==========
+
+    @Test
+    fun `observeDebugInfo falls back to fetchDebugInfo for non-ServiceProtocol`() =
+        runTest(testDispatcher) {
+            // Given - a plain RnsTransportAdmin mock (no strangler-fig variants post-A.10)
+            // Protocol with many methods - relaxed mock is appropriate
+            @Suppress("NoRelaxedMocks")
+            val nonServiceTransportAdmin = mockk<RnsTransportAdmin>(relaxed = true)
+            var getDebugInfoCalled = false
+            
+            coEvery { nonServiceTransportAdmin.getDebugInfo() } answers {
+                getDebugInfoCalled = true
+                mapOf(
+                    "initialized" to true,
+                    "reticulum_available" to true,
+                    "storage_path" to "/fallback/path",
+                    "interfaces" to emptyList<Map<String, Any>>(),
+                )
+            }
+            coEvery { nonServiceTransportAdmin.getFailedInterfaces() } returns emptyList()
+
+            // When - create ViewModel with non-service protocol
+            val viewModel = buildViewModel(rnsTransportAdmin = nonServiceTransportAdmin)
+            advanceUntilIdle()
+
+            // Then - should have called getDebugInfo for fallback
+            assertTrue("getDebugInfo should be called for non-service protocol", getDebugInfoCalled)
+            assertTrue("ViewModel should be created successfully", viewModel.debugInfo != null)
+        }
+
+    // ========== Interface Parsing Tests ==========
+
+    @Test
+    fun `parseAndUpdateDebugInfo parses interfaces array correctly`() =
+        runTest(testDispatcher) {
+            // Given
+            val viewModel = buildViewModel()
+
+            // When - emit JSON with interfaces
+            val debugJson =
+                """
+                {
+                    "initialized": true,
+                    "interfaces": [
+                        {"name": "WiFi", "type": "TCPInterface", "online": true},
+                        {"name": "BLE", "type": "BLEInterface", "online": false}
+                    ]
+                }
+                """.trimIndent()
+            debugInfoFlow.emit(debugJson)
+            advanceUntilIdle()
+
+            // Then - verify interfaces are parsed (state may not update due to viewModelScope)
+            assertTrue("Should not crash when parsing interfaces", viewModel.debugInfo != null)
+        }
+
+    @Test
+    fun `parseAndUpdateDebugInfo merges failed interfaces`() =
+        runTest(testDispatcher) {
+            // Given - mock failed interfaces
+            val failedInterfaces =
+                listOf(
+                    FailedInterface(name = "RNode", error = "USB not connected"),
+                    FailedInterface(name = "TCP", error = "Connection refused"),
+                )
+            coEvery { mockRnsTransportAdmin.getFailedInterfaces() } returns failedInterfaces
+
+            val viewModel = buildViewModel()
+
+            // When - emit JSON
+            val debugJson = """{"initialized": true, "interfaces": []}"""
+            debugInfoFlow.emit(debugJson)
+            advanceUntilIdle()
+
+            // Then - should include failed interfaces in state
+            assertTrue("Should not crash when merging failed interfaces", viewModel.debugInfo != null)
+        }
+
+    // ========== Error State Tests ==========
+
+    @Test
+    fun `parseAndUpdateDebugInfo extracts NetworkStatus ERROR to error field`() =
+        runTest(testDispatcher) {
+            // Given - set network status to ERROR
+            val errorStatus = NetworkStatus.ERROR("Test error message")
+            every { mockRnsCore.networkStatus } returns MutableStateFlow(errorStatus)
+
+            val viewModel = buildViewModel()
+
+            // When - emit JSON without explicit error
+            val debugJson = """{"initialized": true}"""
+            debugInfoFlow.emit(debugJson)
+            advanceUntilIdle()
+
+            // Then - error should be extracted from NetworkStatus
+            assertTrue("Should not crash with ERROR status", viewModel.debugInfo != null)
+        }
+
+    // ========== Restart Service Tests ==========
+
+    @Test
+    fun `restartService sets isRestarting state correctly`() =
+        runTest(testDispatcher) {
+            // Given
+            coEvery { mockInterfaceConfigManager.applyInterfaceChanges(any()) } coAnswers {
+                firstArg<(() -> Unit)?>()?.invoke()
+                Result.success(Unit)
+            }
+
+            val viewModel = buildViewModel()
+            advanceUntilIdle()
+
+            // Then - initial state should be false
+            assertFalse("isRestarting should initially be false", viewModel.isRestarting.value)
+
+            // When - call restartService
+            viewModel.restartService()
+            advanceUntilIdle()
+
+            // Then - isRestarting should be back to false after completion
+            assertFalse("isRestarting should be false after restart completes", viewModel.isRestarting.value)
+        }
+
+    @Test
+    fun `restartService handles exception and resets isRestarting`() =
+        runTest(testDispatcher) {
+            // Given - make applyInterfaceChanges throw
+            coEvery { mockInterfaceConfigManager.applyInterfaceChanges(any()) } throws RuntimeException("Restart failed")
+
+            val viewModel = buildViewModel()
+            advanceUntilIdle()
+
+            // When - call restartService
+            viewModel.restartService()
+            advanceUntilIdle()
+
+            // Then - isRestarting should be reset to false even after exception
+            assertFalse("isRestarting should be false after exception", viewModel.isRestarting.value)
+        }
+
+    // ========== Generate Share Text Tests ==========
+
+    @Test
+    fun `generateShareText returns null when publicKey is null`() =
+        runTest(testDispatcher) {
+            // Given - make identity loading fail so publicKey remains null
+            coEvery { mockRnsLxmf.getLxmfIdentity() } returns Result.failure(RuntimeException("No identity"))
+            coEvery { mockRnsCore.createIdentity() } returns Result.failure(RuntimeException("Cannot create identity"))
+
+            val viewModel = buildViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = viewModel.generateShareText("TestUser")
+
+            // Then
+            assertNull("Should return null when publicKey is null", result)
+        }
+
+    @Test
+    fun `generateShareText returns null when destinationHash is null`() =
+        runTest(testDispatcher) {
+            // Given - make destination loading fail so destinationHash remains null
+            coEvery { mockRnsLxmf.getLxmfIdentity() } returns Result.failure(RuntimeException("No identity"))
+            coEvery { mockRnsCore.createIdentity() } returns Result.failure(RuntimeException("Cannot create identity"))
+
+            val viewModel = buildViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = viewModel.generateShareText("TestUser")
+
+            // Then
+            assertNull("Should return null when destinationHash is null", result)
+        }
+
+    // ========== Shutdown State Reset Tests ==========
+
+    @Test
+    fun `debugInfo is reset to defaults when network status becomes SHUTDOWN`() =
+        runTest(testDispatcher) {
+            // Given - create a mutable network status flow
+            val networkStatusFlow = MutableStateFlow<NetworkStatus>(NetworkStatus.READY)
+            every { mockRnsCore.networkStatus } returns networkStatusFlow
+
+            val viewModel = buildViewModel()
+
+            // Emit some debug info to set state
+            val debugJson =
+                """
+                {
+                    "initialized": true,
+                    "reticulum_available": true,
+                    "storage_path": "/data/test",
+                    "interfaces": [],
+                    "transport_enabled": true
+                }
+                """.trimIndent()
+            debugInfoFlow.emit(debugJson)
+            testScheduler.advanceUntilIdle()
+
+            // When - network status changes to SHUTDOWN
+            networkStatusFlow.value = NetworkStatus.SHUTDOWN
+            advanceUntilIdle()
+
+            // Then - debugInfo should be reset to defaults
+            val state = viewModel.debugInfo.value
+            assertFalse("initialized should be reset to false on SHUTDOWN", state.initialized)
+            assertFalse("reticulumAvailable should be reset to false on SHUTDOWN", state.reticulumAvailable)
+        }
+
+    @Test
+    fun `debugInfo remains populated while network is READY`() =
+        runTest(testDispatcher) {
+            // Given - network is READY
+            val networkStatusFlow = MutableStateFlow<NetworkStatus>(NetworkStatus.READY)
+            every { mockRnsCore.networkStatus } returns networkStatusFlow
+
+            val viewModel = buildViewModel()
+
+            // When - emit debug info
+            val debugJson =
+                """
+                {
+                    "initialized": true,
+                    "reticulum_available": true,
+                    "storage_path": "/data/test"
+                }
+                """.trimIndent()
+            debugInfoFlow.emit(debugJson)
+            advanceUntilIdle()
+
+            // Then - state should reflect the debug info (not reset)
+            // Note: Due to viewModelScope, state updates may be async
+            assertTrue("ViewModel should be created successfully", viewModel.debugInfo != null)
+        }
+}

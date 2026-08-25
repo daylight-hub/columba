@@ -282,7 +282,7 @@ class DiscoveredInterfacesScrollBenchmark {
     @Test
     fun scrollDiscoveredInterfaces() {
         benchmarkRule.measureRepeated(
-            packageName = "network.columba.app",
+            packageName = "network.libertychat.app",
             metrics = listOf(FrameTimingMetric()),
             compilationMode = CompilationMode.None(), // Test without AOT
             startupMode = StartupMode.WARM,

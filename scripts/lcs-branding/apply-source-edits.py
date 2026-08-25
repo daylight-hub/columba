@@ -52,28 +52,28 @@ edit("app/src/main/res/values/strings.xml",
      "<string name=\"offline_banner_shutdown\">Liberty Chat is offline</string>")
 
 # ---- Item 4: default RNode frequency = US slot 51 (914.875 MHz) ------------
-edit("app/src/main/java/network/columba/app/data/model/RNodeRegionalPreset.kt",
+edit("app/src/main/java/network/libertychat/app/data/model/RNodeRegionalPreset.kt",
      '            "us_915" -> minOf(50, numSlots - 1)\n',
      '            "us_915" -> minOf(51, numSlots - 1) // LCS default: slot 51 = 914.875 MHz\n')
 
 # ---- Item 6: "Long Fast" badge -> "LCS Recommended" ------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/rnode/ModemPresetStep.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/rnode/ModemPresetStep.kt",
      'text = "Recommended",',
      'text = "LCS Recommended",')
 
 # ---- Item 3: announce icon left of the search icon ------------------------
 # 3a. give SearchableTopAppBar a leadingActions slot rendered before search
-edit("app/src/main/java/network/columba/app/ui/components/SearchableTopAppBar.kt",
+edit("app/src/main/java/network/libertychat/app/ui/components/SearchableTopAppBar.kt",
      "    searchPlaceholder: String = \"Search...\",\n    additionalActions: @Composable (RowScope.() -> Unit)? = null,\n) {",
      "    searchPlaceholder: String = \"Search...\",\n    leadingActions: @Composable (RowScope.() -> Unit)? = null,\n    additionalActions: @Composable (RowScope.() -> Unit)? = null,\n) {")
-edit("app/src/main/java/network/columba/app/ui/components/SearchableTopAppBar.kt",
+edit("app/src/main/java/network/libertychat/app/ui/components/SearchableTopAppBar.kt",
      "            actions = {\n                IconButton(onClick = onSearchToggle) {",
      "            actions = {\n                leadingActions?.invoke(this)\n                IconButton(onClick = onSearchToggle) {")
 # 3b. Chats screen: add the announce IconButton + import
-edit("app/src/main/java/network/columba/app/ui/screens/ChatsScreen.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/ChatsScreen.kt",
      "import androidx.compose.material.icons.filled.Chat\n",
      "import androidx.compose.material.icons.filled.Campaign\nimport androidx.compose.material.icons.filled.Chat\n")
-edit("app/src/main/java/network/columba/app/ui/screens/ChatsScreen.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/ChatsScreen.kt",
      '                searchPlaceholder = "Search conversations...",\n                additionalActions = {',
      '                searchPlaceholder = "Search conversations...",\n'
      '                leadingActions = {\n'
@@ -91,7 +91,7 @@ edit("app/src/main/java/network/columba/app/ui/screens/ChatsScreen.kt",
      '                additionalActions = {')
 
 # ---- Item 5: TX-power radio note ------------------------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/rnode/ReviewConfigStep.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/rnode/ReviewConfigStep.kt",
      '                        placeholder = { Text("0-$maxTxPower") },\n                    )\n                }\n\n                // Airtime limits, interface mode, and framebuffer are not relevant for transport mode',
      '                        placeholder = { Text("0-$maxTxPower") },\n                    )\n                }\n\n'
      '                // LCS: TX-power ceilings by RNode hardware\n'
@@ -103,7 +103,7 @@ edit("app/src/main/java/network/columba/app/ui/screens/rnode/ReviewConfigStep.kt
      '                // Airtime limits, interface mode, and framebuffer are not relevant for transport mode')
 
 # ---- Item 7: remove "Display Logo on RNode" toggle ------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/rnode/ReviewConfigStep.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/rnode/ReviewConfigStep.kt",
      '''                    Spacer(Modifier.height(16.dp))
 
                     // Display logo on RNode toggle
@@ -133,7 +133,7 @@ edit("app/src/main/java/network/columba/app/ui/screens/rnode/ReviewConfigStep.kt
      '')
 
 # ---- Item 8: TCP client servers -> single LCS node ------------------------
-p = ROOT / "app/src/main/java/network/columba/app/data/model/TcpCommunityServer.kt"
+p = ROOT / "app/src/main/java/network/libertychat/app/data/model/TcpCommunityServer.kt"
 s = p.read_text()
 start = s.index("        listOf(")
 end = s.index("        )", start) + len("        )")
@@ -146,32 +146,32 @@ p.write_text(s[:start] + new_list + s[end:])
 print("OK  TcpCommunityServer.kt  (server list replaced)")
 
 # ---- Item 9: Share APK rebrand + LCS filename -----------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/ShareColumbaCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/ShareColumbaCard.kt",
      'title = "Share Columba",', 'title = "Share Liberty Chat",')
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/ShareColumbaCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/ShareColumbaCard.kt",
      '"Share the Columba app with someone nearby. "',
      '"Share the Liberty Chat app with someone nearby. "')
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/ShareColumbaCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/ShareColumbaCard.kt",
      'Text("Share Columba APK")', 'Text("Share Liberty Chat APK")')
-edit("app/src/main/java/network/columba/app/viewmodel/ApkSharingViewModel.kt",
-     '"columba-${network.columba.app.BuildConfig.VERSION_NAME}.apk"',
-     '"liberty-chat-${network.columba.app.BuildConfig.VERSION_NAME}.apk"')
+edit("app/src/main/java/network/libertychat/app/viewmodel/ApkSharingViewModel.kt",
+     '"columba-${network.libertychat.app.BuildConfig.VERSION_NAME}.apk"',
+     '"liberty-chat-${network.libertychat.app.BuildConfig.VERSION_NAME}.apk"')
 
 # ---- Item 10: remove built-in RNode flasher entry (Settings card) ---------
-edit("app/src/main/java/network/columba/app/ui/screens/SettingsScreen.kt",
-     "import network.columba.app.ui.screens.settings.cards.RNodeFlasherCard\n", "")
-remove_balanced_call("app/src/main/java/network/columba/app/ui/screens/SettingsScreen.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/SettingsScreen.kt",
+     "import network.libertychat.app.ui.screens.settings.cards.RNodeFlasherCard\n", "")
+remove_balanced_call("app/src/main/java/network/libertychat/app/ui/screens/SettingsScreen.kt",
                      "RNodeFlasherCard(")
 
 # ---- Item 11: update check -> LCS repo ------------------------------------
-edit("app/src/main/java/network/columba/app/service/UpdateChecker.kt",
+edit("app/src/main/java/network/libertychat/app/service/UpdateChecker.kt",
      'private const val OWNER = "torlando-tech"',
      'private const val OWNER = "daylight-hub"')
 
 # ---- Item 12: remove Report Bug button ------------------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      "import androidx.compose.material.icons.filled.BugReport\n", "")
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      '''
             // Report Bug Button
             OutlinedButton(
@@ -189,7 +189,7 @@ edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.
 ''', "\n")
 
 # ---- Item 14: remove GitHub / Report Issue / About Reticulum links --------
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      '''            // Links
             InfoSection(title = "Links & Resources") {
                 LinkButton("GitHub Repository", "https://github.com/torlando-tech/columba", context)
@@ -201,10 +201,10 @@ edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.
 
 ''', "")
 # LinkButton helper is now unused -> remove it to keep detekt happy
-remove_balanced_call("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+remove_balanced_call("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
                      "private fun LinkButton(")
 # clean the now-dangling body of the old LinkButton (its {...} block)
-p = ROOT / "app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt"
+p = ROOT / "app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt"
 s = p.read_text()
 # after removing the fun signature+params, an orphan block may remain; strip a leading
 # "{ TextButton(...) }" that followed the signature.
@@ -226,17 +226,17 @@ if orphan in s:
     print("OK  AboutCard.kt  (orphan LinkButton body removed)")
 
 # ---- Item 13: About branding + license credit ----------------------------
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      'contentDescription = "Columba Logo",', 'contentDescription = "Liberty Chat Logo",')
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      '            Text(\n                text = "Columba",\n                style = MaterialTheme.typography.headlineSmall,',
      '            Text(\n                text = "Liberty Chat",\n                style = MaterialTheme.typography.headlineSmall,')
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      'text = "Native Android messaging app using Bluetooth LE, TCP, or RNode (LoRa) over LXMF and Reticulum",',
      'text = "Liberty Chat \u2014 messaging over Bluetooth LE, TCP, or RNode (LoRa) using LXMF and Reticulum",')
-edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.kt",
+edit("app/src/main/java/network/libertychat/app/ui/screens/settings/cards/AboutCard.kt",
      '''                Text(
-                    text = "© 2025–${network.columba.app.BuildConfig.COPYRIGHT_YEAR} Columba Contributors",
+                    text = "© 2025–${network.libertychat.app.BuildConfig.COPYRIGHT_YEAR} Columba Contributors",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -255,14 +255,14 @@ edit("app/src/main/java/network/columba/app/ui/screens/settings/cards/AboutCard.
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "Based on Columba © 2025–${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                    text = "Based on Columba © 2025–${network.libertychat.app.BuildConfig.COPYRIGHT_YEAR} " +
                         "Columba Contributors (torlando-tech) — original design & code",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "LCS branding & modifications © ${network.columba.app.BuildConfig.COPYRIGHT_YEAR} " +
+                    text = "LCS branding & modifications © ${network.libertychat.app.BuildConfig.COPYRIGHT_YEAR} " +
                         "Liberty Communication Systems, Inc.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

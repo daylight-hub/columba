@@ -1,0 +1,429 @@
+package network.libertychat.app.viewmodel
+
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import network.libertychat.app.data.db.entity.LocalIdentityEntity
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.map.MapTileSourceManager
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.rns.api.model.NetworkStatus
+import network.libertychat.app.rns.api.BackendCapabilities
+import network.libertychat.app.rns.api.RnsBackend
+import network.libertychat.app.rns.api.RnsCore
+import network.libertychat.app.rns.api.RnsLxmf
+import network.libertychat.app.rns.api.RnsTransportAdmin
+import network.libertychat.app.service.AvailableRelaysState
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.service.LocationSharingManager
+import network.libertychat.app.service.PropagationNodeManager
+import network.libertychat.app.service.TelemetryCollectorManager
+import network.libertychat.app.ui.theme.PresetTheme
+import network.libertychat.app.ui.theme.ThemeMode
+import io.mockk.Runs
+import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+
+/**
+ * Unit tests for SettingsViewModel incoming message size limit functionality.
+ *
+ * Tests cover:
+ * - Initial state loading from repository
+ * - Setting different size limits
+ * - State updates when limit changes
+ * - Runtime update to protocol
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class SettingsViewModelIncomingMessageLimitTest {
+    @get:Rule
+    val instantExecutorRule = InstantTaskExecutorRule()
+
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    private lateinit var settingsRepository: SettingsRepository
+    private lateinit var identityRepository: IdentityRepository
+    private lateinit var rnsBackend: RnsBackend
+    private lateinit var rnsCore: RnsCore
+    private lateinit var rnsLxmf: RnsLxmf
+    private lateinit var rnsTransportAdmin: RnsTransportAdmin
+    private lateinit var rnsTelephony: network.libertychat.app.rns.api.RnsTelephony
+    private lateinit var interfaceConfigManager: InterfaceConfigManager
+    private lateinit var propagationNodeManager: PropagationNodeManager
+    private lateinit var locationSharingManager: LocationSharingManager
+    private lateinit var interfaceRepository: InterfaceRepository
+    private lateinit var mapTileSourceManager: MapTileSourceManager
+    private lateinit var telemetryCollectorManager: TelemetryCollectorManager
+    private lateinit var contactRepository: network.libertychat.app.data.repository.ContactRepository
+    private lateinit var updateChecker: network.libertychat.app.service.UpdateChecker
+    private lateinit var crashReportManager: network.libertychat.app.util.CrashReportManager
+    private lateinit var context: android.content.Context
+    private lateinit var viewModel: SettingsViewModel
+
+    // Mutable flows for controlling test scenarios
+    private val incomingMessageSizeLimitKbFlow = MutableStateFlow(1024)
+    private val preferOwnInstanceFlow = MutableStateFlow(false)
+    private val isSharedInstanceFlow = MutableStateFlow(false)
+    private val rpcKeyFlow = MutableStateFlow<String?>(null)
+    private val autoAnnounceEnabledFlow = MutableStateFlow(true)
+    private val autoAnnounceIntervalHoursFlow = MutableStateFlow(3)
+    private val lastAutoAnnounceTimeFlow = MutableStateFlow<Long?>(null)
+    private val nextAutoAnnounceTimeFlow = MutableStateFlow<Long?>(null)
+    private val themePreferenceFlow = MutableStateFlow(PresetTheme.VIBRANT)
+    private val themeModeFlow = MutableStateFlow(ThemeMode.SYSTEM)
+    private val activeIdentityFlow = MutableStateFlow<LocalIdentityEntity?>(null)
+    private val networkStatusFlow = MutableStateFlow<NetworkStatus>(NetworkStatus.READY)
+    private val autoRetrieveEnabledFlow = MutableStateFlow(true)
+    private val retrievalIntervalSecondsFlow = MutableStateFlow(30)
+    private val transportNodeEnabledFlow = MutableStateFlow(true)
+    private val defaultDeliveryMethodFlow = MutableStateFlow("direct")
+
+    @Suppress("LongMethod") // SettingsViewModel has many dependencies requiring mock setup
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+
+        // Disable monitor coroutines during testing to avoid infinite loops
+        SettingsViewModel.enableMonitors = false
+
+        settingsRepository = mockk()
+        identityRepository = mockk()
+        rnsBackend = mockk()
+        rnsCore = mockk()
+        rnsLxmf = mockk()
+        rnsTransportAdmin = mockk()
+        rnsTelephony = mockk()
+        // setAllowVoiceCalls fires setIncomingEnabled — stubbed as no-op since the test
+        // covers incoming-message-limit logic, not the telephony AIDL round-trip.
+        coEvery { rnsTelephony.setIncomingEnabled(any()) } just Runs
+        interfaceConfigManager = mockk()
+        propagationNodeManager = mockk()
+        locationSharingManager = mockk()
+        interfaceRepository = mockk()
+        mapTileSourceManager = mockk()
+        telemetryCollectorManager = mockk()
+        contactRepository = mockk()
+        updateChecker = mockk()
+        crashReportManager = mockk()
+        every { crashReportManager.setCrashReportingConsentMirror(any()) } returns Unit
+        context =
+            mockk {
+                val mockEditor =
+                    mockk<android.content.SharedPreferences.Editor>(relaxed = true) {
+                        every { putBoolean(any(), any()) } returns this
+                        every { commit() } returns true
+                        every { apply() } just Runs
+                    }
+                val mockPrefs =
+                    mockk<android.content.SharedPreferences> {
+                        every { edit() } returns mockEditor
+                        every { getBoolean(any(), any()) } returns false
+                    }
+                every { getSharedPreferences(any(), any()) } returns mockPrefs
+                every { startForegroundService(any()) } returns null
+            }
+
+        // Mock ContactRepository flow
+        every { contactRepository.getEnrichedContacts() } returns flowOf(emptyList())
+
+        // Mock TelemetryCollectorManager flows used during init
+        every { telemetryCollectorManager.isEnabled } returns MutableStateFlow(false)
+        every { telemetryCollectorManager.isSending } returns MutableStateFlow(false)
+        every { telemetryCollectorManager.isRequesting } returns MutableStateFlow(false)
+
+        // Mock interfaceRepository flows
+        every { interfaceRepository.enabledInterfaces } returns MutableStateFlow(emptyList<InterfaceConfig>())
+
+        // Mock locationSharingManager flows
+        every { locationSharingManager.activeSessions } returns MutableStateFlow(emptyList())
+
+        // Setup repository flow mocks
+        every { settingsRepository.incomingMessageSizeLimitKbFlow } returns incomingMessageSizeLimitKbFlow
+        every { settingsRepository.preferOwnInstanceFlow } returns preferOwnInstanceFlow
+        every { settingsRepository.isSharedInstanceFlow } returns isSharedInstanceFlow
+        every { settingsRepository.shareInstanceHostingEnabledFlow } returns kotlinx.coroutines.flow.MutableStateFlow(false)
+        io.mockk.coEvery { settingsRepository.getShareInstanceHostingEnabled() } returns false
+        io.mockk.coEvery {
+            settingsRepository.saveShareInstanceHostingEnabled(true)
+        } returns Unit
+        io.mockk.coEvery {
+            settingsRepository.saveShareInstanceHostingEnabled(false)
+        } returns Unit
+        every { settingsRepository.rpcKeyFlow } returns rpcKeyFlow
+        every { settingsRepository.autoAnnounceEnabledFlow } returns autoAnnounceEnabledFlow
+        every { settingsRepository.autoAnnounceIntervalHoursFlow } returns autoAnnounceIntervalHoursFlow
+        every { settingsRepository.lastAutoAnnounceTimeFlow } returns lastAutoAnnounceTimeFlow
+        every { settingsRepository.nextAutoAnnounceTimeFlow } returns nextAutoAnnounceTimeFlow
+        every { settingsRepository.themePreferenceFlow } returns themePreferenceFlow
+        every { settingsRepository.themeModeFlow } returns themeModeFlow
+        every { settingsRepository.getAllCustomThemes() } returns flowOf(emptyList())
+        every { settingsRepository.autoRetrieveEnabledFlow } returns autoRetrieveEnabledFlow
+        every { settingsRepository.retrievalIntervalSecondsFlow } returns retrievalIntervalSecondsFlow
+        every { settingsRepository.transportNodeEnabledFlow } returns transportNodeEnabledFlow
+        every { settingsRepository.crashReportingConsentFlow } returns kotlinx.coroutines.flow.MutableStateFlow(false)
+        every { settingsRepository.hasCompletedOnboardingFlow } returns kotlinx.coroutines.flow.MutableStateFlow(true)
+        every { settingsRepository.hasSeenCrashReportingPromptFlow } returns kotlinx.coroutines.flow.MutableStateFlow(true)
+        every { settingsRepository.defaultDeliveryMethodFlow } returns defaultDeliveryMethodFlow
+        every { settingsRepository.locationSharingEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.defaultSharingDurationFlow } returns MutableStateFlow("ONE_HOUR")
+        every { settingsRepository.locationPrecisionRadiusFlow } returns MutableStateFlow(0)
+        every { settingsRepository.preciseLocationPromptDismissedFlow } returns MutableStateFlow(false)
+        every { settingsRepository.imageCompressionPresetFlow } returns MutableStateFlow(network.libertychat.app.data.model.ImageCompressionPreset.AUTO)
+        every { settingsRepository.telemetryCollectorEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.telemetryCollectorAddressFlow } returns MutableStateFlow<String?>(null)
+        every { settingsRepository.telemetrySendIntervalSecondsFlow } returns MutableStateFlow(SettingsRepository.DEFAULT_TELEMETRY_SEND_INTERVAL_SECONDS)
+        every { settingsRepository.lastTelemetrySendTimeFlow } returns MutableStateFlow<Long?>(null)
+        every { settingsRepository.mapSourceHttpEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.mapSourceRmspEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.mapMarkerDeclutterEnabledFlow } returns MutableStateFlow(true)
+        every { mapTileSourceManager.observeRmspServerCount() } returns flowOf(0)
+        every { mapTileSourceManager.hasOfflineMaps() } returns flowOf(false)
+        every { identityRepository.activeIdentity } returns activeIdentityFlow
+
+        // Notification settings flows
+        every { settingsRepository.notificationsEnabledFlow } returns MutableStateFlow(true)
+        every { settingsRepository.notificationReceivedMessageFlow } returns MutableStateFlow(true)
+        every { settingsRepository.notificationReceivedMessageFavoriteFlow } returns MutableStateFlow(true)
+        every { settingsRepository.notificationHeardAnnounceFlow } returns MutableStateFlow(false)
+        every { settingsRepository.notificationBleConnectedFlow } returns MutableStateFlow(false)
+        every { settingsRepository.notificationBleDisconnectedFlow } returns MutableStateFlow(false)
+
+        // Privacy settings flows
+        every { settingsRepository.blockUnknownSendersFlow } returns MutableStateFlow(false)
+        every { settingsRepository.allowCallsFromContactsOnlyFlow } returns MutableStateFlow(false)
+        every { settingsRepository.allowVoiceCallsFlow } returns MutableStateFlow(true)
+
+        // Telemetry request settings flows
+        every { settingsRepository.telemetryRequestEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.telemetryRequestIntervalSecondsFlow } returns MutableStateFlow(SettingsRepository.DEFAULT_TELEMETRY_REQUEST_INTERVAL_SECONDS)
+        every { settingsRepository.lastTelemetryRequestTimeFlow } returns MutableStateFlow<Long?>(null)
+        every { settingsRepository.telemetryHostModeEnabledFlow } returns MutableStateFlow(false)
+        every { settingsRepository.telemetryAllowedRequestersFlow } returns MutableStateFlow(emptySet())
+        every { settingsRepository.includePrereleaseUpdates } returns MutableStateFlow(false)
+        every { settingsRepository.sortMessagesBySentTime } returns flowOf(false)
+        every { settingsRepository.tryPropagationOnFailFlow } returns MutableStateFlow(true)
+        coEvery { settingsRepository.getLastUpdateCheckTime() } returns System.currentTimeMillis()
+
+        // Mock PropagationNodeManager flows (StateFlows)
+        every { propagationNodeManager.currentRelay } returns MutableStateFlow(null)
+        every { propagationNodeManager.isSyncing } returns MutableStateFlow(false)
+        every { propagationNodeManager.lastSyncTimestamp } returns MutableStateFlow(null)
+        every { propagationNodeManager.availableRelaysState } returns
+            MutableStateFlow(AvailableRelaysState.Loaded(emptyList()))
+
+        // Mock other required methods
+        coEvery { identityRepository.getActiveIdentitySync() } returns null
+        coEvery { interfaceConfigManager.applyInterfaceChanges() } returns Result.success(Unit)
+
+        // Mock RNS seam sub-interfaces
+        every { rnsCore.networkStatus } returns networkStatusFlow
+        every { rnsBackend.capabilities } returns MutableStateFlow(BackendCapabilities.UNKNOWN)
+
+        // Mock methods called during setIncomingMessageSizeLimit
+        coEvery { settingsRepository.saveIncomingMessageSizeLimitKb(any()) } just Runs
+        coEvery { settingsRepository.saveMapMarkerDeclutterEnabled(any()) } just Runs
+        every { rnsLxmf.setIncomingMessageSizeLimit(any()) } just Runs
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+        clearAllMocks()
+        // Restore default behavior for other tests
+        SettingsViewModel.enableMonitors = true
+    }
+
+    private fun createViewModel(): SettingsViewModel =
+        SettingsViewModel(
+            context = context,
+            settingsRepository = settingsRepository,
+            identityRepository = identityRepository,
+            rnsBackend = rnsBackend,
+            rnsCore = rnsCore,
+            rnsLxmf = rnsLxmf,
+            rnsTransportAdmin = rnsTransportAdmin,
+            rnsTelephony = rnsTelephony,
+            interfaceConfigManager = interfaceConfigManager,
+            propagationNodeManager = propagationNodeManager,
+            locationSharingManager = locationSharingManager,
+            interfaceRepository = interfaceRepository,
+            mapTileSourceManager = mapTileSourceManager,
+            telemetryCollectorManager = telemetryCollectorManager,
+            contactRepository = contactRepository,
+            updateChecker = updateChecker,
+            crashReportManager = crashReportManager,
+        )
+
+    // ========== Initial State Tests ==========
+
+    @Test
+    fun `initial state has default incoming message size limit`() =
+        runTest {
+            // Given - Default flow value of 1024 KB
+            incomingMessageSizeLimitKbFlow.value = 1024
+
+            // When
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // Then - State should have default value (1024 KB)
+            assertEquals(1024, viewModel.state.value.incomingMessageSizeLimitKb)
+        }
+
+    // ========== Set Limit Tests ==========
+
+    @Test
+    fun `setIncomingMessageSizeLimit saves to repository`() =
+        runTest {
+            // Given
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = runCatching { viewModel.setIncomingMessageSizeLimit(10240) } // 10MB
+
+            advanceUntilIdle()
+
+            // Then
+            assertTrue("setIncomingMessageSizeLimit should complete without throwing", result.isSuccess)
+            coVerify { settingsRepository.saveIncomingMessageSizeLimitKb(10240) }
+        }
+
+    @Test
+    fun `setIncomingMessageSizeLimit calls protocol to apply at runtime`() =
+        runTest {
+            // Given
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = runCatching { viewModel.setIncomingMessageSizeLimit(25600) } // 25MB
+
+            advanceUntilIdle()
+
+            // Then
+            assertTrue("setIncomingMessageSizeLimit should complete without throwing", result.isSuccess)
+            verify { rnsLxmf.setIncomingMessageSizeLimit(25600) }
+        }
+
+    @Test
+    fun `setIncomingMessageSizeLimit with 1MB limit`() =
+        runTest {
+            // Given
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = runCatching { viewModel.setIncomingMessageSizeLimit(1024) }
+
+            advanceUntilIdle()
+
+            // Then
+            assertTrue("setIncomingMessageSizeLimit should complete without throwing", result.isSuccess)
+            coVerify { settingsRepository.saveIncomingMessageSizeLimitKb(1024) }
+            verify { rnsLxmf.setIncomingMessageSizeLimit(1024) }
+        }
+
+    @Test
+    fun `setIncomingMessageSizeLimit with 5MB limit`() =
+        runTest {
+            // Given
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = runCatching { viewModel.setIncomingMessageSizeLimit(5120) }
+
+            advanceUntilIdle()
+
+            // Then
+            assertTrue("setIncomingMessageSizeLimit should complete without throwing", result.isSuccess)
+            coVerify { settingsRepository.saveIncomingMessageSizeLimitKb(5120) }
+            verify { rnsLxmf.setIncomingMessageSizeLimit(5120) }
+        }
+
+    @Test
+    fun `setIncomingMessageSizeLimit with unlimited 128MB`() =
+        runTest {
+            // Given
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            // When
+            val result = runCatching { viewModel.setIncomingMessageSizeLimit(131072) }
+
+            advanceUntilIdle()
+
+            // Then
+            assertTrue("setIncomingMessageSizeLimit should complete without throwing", result.isSuccess)
+            coVerify { settingsRepository.saveIncomingMessageSizeLimitKb(131072) }
+            verify { rnsLxmf.setIncomingMessageSizeLimit(131072) }
+        }
+
+    // ========== State Update Tests ==========
+
+    @Test
+    fun `state updates when incoming message size limit flow emits new value`() =
+        runTest {
+            // Given
+            incomingMessageSizeLimitKbFlow.value = 1024
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            assertEquals(1024, viewModel.state.value.incomingMessageSizeLimitKb)
+
+            // When - Repository emits new value
+            incomingMessageSizeLimitKbFlow.value = 10240
+
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(10240, viewModel.state.value.incomingMessageSizeLimitKb)
+        }
+
+    @Test
+    fun `state updates to different limit values`() =
+        runTest {
+            // Given - Start with default
+            incomingMessageSizeLimitKbFlow.value = 1024
+            viewModel = createViewModel()
+            advanceUntilIdle()
+
+            assertEquals(1024, viewModel.state.value.incomingMessageSizeLimitKb)
+
+            // When - Change to 5MB
+            incomingMessageSizeLimitKbFlow.value = 5120
+
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(5120, viewModel.state.value.incomingMessageSizeLimitKb)
+
+            // When - Change to unlimited (128MB)
+            incomingMessageSizeLimitKbFlow.value = 131072
+
+            advanceUntilIdle()
+
+            // Then
+            assertEquals(131072, viewModel.state.value.incomingMessageSizeLimitKb)
+        }
+}

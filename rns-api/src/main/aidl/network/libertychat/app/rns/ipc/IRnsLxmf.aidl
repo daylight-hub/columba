@@ -1,0 +1,104 @@
+// AIDL surface mirroring the Kotlin RnsLxmf interface.
+//
+// Bundle key conventions for IRnsResultCallback payloads:
+//   - sendLxmfMessage / sendLxmfMessageWithMethod / sendReaction → "receipt": MessageReceipt
+//   - getLxmfIdentity     → "identity": Identity
+//   - getLxmfDestination  → "destination": Destination
+//   - requestMessagesFromPropagationNode / getPropagationState → "state": PropagationState
+//   - getOutboundPropagationNode (Result<String?>) — uses IRnsStringCallback, not Bundle.
+//   - Result<Unit>        → Bundle.EMPTY
+//
+// Binary attachment payloads (image bytes + file attachments) do NOT ride
+// inline: a Binder transaction caps at ~1 MB shared per process, so a multi-MB
+// file threw TransactionTooLargeException. They cross as a single read-only
+// `ParcelFileDescriptor attachmentsBlob` (a dup'd fd, not the bytes) that
+// :rns-ipc's AttachmentBlob serializes on the client and reads on the server;
+// null means "no binary payload". extraFields is a generic Bundle whose keys
+// are stringified LXMF field numbers ("4", "5", "16", …); values are whatever
+// the field accepts (typically byte[] or String) and are expected to stay small
+// — large binary fields must go through attachmentsBlob, not here. See the
+// per-call documentation for which fields each method writes.
+package network.libertychat.app.rns.ipc;
+
+import network.libertychat.app.rns.api.model.DeliveryMethod;
+import network.libertychat.app.rns.api.model.IconAppearance;
+import network.libertychat.app.rns.api.model.Identity;
+import network.libertychat.app.rns.ipc.callback.IRnsDeliveryStatusCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsMessageCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsPropagationStateCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsResultCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsStringCallback;
+import network.libertychat.app.rns.ipc.callback.IRnsTransferProgressCallback;
+
+oneway interface IRnsLxmf {
+    // ==================== Send ====================
+
+    void sendLxmfMessage(
+        in byte[] destinationHash,
+        String content,
+        in Identity sourceIdentity,
+        in @nullable ParcelFileDescriptor attachmentsBlob,
+        in IRnsResultCallback cb);
+
+    void sendLxmfMessageWithMethod(
+        in byte[] destinationHash,
+        String content,
+        in Identity sourceIdentity,
+        in DeliveryMethod deliveryMethod,
+        boolean tryPropagationOnFail,
+        in @nullable ParcelFileDescriptor attachmentsBlob,
+        in @nullable String replyToMessageId,
+        in @nullable String replyQuotedContent,
+        in @nullable IconAppearance iconAppearance,
+        in @nullable Bundle extraFields,
+        in IRnsResultCallback cb);
+
+    void sendReaction(
+        in byte[] destinationHash,
+        String targetMessageId,
+        String emoji,
+        in Identity sourceIdentity,
+        in IRnsResultCallback cb);
+
+    // ==================== Receive ====================
+
+    // Flow<ReceivedMessage>: observer register/unregister.
+    void registerMessageObserver(in IRnsMessageCallback cb);
+    void unregisterMessageObserver(in IRnsMessageCallback cb);
+
+    // Flow<DeliveryStatusUpdate>: observer register/unregister.
+    void registerDeliveryStatusObserver(in IRnsDeliveryStatusCallback cb);
+    void unregisterDeliveryStatusObserver(in IRnsDeliveryStatusCallback cb);
+
+    // Flow<TransferProgressUpdate>: ephemeral Resource progress.
+    void registerTransferProgressObserver(in IRnsTransferProgressCallback cb);
+    void unregisterTransferProgressObserver(in IRnsTransferProgressCallback cb);
+
+    // ==================== LXMF identity access ====================
+
+    void getLxmfIdentity(in IRnsResultCallback cb);
+    void getLxmfDestination(in IRnsResultCallback cb);
+
+    // ==================== Propagation node ====================
+
+    void setOutboundPropagationNode(in @nullable byte[] destHash, in IRnsResultCallback cb);
+
+    // Returns Result<String?>; uses IRnsStringCallback (nullable String supported there).
+    void getOutboundPropagationNode(in IRnsStringCallback cb);
+
+    void requestMessagesFromPropagationNode(in @nullable byte[] identityPrivateKey, int maxMessages, in IRnsResultCallback cb);
+    void getPropagationState(in IRnsResultCallback cb);
+    void cancelMessageSync(in IRnsResultCallback cb);
+
+    // SharedFlow<PropagationState>: observer register/unregister.
+    void registerPropagationStateObserver(in IRnsPropagationStateCallback cb);
+    void unregisterPropagationStateObserver(in IRnsPropagationStateCallback cb);
+
+    // ==================== Performance & limits ====================
+    //
+    // Both setters are fire-and-forget on the Kotlin side (non-suspend `fun`).
+    // Errors are logged on the host; no callback is invoked.
+
+    void setConversationActive(boolean active);
+    void setIncomingMessageSizeLimit(int limitKb);
+}

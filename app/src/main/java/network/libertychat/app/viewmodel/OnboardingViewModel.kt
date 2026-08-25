@@ -1,0 +1,518 @@
+package network.libertychat.app.viewmodel
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import network.libertychat.app.data.model.TcpCommunityServers
+import network.libertychat.app.data.repository.IdentityRepository
+import network.libertychat.app.repository.InterfaceRepository
+import network.libertychat.app.repository.SettingsRepository
+import network.libertychat.app.rns.api.model.InterfaceConfig
+import network.libertychat.app.service.InterfaceConfigManager
+import network.libertychat.app.telemetry.CrashReporterProvider
+import network.libertychat.app.ui.screens.onboarding.OnboardingInterfaceType
+import network.libertychat.app.ui.screens.onboarding.OnboardingState
+import network.libertychat.app.util.BatteryOptimizationManager
+import network.libertychat.app.util.CrashReportManager
+import network.libertychat.app.util.getBlePermissions
+import javax.inject.Inject
+
+/**
+ * ViewModel for managing the multi-page onboarding flow.
+ * Handles identity setup, interface selection, and permission requests.
+ */
+@HiltViewModel
+class OnboardingViewModel
+    @Inject
+    constructor(
+        private val settingsRepository: SettingsRepository,
+        private val identityRepository: IdentityRepository,
+        private val interfaceRepository: InterfaceRepository,
+        private val interfaceConfigManager: InterfaceConfigManager,
+        private val crashReportManager: CrashReportManager,
+    ) : ViewModel() {
+        companion object {
+            private const val TAG = "OnboardingViewModel"
+            const val DEFAULT_DISPLAY_NAME = "Anonymous Peer"
+        }
+
+        private val _state = MutableStateFlow(OnboardingState())
+        val state: StateFlow<OnboardingState> = _state.asStateFlow()
+
+        /**
+         * True when the active identity's Keystore-wrapped key blob survived a
+         * backup restore but the Keystore AES key that produced it did not
+         * (Keystore keys are app-UID-bound and don't cross uninstall). Navigation
+         * routes to IdentityUnlockScreen so the user can re-import their identity
+         * file rather than landing on a chats tab that can't send anything.
+         */
+        val needsIdentityUnlock: StateFlow<Boolean> =
+            settingsRepository.needsIdentityUnlockFlow.stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5000L),
+                initialValue = false,
+            )
+
+        init {
+            checkOnboardingStatus()
+        }
+
+        /**
+         * Check if onboarding has already been completed.
+         *
+         * Trust the persisted flag alone. A previous heuristic treated "any active
+         * identity exists" as evidence of a pre-onboarding upgrade and auto-marked
+         * onboarding complete, but the native stack now auto-creates an identity
+         * on cold start so that signal fires on fresh installs too and skips the
+         * welcome flow. Users upgrading from the brief pre-onboarding window will
+         * see onboarding once and can Skip to keep their data.
+         */
+        private fun checkOnboardingStatus() {
+            viewModelScope.launch {
+                try {
+                    val hasCompleted = settingsRepository.hasCompletedOnboardingFlow.first()
+                    _state.value =
+                        _state.value.copy(
+                            isLoading = false,
+                            hasCompletedOnboarding = hasCompleted,
+                        )
+                    Log.d(TAG, "Onboarding status checked: hasCompleted=$hasCompleted")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error checking onboarding status", e)
+                    _state.value = _state.value.copy(isLoading = false)
+                }
+            }
+        }
+
+        /**
+         * Set the current page index.
+         */
+        fun setCurrentPage(page: Int) {
+            _state.value = _state.value.copy(currentPage = page)
+        }
+
+        /**
+         * Update the display name as the user types.
+         */
+        fun updateDisplayName(name: String) {
+            _state.value = _state.value.copy(displayName = name, error = null)
+        }
+
+        /**
+         * Update the anonymous crash reporting opt-in choice. Persisted when onboarding
+         * completes (see [completeOnboarding]).
+         */
+        fun setCrashReportingEnabled(enabled: Boolean) {
+            _state.value = _state.value.copy(crashReportingEnabled = enabled)
+        }
+
+        /**
+         * Toggle an interface type selection.
+         */
+        fun toggleInterface(interfaceType: OnboardingInterfaceType) {
+            val currentSelection = _state.value.selectedInterfaces.toMutableSet()
+            if (currentSelection.contains(interfaceType)) {
+                currentSelection.remove(interfaceType)
+            } else {
+                currentSelection.add(interfaceType)
+            }
+            _state.value = _state.value.copy(selectedInterfaces = currentSelection)
+        }
+
+        /**
+         * Handle notification permission result.
+         */
+        fun onNotificationPermissionResult(granted: Boolean) {
+            _state.value =
+                _state.value.copy(
+                    notificationsEnabled = granted,
+                    notificationsGranted = granted,
+                )
+            Log.d(TAG, "Notification permission result: granted=$granted")
+        }
+
+        /**
+         * Handle BLE permissions result.
+         */
+        fun onBlePermissionsResult(
+            allGranted: Boolean,
+            anyDenied: Boolean,
+        ) {
+            _state.value =
+                _state.value.copy(
+                    blePermissionsGranted = allGranted,
+                    blePermissionsDenied = anyDenied && !allGranted,
+                )
+            Log.d(TAG, "BLE permissions result: allGranted=$allGranted, anyDenied=$anyDenied")
+
+            // If permissions were denied, remove BLE from selected interfaces
+            if (!allGranted && anyDenied) {
+                val currentSelection = _state.value.selectedInterfaces.toMutableSet()
+                currentSelection.remove(OnboardingInterfaceType.BLE)
+                _state.value = _state.value.copy(selectedInterfaces = currentSelection)
+            }
+        }
+
+        /**
+         * Check current battery optimization status.
+         */
+        fun checkBatteryOptimizationStatus(context: Context) {
+            val isExempt = BatteryOptimizationManager.isIgnoringBatteryOptimizations(context)
+            _state.value = _state.value.copy(batteryOptimizationExempt = isExempt)
+            Log.d(TAG, "Battery optimization status: exempt=$isExempt")
+        }
+
+        /**
+         * Re-evaluate the POST_NOTIFICATIONS runtime permission. Used by the
+         * onboarding lifecycle observer to refresh the permission card after the
+         * user grants the permission via the system Settings UI (the launcher
+         * callback path does not fire when the user goes through the
+         * "Don't ask again" → app Settings flow).
+         *
+         * On API < 33 the permission is granted at install time; we mirror that
+         * by setting both flags to true.
+         */
+        fun checkNotificationPermissionStatus(context: Context) {
+            val granted =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ) == PackageManager.PERMISSION_GRANTED
+                } else {
+                    true
+                }
+            _state.value =
+                _state.value.copy(
+                    notificationsGranted = granted,
+                    notificationsEnabled = granted,
+                )
+            Log.d(TAG, "Notification permission status: granted=$granted")
+        }
+
+        /**
+         * Re-evaluate the BLE runtime permission set. Mirrors
+         * [checkNotificationPermissionStatus] for the BLE card on the
+         * ConnectivityPage; covers the manual-Settings grant flow for which
+         * the permission launcher callback never fires.
+         *
+         * Intentionally does NOT mutate selectedInterfaces. The launcher
+         * callback path in [onBlePermissionsResult] is the only place that
+         * removes BLE from selection on denial — an idempotent on-resume
+         * re-check should not undo a user toggle.
+         */
+        fun checkBlePermissionsStatus(context: Context) {
+            val permissions = getBlePermissions()
+            val grantedFlags =
+                permissions.map {
+                    ContextCompat.checkSelfPermission(context, it) ==
+                        PackageManager.PERMISSION_GRANTED
+                }
+            val allGranted = grantedFlags.all { it }
+            val anyDenied = grantedFlags.any { !it }
+            // The resume re-check only CLEARS blePermissionsDenied (when perms are
+            // now granted) — it never sets it true. The launcher callback in
+            // [onBlePermissionsResult] remains the sole setter, so a fresh install
+            // (where checkSelfPermission says "not granted" before the user has
+            // ever interacted with BLE) does not flip the card into the red
+            // "Permissions denied" state on the first ON_RESUME.
+            _state.value =
+                _state.value.copy(
+                    blePermissionsGranted = allGranted,
+                    blePermissionsDenied =
+                        if (allGranted) false else _state.value.blePermissionsDenied,
+                )
+            Log.d(TAG, "BLE permissions status: allGranted=$allGranted, anyDenied=$anyDenied")
+        }
+
+        /**
+         * Complete onboarding with all selected settings.
+         * Creates interfaces and saves display name.
+         *
+         * @param onComplete Callback invoked after successful completion
+         */
+        fun completeOnboarding(onComplete: () -> Unit) {
+            viewModelScope.launch {
+                try {
+                    _state.value = _state.value.copy(isSaving = true, error = null)
+                    var hasWarnings = false
+
+                    val nameToSave =
+                        _state.value.displayName.trim().ifEmpty {
+                            DEFAULT_DISPLAY_NAME
+                        }
+
+                    // Update display name in database
+                    val activeIdentity = identityRepository.getActiveIdentitySync()
+                    if (activeIdentity != null) {
+                        identityRepository
+                            .updateDisplayName(activeIdentity.identityHash, nameToSave)
+                            .onSuccess {
+                                Log.d(TAG, "Display name set to: $nameToSave")
+                            }.onFailure { error ->
+                                Log.e(TAG, "Failed to update display name", error)
+                                hasWarnings = true
+                            }
+                    } else {
+                        Log.w(TAG, "No active identity found - display name will be set when identity is created")
+                    }
+
+                    // Create selected interfaces
+                    val interfacesCreated = createSelectedInterfaces()
+                    if (!interfacesCreated) {
+                        hasWarnings = true
+                    }
+
+                    // Mark onboarding as completed - this is critical and will throw if it fails
+                    settingsRepository.markOnboardingCompleted()
+
+                    // Persist the crash-reporting opt-in choice. Writes the DataStore source
+                    // of truth + the synchronous startup mirror, and activates reporting
+                    // immediately (no restart). Mark the one-time update prompt seen since
+                    // the user has now made an explicit choice during onboarding.
+                    val crashReportingEnabled = _state.value.crashReportingEnabled
+                    settingsRepository.setCrashReportingConsent(crashReportingEnabled)
+                    crashReportManager.setCrashReportingConsentMirror(crashReportingEnabled)
+                    settingsRepository.markCrashReportingPromptSeen()
+                    CrashReporterProvider.create().setEnabled(crashReportingEnabled)
+
+                    // Restart service to apply changes. Flip UI to "done" at Step 9
+                    // (RNS ready) rather than after the full apply — on a fresh
+                    // install Step 10 (peer-restore) is empty so this is a no-op,
+                    // but if onboarding is being re-run on an existing install
+                    // (rare but possible via Settings > Reset Onboarding) Step 10
+                    // can run for minutes. Same fix pattern as the rest of the
+                    // applyInterfaceChanges callers in this branch.
+                    Log.d(TAG, "Restarting service to apply onboarding settings...")
+                    interfaceConfigManager
+                        .applyInterfaceChanges(
+                            onServiceReady = {
+                                Log.d(TAG, "Service ready (Step 9) - dismissing onboarding spinner")
+                                _state.value =
+                                    _state.value.copy(
+                                        isSaving = false,
+                                        hasCompletedOnboarding = true,
+                                    )
+                            },
+                        ).onSuccess {
+                            Log.d(TAG, "Service restart fully complete (Step 12)")
+                        }.onFailure { error ->
+                            Log.w(TAG, "Failed to restart service (settings saved but may need manual restart)", error)
+                            hasWarnings = true
+                            // Failure path: still unblock UI so user isn't stuck.
+                            _state.value =
+                                _state.value.copy(
+                                    isSaving = false,
+                                    hasCompletedOnboarding = true,
+                                )
+                        }
+
+                    if (hasWarnings) {
+                        Log.w(TAG, "Onboarding completed with warnings - some settings may need manual configuration")
+                    } else {
+                        Log.d(TAG, "Onboarding completed successfully")
+                    }
+
+                    onComplete()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error completing onboarding", e)
+                    _state.value =
+                        _state.value.copy(
+                            isSaving = false,
+                            error = e.message ?: "Failed to save",
+                        )
+                }
+            }
+        }
+
+        /**
+         * Create or update interface configurations based on user selections.
+         * - Selected interfaces: create if missing, enable if exists
+         * - Unselected interfaces: disable if exists (preserve user config)
+         *
+         * @return true if all interfaces were created/updated successfully, false if any failed
+         */
+        private suspend fun createSelectedInterfaces(): Boolean {
+            var success = true
+            val selectedInterfaces = _state.value.selectedInterfaces
+
+            // Get existing interface entities (which include IDs)
+            val existingEntities = interfaceRepository.allInterfaceEntities.first()
+
+            // Map interface types to database type strings
+            val typeMapping =
+                mapOf(
+                    OnboardingInterfaceType.AUTO to "AutoInterface",
+                    OnboardingInterfaceType.BLE to "AndroidBLE",
+                    OnboardingInterfaceType.TCP to "TCPClient",
+                    OnboardingInterfaceType.RNODE to "RNode",
+                )
+
+            // Process each interface type
+            for ((onboardingType, dbType) in typeMapping) {
+                val isSelected = selectedInterfaces.contains(onboardingType)
+                val existingEntity = existingEntities.find { it.type == dbType }
+
+                when {
+                    // RNode requires wizard setup, don't auto-create or modify
+                    onboardingType == OnboardingInterfaceType.RNODE -> {
+                        Log.d(TAG, "RNode requires wizard setup, skipping")
+                    }
+
+                    // Interface exists - update enabled state based on selection
+                    existingEntity != null -> {
+                        interfaceRepository.toggleInterfaceEnabled(existingEntity.id, isSelected)
+                        Log.d(TAG, "$dbType ${if (isSelected) "enabled" else "disabled"}")
+                    }
+
+                    // Interface doesn't exist and is selected - create it
+                    isSelected -> {
+                        val config =
+                            when (onboardingType) {
+                                OnboardingInterfaceType.AUTO ->
+                                    InterfaceConfig.AutoInterface(
+                                        name = "Local WiFi",
+                                        enabled = true,
+                                    )
+                                OnboardingInterfaceType.BLE ->
+                                    InterfaceConfig.AndroidBLE(
+                                        name = "Bluetooth LE",
+                                        enabled = true,
+                                    )
+                                OnboardingInterfaceType.TCP -> {
+                                    val defaultServer = TcpCommunityServers.servers.firstOrNull()
+                                    if (defaultServer != null) {
+                                        InterfaceConfig.TCPClient(
+                                            name = defaultServer.name,
+                                            enabled = true,
+                                            targetHost = defaultServer.host,
+                                            targetPort = defaultServer.port,
+                                            // LCS: carry the server's bootstrap flag through.
+                                            // Onboarding previously dropped it, so a user who
+                                            // chose TCP here got the LCS gateway as a permanent
+                                            // interface while the same server added through the
+                                            // TCP wizard got bootstrap_only. Since LCS no longer
+                                            // seeds a bootstrap interface, this is now the only
+                                            // way one gets configured during first run.
+                                            bootstrapOnly = defaultServer.isBootstrap,
+                                        )
+                                    } else {
+                                        Log.w(TAG, "No default TCP server available")
+                                        null
+                                    }
+                                }
+                                OnboardingInterfaceType.RNODE -> null
+                            }
+                        config?.let {
+                            try {
+                                interfaceRepository.insertInterface(it)
+                                Log.d(TAG, "Created interface: ${it.name}")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to create interface: ${it.name}", e)
+                                success = false
+                            }
+                        }
+                    }
+
+                    // Interface doesn't exist and is not selected - nothing to do
+                    else -> {
+                        Log.d(TAG, "$dbType not selected and doesn't exist, skipping")
+                    }
+                }
+            }
+            return success
+        }
+
+        /**
+         * Skip onboarding with default settings.
+         * Creates only AutoInterface (local WiFi) with default display name.
+         *
+         * Navigates immediately after saving settings, then applies interface changes
+         * in the background. User sees loading state on Chats screen while service starts.
+         *
+         * @param onComplete Callback invoked after skipping
+         */
+        fun skipOnboarding(onComplete: () -> Unit) {
+            viewModelScope.launch {
+                try {
+                    _state.value = _state.value.copy(isSaving = true)
+
+                    // Set default display name
+                    val activeIdentity = identityRepository.getActiveIdentitySync()
+                    if (activeIdentity != null) {
+                        identityRepository
+                            .updateDisplayName(activeIdentity.identityHash, DEFAULT_DISPLAY_NAME)
+                            .onSuccess {
+                                Log.d(TAG, "Display name set to default: $DEFAULT_DISPLAY_NAME")
+                            }.onFailure { error ->
+                                Log.e(TAG, "Failed to set default display name", error)
+                            }
+                    }
+
+                    // Create only AutoInterface for skip (safe default)
+                    val existingInterfaces = interfaceRepository.allInterfaces.first()
+                    val hasAutoInterface = existingInterfaces.any { it is InterfaceConfig.AutoInterface }
+                    if (!hasAutoInterface) {
+                        interfaceRepository.insertInterface(
+                            InterfaceConfig.AutoInterface(
+                                name = "Local WiFi",
+                                enabled = true,
+                            ),
+                        )
+                        Log.d(TAG, "Created default AutoInterface for skip")
+                    }
+
+                    // Mark onboarding as completed
+                    settingsRepository.markOnboardingCompleted()
+
+                    // Navigate immediately - user sees loading state on Chats screen
+                    _state.value =
+                        _state.value.copy(
+                            isSaving = false,
+                            hasCompletedOnboarding = true,
+                        )
+                    Log.d(TAG, "Onboarding skipped, navigating to main screen")
+                    onComplete()
+
+                    // Apply interface changes in background (service restart takes 8-12 seconds)
+                    // User sees "Loading conversations..." while this completes
+                    Log.d(TAG, "Applying interface changes in background...")
+                    interfaceConfigManager
+                        .applyInterfaceChanges()
+                        .onSuccess {
+                            Log.d(TAG, "Service restarted with default settings")
+                        }.onFailure { error ->
+                            Log.w(
+                                TAG,
+                                "Failed to restart service (settings saved but may need manual restart)",
+                                error,
+                            )
+                        }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error skipping onboarding", e)
+                    _state.value =
+                        _state.value.copy(
+                            isSaving = false,
+                            error = e.message,
+                        )
+                }
+            }
+        }
+
+        // Legacy method for backwards compatibility with old WelcomeScreen
+        @Deprecated("Use updateDisplayName instead", ReplaceWith("updateDisplayName(name)"))
+        fun updateDisplayNameInput(name: String) = updateDisplayName(name)
+    }

@@ -98,7 +98,7 @@ adb install -r liberty-chat-1.2.0-arm64-v8a.apk
 
 `-r` reinstalls over an existing copy and keeps app data. If you get
 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, the signing key changed — uninstall first
-(`adb uninstall network.columba.app`), which **wipes identities and message
+(`adb uninstall network.libertychat.app`), which **wipes identities and message
 history**, so export anything you care about beforehand.
 
 Sideloading without adb: copy the APK to the device and open it from a file

@@ -617,7 +617,7 @@ def _announce_enrichment(destination_hash, identity, app_data):
     """Python-only enrichment for an announce: matched aspect + current hops.
 
     The kotlin event-bridge side derives display name + stamp costs from the
-    raw `app_data` bytes via the shared `network.columba.app.rns.api.util.
+    raw `app_data` bytes via the shared `network.libertychat.app.rns.api.util.
     AppDataParser` (same parser the native kotlin backend uses), so neither
     field is computed here — keeping the parsing in one place means the two
     backends cannot drift on its rules.

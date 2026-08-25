@@ -8,7 +8,7 @@
 -keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
 
 # Keep Room entities
--keep class network.columba.app.data.local.entities.** { *; }
+-keep class network.libertychat.app.data.local.entities.** { *; }
 
 # Preserve attributes needed for debugging
 -keepattributes *Annotation*
@@ -19,15 +19,15 @@
 # Without these rules, IPC between app and ReticulumService will fail
 -keep class * implements android.os.IInterface { *; }
 -keep class * extends android.os.Binder { *; }
--keep class network.columba.app.I** { *; }
+-keep class network.libertychat.app.I** { *; }
 -keepclassmembers class * implements android.os.IInterface {
     public *;
 }
 
 # ===== Service Protection =====
 # ReticulumService runs in a separate process and uses IPC
--keep class network.columba.app.service.** { *; }
--keepclassmembers class network.columba.app.service.** { *; }
+-keep class network.libertychat.app.service.** { *; }
+-keepclassmembers class network.libertychat.app.service.** { *; }
 
 # ===== Android IPC Components =====
 -keep class android.os.RemoteCallbackList { *; }
@@ -63,7 +63,7 @@
 
 # ===== Reflectively-invoked bridge classes (Chaquopy / JNI-by-name) =====
 # Classes invoked by name across a boundary R8 can't see (Python via Chaquopy,
-# JNI) carry @network.columba.app.rns.api.annotation.ReflectivelyKept. Keeping
+# JNI) carry @network.libertychat.app.rns.api.annotation.ReflectivelyKept. Keeping
 # them at class level preserves all current AND future members, so adding a
 # method to a bridge needs no rule change. The ReflectivelyKeptRequired detekt
 # rule enforces the annotation on Chaquopy bridge shapes (fun interfaces in
@@ -71,12 +71,12 @@
 # unprotected.
 #
 # (Replaces the previous per-class androidx.annotation.Keep convention; the old
-# `-keep class network.columba.app.reticulum.protocol.** { *; }` glob was
+# `-keep class network.libertychat.app.reticulum.protocol.** { *; }` glob was
 # already removed — it protected only test classes after a package rename.)
--keep @network.columba.app.rns.api.annotation.ReflectivelyKept class * { *; }
+-keep @network.libertychat.app.rns.api.annotation.ReflectivelyKept class * { *; }
 
 # ===== Chaquopy (Python runtime) =====
-# Restored from release/v0.10.x: the com.lxmf.messenger -> network.columba.app
+# Restored from release/v0.10.x: the com.lxmf.messenger -> network.libertychat.app
 # rename dropped these rules, which regressed minified release builds — the
 # Python backend fails at interpreter startup with an asset AssertionError
 # (dumping assets/chaquopy/build.json). The -keepattributes below are the

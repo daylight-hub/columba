@@ -65,7 +65,7 @@ jobs:
       - name: Build Release AAB (Play Store)
         # Reuses compiled classes/resources from the assemble step above, so
         # this is fast (~1m) despite the multi-flavor project. Only the
-        # pythonBackend flavor is built: it's the appId (network.columba.app)
+        # pythonBackend flavor is built: it's the appId (network.libertychat.app)
         # registered with the Play Console listing — kotlinBackend (`.kt`
         # suffix) isn't published there.
         timeout-minutes: 15

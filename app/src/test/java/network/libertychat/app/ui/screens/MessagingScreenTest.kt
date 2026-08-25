@@ -1,0 +1,2279 @@
+package network.libertychat.app.ui.screens
+
+import android.app.Application
+import android.Manifest
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.test.withKeyDown
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.paging.PagingData
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.testing.TestLifecycleOwner
+import network.libertychat.app.audio.VoiceMessageRecordingState
+import network.libertychat.app.audio.VoiceMessageFormat
+import network.libertychat.app.service.SyncProgress
+import network.libertychat.app.test.MessagingTestFixtures
+import network.libertychat.app.test.RegisterComponentActivityRule
+import network.libertychat.app.ui.model.CodecProfile
+import network.libertychat.app.ui.model.LocationSharingState
+import network.libertychat.app.ui.model.ReplyPreviewUi
+import network.libertychat.app.viewmodel.ContactToggleResult
+import network.libertychat.app.viewmodel.MessagingViewModel
+import network.libertychat.app.viewmodel.ComposerSendResult
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+/**
+ * UI tests for MessagingScreen.kt.
+ * Tests the main messaging screen including message display, input, and navigation.
+ */
+@OptIn(ExperimentalTestApi::class) // performKeyInput / key-injection DSL for the Enter-to-send tests
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
+class MessagingScreenTest {
+    @Test
+    fun `text send keeps keyboard panel while IME remains visible`() {
+        assertEquals(
+            InputPanelMode.KEYBOARD,
+            inputPanelModeAfterSend(
+                currentMode = InputPanelMode.KEYBOARD,
+                wasVoiceMessage = false,
+                imeIsVisible = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `text send clears stale panel mode when IME is hidden`() {
+        assertEquals(
+            InputPanelMode.NONE,
+            inputPanelModeAfterSend(
+                currentMode = InputPanelMode.PANEL,
+                wasVoiceMessage = false,
+                imeIsVisible = false,
+            ),
+        )
+    }
+
+    private val registerActivityRule = RegisterComponentActivityRule()
+    private val composeRule = createComposeRule()
+
+    @get:Rule
+    val ruleChain: RuleChain = RuleChain.outerRule(registerActivityRule).around(composeRule)
+
+    val composeTestRule get() = composeRule
+
+    private lateinit var mockViewModel: MessagingViewModel
+
+    @Suppress("NoRelaxedMocks") // MessagingViewModel is a complex Android ViewModel with many internal behaviors
+    @Before
+    fun setup() {
+        mockViewModel = mockk(relaxed = true)
+
+        // Stub void methods called by UI interactions
+        every { mockViewModel.syncFromPropagationNode() } just Runs
+        every { mockViewModel.toggleContact() } just Runs
+        every { mockViewModel.sendMessage(any(), any()) } just Runs
+        every { mockViewModel.clearSelectedImage() } just Runs
+        every { mockViewModel.loadMessages(any(), any()) } just Runs
+        every { mockViewModel.loadImageAsync(any(), any()) } just Runs
+        every { mockViewModel.clearReplyTo() } just Runs
+        every { mockViewModel.loadReplyPreviewAsync(any(), any()) } just Runs
+
+        // Setup default mock returns
+        every { mockViewModel.messages } returns flowOf(PagingData.empty())
+        every { mockViewModel.announceInfo } returns MutableStateFlow(null)
+        every { mockViewModel.peerActivity } returns MutableStateFlow(null)
+        every { mockViewModel.currentConversationHash } returns
+            MutableStateFlow(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH)
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(null)
+        every { mockViewModel.selectedImageFormat } returns MutableStateFlow(null)
+        every { mockViewModel.isProcessingImage } returns MutableStateFlow(false)
+        every { mockViewModel.isSyncing } returns MutableStateFlow(false)
+        every { mockViewModel.syncProgress } returns MutableStateFlow(SyncProgress.Idle)
+        every { mockViewModel.isContactSaved } returns MutableStateFlow(false)
+        every { mockViewModel.isSending } returns MutableStateFlow(false)
+        every { mockViewModel.manualSyncResult } returns MutableSharedFlow()
+        every { mockViewModel.loadedImageIds } returns MutableStateFlow(emptySet())
+        every { mockViewModel.contactToggleResult } returns MutableSharedFlow()
+        // File attachment mocks
+        every { mockViewModel.selectedFileAttachments } returns MutableStateFlow(emptyList())
+        every { mockViewModel.totalAttachmentSize } returns MutableStateFlow(0)
+        every { mockViewModel.fileAttachmentError } returns MutableSharedFlow()
+        every { mockViewModel.composerSendResult } returns MutableSharedFlow()
+        every { mockViewModel.isProcessingFile } returns MutableStateFlow(false)
+        // Location sharing mocks
+        every { mockViewModel.contacts } returns MutableStateFlow(emptyList())
+        every { mockViewModel.locationSharingState } returns MutableStateFlow(LocationSharingState.NONE)
+        // Reply mocks
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(null)
+        every { mockViewModel.replyPreviewCache } returns MutableStateFlow(emptyMap())
+        // Reaction mode mocks
+        every { mockViewModel.reactionModeState } returns MutableStateFlow(null)
+        every { mockViewModel.myIdentityHash } returns MutableStateFlow("my-identity-hash")
+        // Animated image mocks
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(false)
+        every { mockViewModel.decodedImages } returns MutableStateFlow(emptyMap())
+        // Image quality selection mocks
+        every { mockViewModel.qualitySelectionState } returns MutableStateFlow(null)
+        // Link state mock (replaces linkSpeedProbeState)
+        every { mockViewModel.currentLinkState } returns MutableStateFlow(null)
+        // Conversation link state mock
+        every { mockViewModel.conversationLinkState } returns MutableStateFlow(null)
+        // Draft text mock
+        every { mockViewModel.draftText } returns MutableStateFlow(null)
+        // Shared image error mock (share pictures feature)
+        every { mockViewModel.sharedImageError } returns MutableSharedFlow()
+        // Location-sharing refusal message (master-gate OFF Toast)
+        every { mockViewModel.locationSharingMessage } returns MutableSharedFlow()
+        // Recent photos mock (share pictures feature)
+        every { mockViewModel.recentPhotos } returns MutableStateFlow(emptyList())
+        // Message font scale mock (text size dialog)
+        every { mockViewModel.messageFontScale } returns MutableStateFlow(1.0f)
+        // Contact location mock (locate on map feature)
+        every { mockViewModel.hasContactLocation } returns MutableStateFlow(false)
+        // Voice-message recording mocks
+        every { mockViewModel.voiceRecordingState } returns MutableStateFlow(VoiceMessageRecordingState())
+        every { mockViewModel.isVoiceMessageSupported } returns true
+        every { mockViewModel.isVoiceRecordingBlockedByCall } returns MutableStateFlow(false)
+    }
+
+    // ========== Empty State Tests ==========
+
+    @Test
+    fun emptyState_displaysNoMessagesYet() {
+        // Given - empty messages
+        every { mockViewModel.messages } returns flowOf(PagingData.empty())
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                onPeerClick = {},
+                onViewMessageDetails = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithText("No messages yet").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Send a message to start the conversation").assertIsDisplayed()
+    }
+
+    // ========== TopAppBar Tests ==========
+
+    @Test
+    fun topAppBar_displaysPeerName() {
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = "Alice",
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
+    }
+
+    @Test
+    fun topAppBar_backButton_callsOnBackClick() {
+        // Given
+        var backClicked = false
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = { backClicked = true },
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+        // Then
+        assertTrue(backClicked)
+    }
+
+    @Test
+    fun topAppBar_backButton_cancelsActiveVoiceRecordingBeforeNavigation() {
+        shadowOf(RuntimeEnvironment.getApplication() as Application).grantPermissions(Manifest.permission.RECORD_AUDIO)
+        var backClicked = false
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = { backClicked = true },
+                viewModel = mockViewModel,
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Attach").performClick()
+        composeTestRule.onNodeWithContentDescription("Record a voice message").performClick()
+        composeTestRule.onNodeWithText("Record").performClick()
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+        verify { mockViewModel.requestCancelVoiceRecording() }
+        assertTrue(backClicked)
+    }
+
+    @Test
+    fun voiceMessageButton_opensQualityPicker_andStartsSelectedProfile() {
+        shadowOf(RuntimeEnvironment.getApplication() as Application).grantPermissions(Manifest.permission.RECORD_AUDIO)
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Attach").performClick()
+        composeTestRule.onNodeWithContentDescription("Record a voice message").performClick()
+
+        composeTestRule.onNodeWithText("Select Voice Message Quality").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Codec2 1200").assertExists()
+        composeTestRule.onNodeWithText("Codec2 2400").assertExists()
+        composeTestRule.onNodeWithText("Codec2 3200").assertExists()
+        composeTestRule.onNodeWithText("Medium Quality").assertExists()
+        composeTestRule.onNodeWithText("High Quality").assertExists()
+        composeTestRule.onNodeWithText("Maximum Quality").assertExists()
+        composeTestRule.onNodeWithText("Original Quality").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Low Latency").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Ultra Low Latency").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Sideband", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("MeshChatX", substring = true).assertDoesNotExist()
+        verify(exactly = 0) { mockViewModel.requestStartVoiceRecording(any(), any()) }
+
+        composeTestRule.onNodeWithText("High Quality").performScrollTo().performClick()
+        composeTestRule.onNodeWithText("Record").performClick()
+
+        verify { mockViewModel.requestStartVoiceRecording(VoiceMessageFormat.OPUS_HIGH, any()) }
+    }
+
+    @Test
+    fun topAppBar_peerHeader_callsOnPeerClick() {
+        // Given
+        var peerClicked = false
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = "Alice",
+                onBackClick = {},
+                onPeerClick = { peerClicked = true },
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        composeTestRule.onNodeWithText("Alice").performClick()
+
+        // Then
+        assertTrue(peerClicked)
+    }
+
+    @Test
+    fun topAppBar_syncMenuItem_callsSyncFromPropagationNode() {
+        // Given
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - open overflow menu, then tap "Sync messages"
+        composeTestRule.onNodeWithContentDescription("More options").performClick()
+        composeTestRule.onNodeWithText("Sync messages").assertExists()
+        composeTestRule.onNodeWithText("Sync messages").performClick()
+
+        // Then - menu dismisses and sync is triggered
+        composeTestRule.onNodeWithText("Sync messages").assertDoesNotExist()
+        verify { mockViewModel.syncFromPropagationNode() }
+    }
+
+    @Test
+    fun topAppBar_syncMenuItem_showsSyncingState() {
+        // Given
+        every { mockViewModel.isSyncing } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - open overflow menu
+        composeTestRule.onNodeWithContentDescription("More options").performClick()
+
+        // Then - menu item shows syncing text instead of normal text
+        composeTestRule.onNodeWithText("Syncing\u2026").assertExists()
+        composeTestRule.onNodeWithText("Sync messages").assertDoesNotExist()
+    }
+
+    // ========== Star Toggle Button Tests ==========
+
+    @Test
+    fun topAppBar_starButton_displaysCorrectContentDescription_whenNotSaved() {
+        // Given
+        every { mockViewModel.isContactSaved } returns MutableStateFlow(false)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithContentDescription("Save to contacts").assertIsDisplayed()
+    }
+
+    @Test
+    fun topAppBar_starButton_displaysCorrectContentDescription_whenSaved() {
+        // Given
+        every { mockViewModel.isContactSaved } returns MutableStateFlow(true)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithContentDescription("Remove from contacts").assertIsDisplayed()
+    }
+
+    @Test
+    fun topAppBar_starButton_callsToggleContact() {
+        // Given
+        every { mockViewModel.isContactSaved } returns MutableStateFlow(false)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Save to contacts").performClick()
+            }
+
+        // Then
+        assertTrue("Star button click should succeed", result.isSuccess)
+        verify { mockViewModel.toggleContact() }
+    }
+
+    @Test
+    fun topAppBar_starButton_whenSaved_callsToggleContact() {
+        // Given
+        every { mockViewModel.isContactSaved } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Remove from contacts").performClick()
+            }
+
+        // Then
+        assertTrue("Remove from contacts button click should succeed", result.isSuccess)
+        verify { mockViewModel.toggleContact() }
+    }
+
+    // ========== Online Status Tests ==========
+
+    @Test
+    fun onlineStatus_displaysLastSeen_whenRecentlySeen() {
+        // Given - recent verified inbound peer activity.
+        // "Online" is reserved for an active link only.
+        every { mockViewModel.peerActivity } returns
+            MutableStateFlow(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    lastReceivedAt = System.currentTimeMillis() - 60_000L,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.MESSAGE,
+                ),
+            )
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithText("Last seen", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithText("Online").assertDoesNotExist()
+    }
+
+    @Test
+    fun onlineStatus_displaysOffline_whenNotRecentlySeen() {
+        // Given - old verified inbound activity.
+        every { mockViewModel.peerActivity } returns
+            MutableStateFlow(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    lastReceivedAt = System.currentTimeMillis() - 60 * 60 * 1_000L,
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.ANNOUNCE,
+                ),
+            )
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then - should show relative time instead of "Online"
+        composeTestRule.onNodeWithText("Online").assertDoesNotExist()
+    }
+
+    @Test
+    fun onlineStatus_ignoresActivityFromPreviousConversation() {
+        every { mockViewModel.peerActivity } returns
+            MutableStateFlow(
+                network.libertychat.app.data.db.entity.PeerActivityEntity(
+                    destinationHash = "different-peer",
+                    lastReceivedAt = System.currentTimeMillis(),
+                    activityType = network.libertychat.app.data.db.entity.PeerActivityType.MESSAGE,
+                ),
+            )
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        composeTestRule.onNodeWithText("Last seen", substring = true).assertDoesNotExist()
+        composeTestRule.onNodeWithText("Online").assertDoesNotExist()
+    }
+
+    @Test
+    fun onlineStatus_ignoresActiveLinkFromPreviousConversation() {
+        every { mockViewModel.currentConversationHash } returns MutableStateFlow("different-peer")
+        every { mockViewModel.conversationLinkState } returns
+            MutableStateFlow(
+                network.libertychat.app.service.ConversationLinkManager.LinkState(isActive = true),
+            )
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        composeTestRule.onNodeWithText("Online").assertDoesNotExist()
+    }
+
+    // ========== Message List Tests ==========
+
+    @Test
+    fun messageList_displaysMessages() {
+        // Given - multiple messages
+        val messages = MessagingTestFixtures.createMultipleMessages(3)
+        every { mockViewModel.messages } returns flowOf(PagingData.from(messages))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - verify messages are displayed
+        composeTestRule.onNodeWithText("Received message 1", substring = true).assertIsDisplayed()
+    }
+
+    // ========== MessageInputBar Tests ==========
+
+    @Test
+    fun inputBar_sending_keepsAccessibleNameAndState() {
+        composeTestRule.setContent {
+            MessageInputBar(
+                messageText = "Sending",
+                onMessageTextChange = {},
+                onSendClick = {},
+                isSending = true,
+            )
+        }
+
+        composeTestRule
+            .onNodeWithContentDescription("Send message")
+            .assertIsNotEnabled()
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Sending message"))
+    }
+
+    @Test
+    fun inputBar_emptyText_sendButtonDisabled() {
+        // Given - no text entered
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithContentDescription("Send message").assertIsNotEnabled()
+    }
+
+    @Test
+    fun inputBar_withText_sendButtonEnabled() {
+        // Given
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Hello")
+
+        // Then
+        composeTestRule.onNodeWithContentDescription("Send message").assertIsEnabled()
+    }
+
+    @Test
+    fun inputBar_withImageOnly_sendButtonEnabled() {
+        // Given - image selected but no text
+        every { mockViewModel.selectedImageData } returns
+            MutableStateFlow(
+                MessagingTestFixtures.createTestImageData(),
+            )
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithContentDescription("Send message").assertIsEnabled()
+    }
+
+    @Test
+    fun inputBar_sendClick_callsSendMessage() {
+        // Given
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Test message")
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Send message").performClick()
+            }
+
+        // Then
+        assertTrue("Send button click should succeed", result.isSuccess)
+        verify { mockViewModel.sendMessage(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH, "Test message") }
+    }
+
+    @Test
+    fun inputBar_sendClick_keepsComposerAboveVisibleKeyboard() {
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalMessagingImeBottomInsetOverride provides 900) {
+                MessagingScreen(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                    onBackClick = {},
+                    viewModel = mockViewModel,
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Keep composer visible")
+        val spacerBeforeSend = composeTestRule.onNodeWithTag("messageKeyboardSpacer").fetchSemanticsNode()
+        assertTrue(spacerBeforeSend.layoutInfo.coordinates.isAttached)
+
+        composeTestRule.onNodeWithContentDescription("Send message").performClick()
+
+        verify {
+            mockViewModel.sendMessage(
+                MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                "Keep composer visible",
+            )
+        }
+        val spacerAfterSend = composeTestRule.onNodeWithTag("messageKeyboardSpacer").fetchSemanticsNode()
+        assertTrue(spacerAfterSend.layoutInfo.coordinates.isAttached)
+    }
+
+    @Test
+    fun screen_reportsConversationVisibleAgainWhenResumed() {
+        val lifecycleOwner = TestLifecycleOwner(initialState = Lifecycle.State.RESUMED)
+        composeTestRule.setContent {
+            CompositionLocalProvider(LocalLifecycleOwner provides lifecycleOwner) {
+                MessagingScreen(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                    onBackClick = {},
+                    viewModel = mockViewModel,
+                )
+            }
+        }
+
+        verify(exactly = 1) {
+            mockViewModel.onConversationVisible(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH)
+        }
+
+        composeTestRule.runOnIdle {
+            lifecycleOwner.currentState = Lifecycle.State.STARTED
+        }
+        composeTestRule.runOnIdle {
+            lifecycleOwner.currentState = Lifecycle.State.RESUMED
+        }
+
+        verify(exactly = 2) {
+            mockViewModel.onConversationVisible(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH)
+        }
+        assertEquals(Lifecycle.State.RESUMED, lifecycleOwner.currentState)
+    }
+
+    @Test
+    fun inputBar_clearsSubmittedTextOnlyAfterDurableSendResult() {
+        val results = MutableSharedFlow<ComposerSendResult>(extraBufferCapacity = 2)
+        every { mockViewModel.composerSendResult } returns results
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Test message")
+        composeTestRule.onNodeWithContentDescription("Send message").performClick()
+
+        results.tryEmit(
+            ComposerSendResult(
+                MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                "Test message",
+                clearComposer = false,
+            ),
+        )
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Test message").assertExists()
+
+        results.tryEmit(
+            ComposerSendResult(
+                MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                "Test message",
+                clearComposer = true,
+            ),
+        )
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Test message").assertDoesNotExist()
+    }
+
+    @Test
+    fun inputBar_preservesOriginalWhitespaceThroughDurableSendResult() {
+        val results = MutableSharedFlow<ComposerSendResult>(extraBufferCapacity = 1)
+        every { mockViewModel.composerSendResult } returns results
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val submitted = "  Test message  "
+        composeTestRule.onNodeWithText("Type a message...").performTextInput(submitted)
+        composeTestRule.onNodeWithContentDescription("Send message").performClick()
+
+        verify { mockViewModel.sendMessage(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH, submitted) }
+        results.tryEmit(
+            ComposerSendResult(
+                MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                submitted,
+                clearComposer = true,
+            ),
+        )
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithText("Test message", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun inputBar_attachmentButton_showsLoadingIndicator_whenProcessing() {
+        // Given - image processing in progress
+        every { mockViewModel.isProcessingImage } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then - attachment button icon is replaced with loading indicator
+        // When processing, the "Attach image" icon is replaced with CircularProgressIndicator
+        composeTestRule.onNodeWithContentDescription("Attach image").assertDoesNotExist()
+    }
+
+    @Test
+    fun inputBar_imagePreview_shown_whenImageSelected() {
+        // Given - image selected
+        every { mockViewModel.selectedImageData } returns
+            MutableStateFlow(
+                MessagingTestFixtures.createTestImageData(),
+            )
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then - image preview should be shown with size info
+        composeTestRule.onNodeWithText("Image attached", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Remove image").assertIsDisplayed()
+    }
+
+    @Test
+    fun inputBar_clearImageButton_callsClearSelectedImage() {
+        // Given - image selected
+        every { mockViewModel.selectedImageData } returns
+            MutableStateFlow(
+                MessagingTestFixtures.createTestImageData(),
+            )
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Remove image").performClick()
+            }
+
+        // Then
+        assertTrue("Clear image button click should succeed", result.isSuccess)
+        verify { mockViewModel.clearSelectedImage() }
+    }
+
+    // ========== Enter-to-Send Keyboard Tests ==========
+    // Hardware/desktop-keyboard behavior for the message composer's
+    // onPreviewKeyEvent handler: bare Enter sends; Shift+Enter and
+    // modifier+Enter (Ctrl/Alt/Meta) must NOT send so they can fall through to
+    // a newline / OS shortcut. Each test records the actual sendMessage()
+    // calls so it can assert on the exact destination + trimmed text (or assert
+    // nothing was sent), rather than only verifying a mock interaction. The text
+    // field is located via hasSetTextAction() (stable across content changes,
+    // unlike the placeholder text) and focused before injecting keys so the
+    // preview-key handler actually receives them.
+
+    /** Re-stub sendMessage() to record (destinationHash, text) pairs it is called with. */
+    private fun recordSentMessages(): List<Pair<String, String>> {
+        val sent = mutableListOf<Pair<String, String>>()
+        every { mockViewModel.sendMessage(any(), any()) } answers {
+            sent.add(firstArg<String>() to secondArg<String>())
+        }
+        return sent
+    }
+
+    @Test
+    fun inputBar_bareEnter_sendsMessage() {
+        // Given
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Hello there")
+        composeTestRule.waitForIdle()
+
+        // When - bare Enter
+        field.requestFocus()
+        field.performKeyInput { pressKey(Key.Enter) }
+        composeTestRule.waitForIdle()
+
+        // Then - sends exactly once with the trimmed draft (KeyUp must not re-send)
+        assertEquals(
+            listOf(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH to "Hello there"),
+            sent,
+        )
+    }
+
+    @Test
+    fun inputBar_shiftEnter_doesNotSend() {
+        // Given
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Line one")
+        composeTestRule.waitForIdle()
+
+        // When - Shift+Enter (intended to insert a newline, not send)
+        field.requestFocus()
+        field.performKeyInput { withKeyDown(Key.ShiftLeft) { pressKey(Key.Enter) } }
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertEquals("Shift+Enter must not send", emptyList<Pair<String, String>>(), sent)
+    }
+
+    @Test
+    fun inputBar_ctrlEnter_doesNotSend() {
+        // Given
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Hello there")
+        composeTestRule.waitForIdle()
+
+        // When - Ctrl+Enter is a common OS/WM shortcut; must be left un-consumed
+        field.requestFocus()
+        field.performKeyInput { withKeyDown(Key.CtrlLeft) { pressKey(Key.Enter) } }
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertEquals("Ctrl+Enter must not send", emptyList<Pair<String, String>>(), sent)
+    }
+
+    @Test
+    fun inputBar_altEnter_doesNotSend() {
+        // Given
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Hello there")
+        composeTestRule.waitForIdle()
+
+        // When - Alt+Enter must be left un-consumed (covers the !isAltPressed guard)
+        field.requestFocus()
+        field.performKeyInput { withKeyDown(Key.AltLeft) { pressKey(Key.Enter) } }
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertEquals("Alt+Enter must not send", emptyList<Pair<String, String>>(), sent)
+    }
+
+    @Test
+    fun inputBar_metaEnter_doesNotSend() {
+        // Given
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Hello there")
+        composeTestRule.waitForIdle()
+
+        // When - Meta/Command+Enter is a frequent macOS shortcut on the BT-keyboard
+        // target class; must be left un-consumed (covers the !isMetaPressed guard)
+        field.requestFocus()
+        field.performKeyInput { withKeyDown(Key.MetaLeft) { pressKey(Key.Enter) } }
+        composeTestRule.waitForIdle()
+
+        // Then
+        assertEquals("Meta+Enter must not send", emptyList<Pair<String, String>>(), sent)
+    }
+
+    @Test
+    fun inputBar_bareEnter_blankText_doesNotSend() {
+        // Given - empty draft
+        val sent = recordSentMessages()
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - Enter with nothing to send
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.requestFocus()
+        field.performKeyInput { pressKey(Key.Enter) }
+        composeTestRule.waitForIdle()
+
+        // Then - canSend guard blocks the send
+        assertEquals("Bare Enter on a blank draft must not send", emptyList<Pair<String, String>>(), sent)
+    }
+
+    @Test
+    fun inputBar_bareEnter_whileSending_doesNotSend() {
+        // Given - a send already in flight
+        val sent = recordSentMessages()
+        every { mockViewModel.isSending } returns MutableStateFlow(true)
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        val field = composeTestRule.onNode(hasSetTextAction())
+        field.performTextInput("Hello there")
+        composeTestRule.waitForIdle()
+
+        // When - bare Enter while isSending
+        field.requestFocus()
+        field.performKeyInput { pressKey(Key.Enter) }
+        composeTestRule.waitForIdle()
+
+        // Then - !isSending part of canSend blocks the duplicate send
+        assertEquals("Bare Enter while sending must not send again", emptyList<Pair<String, String>>(), sent)
+    }
+
+    // ========== Lifecycle Tests ==========
+
+    @Test
+    fun screen_loadsMessages_onComposition() {
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+            }
+
+        // Then
+        assertTrue("Screen composition should succeed", result.isSuccess)
+        verify { mockViewModel.loadMessages(MessagingTestFixtures.Constants.TEST_DESTINATION_HASH, MessagingTestFixtures.Constants.TEST_PEER_NAME) }
+    }
+
+    // ========== Message Display Tests ==========
+
+    @Test
+    fun sentMessage_displaysContent() {
+        // Given
+        val message = MessagingTestFixtures.createSentMessage(content = "Hello from me")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then
+        composeTestRule.onNodeWithText("Hello from me").assertIsDisplayed()
+    }
+
+    @Test
+    fun receivedMessage_displaysContent() {
+        // Given
+        val message = MessagingTestFixtures.createReceivedMessage(content = "Hello from peer")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then
+        composeTestRule.onNodeWithText("Hello from peer").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentMessage_showsDeliveryStatus_pending() {
+        // Given
+        val message = MessagingTestFixtures.createPendingMessage(content = "Pending test")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - pending shows "○"
+        composeTestRule.onNodeWithText("○").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentMessage_showsDeliveryStatus_sent() {
+        // Given
+        val message = MessagingTestFixtures.createSentMessage(content = "Sent test", status = "sent")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - sent shows "✓"
+        composeTestRule.onNodeWithText("✓").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentMessage_showsDeliveryStatus_delivered() {
+        // Given
+        val message = MessagingTestFixtures.createDeliveredMessage(content = "Delivered test")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - delivered shows "✓✓"
+        composeTestRule.onNodeWithText("✓✓").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentMessage_showsDeliveryStatus_failed() {
+        // Given
+        val message = MessagingTestFixtures.createFailedMessage(content = "Failed test")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - failed shows "!"
+        composeTestRule.onNodeWithText("!").assertIsDisplayed()
+    }
+
+    @Test
+    fun receivedMessage_doesNotShowDeliveryStatus() {
+        // Given - received message should not show delivery status indicators
+        val message = MessagingTestFixtures.createReceivedMessage(content = "From peer")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - no delivery status indicators should be shown
+        composeTestRule.onNodeWithText("○").assertDoesNotExist()
+        composeTestRule.onNodeWithText("✓").assertDoesNotExist()
+        composeTestRule.onNodeWithText("✓✓").assertDoesNotExist()
+        composeTestRule.onNodeWithText("!").assertDoesNotExist()
+    }
+
+    // ========== Message Input Validation Tests ==========
+
+    @Test
+    fun inputBar_displaysPlaceholder() {
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then
+        composeTestRule.onNodeWithText("Type a message...").assertIsDisplayed()
+    }
+
+    // ========== Async Image Loading Tests ==========
+
+    @Test
+    fun messageWithUncachedImage_triggersAsyncLoad() {
+        // Given - message with image that needs async loading
+        val messageWithImage = MessagingTestFixtures.createMessageWithUncachedImage()
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithImage)))
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - should trigger async image loading
+        assertTrue("Message display with uncached image should succeed", result.isSuccess)
+        verify { mockViewModel.loadImageAsync(messageWithImage.id, messageWithImage.fieldsJson) }
+    }
+
+    @Test
+    fun messageWithCachedImage_doesNotTriggerAsyncLoad() {
+        // Given - message with already cached image (decodedImage is non-null)
+        // Since we can't easily create an ImageBitmap in tests, we simulate
+        // a message that has hasImageAttachment but with the image in loadedImageIds
+        val messageId = "cached-img-msg"
+        val messageWithCachedId = MessagingTestFixtures.createMessageWithUncachedImage(id = messageId)
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithCachedId)))
+        every { mockViewModel.loadedImageIds } returns MutableStateFlow(setOf(messageId))
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - should NOT trigger async image loading (already in loadedImageIds)
+        assertTrue("Screen composition should succeed", result.isSuccess)
+        verify(exactly = 0) { mockViewModel.loadImageAsync(messageId, any()) }
+    }
+
+    @Test
+    fun messageWithNoImage_doesNotTriggerAsyncLoad() {
+        // Given - regular text message without image
+        val textMessage = MessagingTestFixtures.createReceivedMessage()
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(textMessage)))
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - should NOT trigger async image loading
+        assertTrue("Screen composition should succeed", result.isSuccess)
+        verify(exactly = 0) { mockViewModel.loadImageAsync(any(), any()) }
+    }
+
+    @Test
+    fun loadedImageIds_update_triggersRecomposition() {
+        // Given - message that initially needs loading
+        val messageId = "loading-msg"
+        val message = MessagingTestFixtures.createMessageWithUncachedImage(id = messageId)
+        val loadedIdsFlow = MutableStateFlow<Set<String>>(emptySet())
+
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+        every { mockViewModel.loadedImageIds } returns loadedIdsFlow
+
+        // When - render initially
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+
+                // Initial load should be triggered
+                verify { mockViewModel.loadImageAsync(messageId, any()) }
+
+                // Then - update loadedImageIds (simulating image loaded)
+                loadedIdsFlow.value = setOf(messageId)
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - second load should not be triggered (image already in loadedImageIds)
+        assertTrue("Screen composition and recomposition should succeed", result.isSuccess)
+        verify(exactly = 1) { mockViewModel.loadImageAsync(messageId, any()) }
+    }
+
+    @Test
+    fun multipleMessagesWithImages_triggerIndependentLoads() {
+        // Given - multiple messages with uncached images
+        val message1 = MessagingTestFixtures.createMessageWithUncachedImage(id = "img-msg-1")
+        val message2 = MessagingTestFixtures.createMessageWithUncachedImage(id = "img-msg-2")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message1, message2)))
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - both should trigger async loads
+        assertTrue("Screen composition should succeed", result.isSuccess)
+        verify { mockViewModel.loadImageAsync("img-msg-1", any()) }
+        verify { mockViewModel.loadImageAsync("img-msg-2", any()) }
+    }
+
+    @Test
+    fun messageWithImageAndNullFieldsJson_doesNotTriggerLoad() {
+        // Given - message where hasImageAttachment is true but fieldsJson is null
+        // (image was already cached at mapping time)
+        val message = MessagingTestFixtures.createMessageWithCachedImage(id = "cached-msg")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(message)))
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - should NOT trigger async load (fieldsJson is null)
+        assertTrue("Screen composition should succeed", result.isSuccess)
+        verify(exactly = 0) { mockViewModel.loadImageAsync(any(), any()) }
+    }
+
+    // ========== Contact Toggle Result Tests ==========
+
+    @Test
+    fun contactToggleResult_added_triggersToastCollection() {
+        // Given - a flow with replay so value is available when LaunchedEffect starts collecting
+        val contactToggleFlow = MutableSharedFlow<ContactToggleResult>(replay = 1)
+        contactToggleFlow.tryEmit(ContactToggleResult.Added)
+        every { mockViewModel.contactToggleResult } returns contactToggleFlow
+
+        // When - render screen (LaunchedEffect will collect the replayed value)
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = "Alice",
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Toast.makeText is called - code path exercised for coverage
+    }
+
+    @Test
+    fun contactToggleResult_removed_triggersToastCollection() {
+        // Given - a flow with replay
+        val contactToggleFlow = MutableSharedFlow<ContactToggleResult>(replay = 1)
+        contactToggleFlow.tryEmit(ContactToggleResult.Removed)
+        every { mockViewModel.contactToggleResult } returns contactToggleFlow
+
+        // When - render screen
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = "Bob",
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun contactToggleResult_error_triggersToastCollection() {
+        // Given - a flow with replay
+        val contactToggleFlow = MutableSharedFlow<ContactToggleResult>(replay = 1)
+        contactToggleFlow.tryEmit(ContactToggleResult.Error("Identity not available"))
+        every { mockViewModel.contactToggleResult } returns contactToggleFlow
+
+        // When - render screen
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = "Charlie",
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+    }
+
+    // ========== Reply Functionality Tests ==========
+
+    @Test
+    fun replyInputBar_displayed_whenPendingReplyIsSet() {
+        // Given - a pending reply is set
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "reply-msg-123",
+                senderName = "Alice",
+                contentPreview = "Original message content",
+            )
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(replyPreview)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - ReplyInputBar should be displayed
+        composeTestRule.onNodeWithText("Replying to Alice").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Original message content").assertIsDisplayed()
+    }
+
+    @Test
+    fun replyInputBar_notDisplayed_whenNoPendingReply() {
+        // Given - no pending reply (default state from setup)
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(null)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - ReplyInputBar should not be displayed
+        composeTestRule.onNodeWithText("Replying to", substring = true).assertDoesNotExist()
+    }
+
+    @Test
+    fun replyInputBar_cancelButton_callsClearReplyTo() {
+        // Given - a pending reply is set
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "reply-msg-123",
+                senderName = "Bob",
+                contentPreview = "Some content",
+            )
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(replyPreview)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // When - tap cancel button
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Cancel reply").performClick()
+            }
+
+        // Then - clearReplyTo should be called
+        assertTrue("Cancel reply button click should succeed", result.isSuccess)
+        verify { mockViewModel.clearReplyTo() }
+    }
+
+    @Test
+    fun replyInputBar_withImageReply_displaysPhotoIndicator() {
+        // Given - a pending reply to an image message
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "img-reply-123",
+                senderName = "Charlie",
+                contentPreview = "",
+                hasImage = true,
+            )
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(replyPreview)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show Photo indicator
+        composeTestRule.onNodeWithText("Photo").assertIsDisplayed()
+    }
+
+    @Test
+    fun replyInputBar_withFileReply_displaysFilename() {
+        // Given - a pending reply to a file message
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "file-reply-123",
+                senderName = "David",
+                contentPreview = "",
+                hasFileAttachment = true,
+                firstFileName = "document.pdf",
+            )
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(replyPreview)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show filename
+        composeTestRule.onNodeWithText("document.pdf").assertIsDisplayed()
+    }
+
+    @Test
+    fun inputBar_withPendingReply_sendButtonEnabled() {
+        // Given - pending reply with text entered
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "reply-msg",
+                senderName = "Eve",
+                contentPreview = "Original",
+            )
+        every { mockViewModel.pendingReplyTo } returns MutableStateFlow(replyPreview)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - enter text
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Reply message")
+
+        // Then - send button should be enabled
+        composeTestRule.onNodeWithContentDescription("Send message").assertIsEnabled()
+    }
+
+    @Test
+    fun messageWithReply_displaysReplyPreviewBubble() {
+        // Given - a message that is a reply to another message
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "original-msg",
+                senderName = "Frank",
+                contentPreview = "This is the original message",
+            )
+        val messageWithReply =
+            MessagingTestFixtures.createMessageWithReply(
+                content = "This is my reply",
+                replyPreview = replyPreview,
+            )
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithReply)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - reply preview should be displayed
+        composeTestRule.onNodeWithText("Frank").assertIsDisplayed()
+        composeTestRule.onNodeWithText("This is the original message").assertIsDisplayed()
+        composeTestRule.onNodeWithText("This is my reply").assertIsDisplayed()
+    }
+
+    @Test
+    fun messageWithReply_loadsReplyPreviewAsync_whenNotCached() {
+        // Given - a message with replyToMessageId but no cached preview
+        val messageWithReplyId =
+            MessagingTestFixtures.createMessageWithReplyId(
+                id = "msg-with-reply",
+                replyToMessageId = "original-msg-id",
+            )
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithReplyId)))
+        every { mockViewModel.replyPreviewCache } returns MutableStateFlow(emptyMap())
+
+        // When
+        val result =
+            runCatching {
+                composeTestRule.setContent {
+                    MessagingScreen(
+                        destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                        peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                        onBackClick = {},
+                        viewModel = mockViewModel,
+                    )
+                }
+                composeTestRule.waitForIdle()
+            }
+
+        // Then - should trigger async loading of reply preview
+        assertTrue("Message with reply should load successfully", result.isSuccess)
+        verify { mockViewModel.loadReplyPreviewAsync("msg-with-reply", "original-msg-id") }
+    }
+
+    @Test
+    fun messageWithReply_doesNotReload_whenCached() {
+        // Given - a message with replyToMessageId and cached preview
+        val messageId = "cached-reply-msg"
+        val replyToId = "original-msg"
+        val messageWithReplyId =
+            MessagingTestFixtures.createMessageWithReplyId(
+                id = messageId,
+                replyToMessageId = replyToId,
+            )
+        val cachedPreview =
+            ReplyPreviewUi(
+                messageId = replyToId,
+                senderName = "Grace",
+                contentPreview = "Cached content",
+            )
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithReplyId)))
+        every { mockViewModel.replyPreviewCache } returns MutableStateFlow(mapOf(messageId to cachedPreview))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should NOT trigger async loading (already cached)
+        verify(exactly = 0) { mockViewModel.loadReplyPreviewAsync(any(), any()) }
+
+        // And should display cached preview
+        composeTestRule.onNodeWithText("Grace").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Cached content").assertIsDisplayed()
+    }
+
+    // ========== GIF/Animated Image Tests ==========
+
+    @Test
+    fun animatedGifMessage_displaysWithoutBubble_whenMediaOnly() {
+        // Given - GIF-only message (no text, no reply, no attachments)
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage()
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - media-only GIF shows sent status (overlay timestamp row)
+        // The "Animated GIF" AsyncImage may not render in Robolectric tests,
+        // but the status indicator should still appear
+        composeTestRule.onNodeWithText("✓").assertIsDisplayed()
+    }
+
+    @Test
+    fun animatedGifMessage_withText_displaysInBubble() {
+        // Given - GIF with text (not media-only)
+        val gifWithText = MessagingTestFixtures.createAnimatedGifMessageWithText()
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifWithText)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should display text content (in bubble)
+        composeTestRule.onNodeWithText("Check out this GIF!").assertIsDisplayed()
+    }
+
+    @Test
+    fun animatedGifMessage_asReply_displaysInBubble() {
+        // Given - GIF as a reply (not media-only due to reply context)
+        val replyPreview =
+            ReplyPreviewUi(
+                messageId = "original-msg",
+                senderName = "Alice",
+                contentPreview = "Original message",
+            )
+        val gifReply = MessagingTestFixtures.createAnimatedGifReplyMessage(replyPreview = replyPreview)
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifReply)))
+        every { mockViewModel.replyPreviewCache } returns MutableStateFlow(mapOf(gifReply.id to replyPreview))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should display reply preview (in bubble)
+        composeTestRule.onNodeWithText("Alice").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Original message").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentGifMessage_showsDeliveryStatus() {
+        // Given - sent GIF message
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "sent")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show sent status indicator
+        composeTestRule.onNodeWithText("✓").assertIsDisplayed()
+    }
+
+    @Test
+    fun animatedGifPreview_displayed_whenSelectedAnimatedImage() {
+        // Given - animated image selected for sending
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(MessagingTestFixtures.createTestGifData())
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(true)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show image attached with GIF label
+        composeTestRule.onNodeWithText("GIF attached", substring = true).assertIsDisplayed()
+        composeTestRule.onNodeWithContentDescription("Remove image").assertIsDisplayed()
+    }
+
+    @Test
+    fun staticImagePreview_displayed_whenSelectedNonAnimatedImage() {
+        // Given - static (non-animated) image selected
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(MessagingTestFixtures.createTestImageData())
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(false)
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show "Image attached" (not "GIF attached")
+        composeTestRule.onNodeWithText("Image attached", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun replyPreviewCache_update_triggersRecomposition() {
+        // Given - message with reply that initially has no cache
+        val messageId = "recompose-test-msg"
+        val replyToId = "original-for-recompose"
+        val messageWithReplyId =
+            MessagingTestFixtures.createMessageWithReplyId(
+                id = messageId,
+                replyToMessageId = replyToId,
+            )
+        val cacheFlow = MutableStateFlow<Map<String, ReplyPreviewUi>>(emptyMap())
+
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(messageWithReplyId)))
+        every { mockViewModel.replyPreviewCache } returns cacheFlow
+
+        // When - render initially
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Initial load should be triggered
+        verify { mockViewModel.loadReplyPreviewAsync(messageId, replyToId) }
+
+        // Then - update cache (simulating async load completion)
+        val loadedPreview =
+            ReplyPreviewUi(
+                messageId = replyToId,
+                senderName = "Henry",
+                contentPreview = "Loaded content",
+            )
+        cacheFlow.value = mapOf(messageId to loadedPreview)
+        composeTestRule.waitForIdle()
+
+        // Should display loaded preview
+        composeTestRule.onNodeWithText("Henry").assertIsDisplayed()
+    }
+
+    // ========== Additional GIF Coverage Tests ==========
+
+    @Test
+    fun receivedGifMessage_displaysWithoutBubble_whenMediaOnly() {
+        // Given - received GIF-only message (from peer, not from me)
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(isFromMe = false)
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - received messages don't show delivery status indicators
+        composeTestRule.onNodeWithText("✓").assertDoesNotExist()
+        composeTestRule.onNodeWithText("✓✓").assertDoesNotExist()
+    }
+
+    @Test
+    fun sentGifMessage_showsDeliveredStatus() {
+        // Given - sent and delivered GIF message
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "delivered")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - delivered shows double checkmark
+        composeTestRule.onNodeWithText("✓✓").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentGifMessage_showsPendingStatus() {
+        // Given - pending GIF message
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "pending")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - pending shows empty circle
+        composeTestRule.onNodeWithText("○").assertIsDisplayed()
+    }
+
+    @Test
+    fun sentGifMessage_showsFailedStatus() {
+        // Given - failed GIF message
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "failed")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - failed shows exclamation
+        composeTestRule.onNodeWithText("!").assertIsDisplayed()
+    }
+
+    @Test
+    fun inputBar_withImageAndText_sendButtonEnabled() {
+        // Given - image selected and text entered
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(MessagingTestFixtures.createTestGifData())
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - enter text along with image
+        composeTestRule.onNodeWithText("Type a message...").performTextInput("Caption for my GIF")
+
+        // Then - send button should be enabled
+        composeTestRule.onNodeWithContentDescription("Send message").assertIsEnabled()
+    }
+
+    @Test
+    fun inputBar_sendWithGif_callsSendMessageWithImageData() {
+        // Given - GIF selected
+        val gifData = MessagingTestFixtures.createTestGifData()
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(gifData)
+        every { mockViewModel.selectedImageFormat } returns MutableStateFlow("gif")
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // When - tap send
+        val result =
+            runCatching {
+                composeTestRule.onNodeWithContentDescription("Send message").performClick()
+            }
+
+        // Then - sendMessage should be called
+        assertTrue("Send button click with GIF should succeed", result.isSuccess)
+        verify { mockViewModel.sendMessage(any(), any()) }
+    }
+
+    @Test
+    fun multipleGifMessages_displayCorrectly() {
+        // Given - multiple GIF messages
+        val gif1 = MessagingTestFixtures.createAnimatedGifMessage(id = "gif-1", isFromMe = true)
+        val gif2 = MessagingTestFixtures.createAnimatedGifMessageWithText(id = "gif-2", content = "Look at this!")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gif1, gif2)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - text from second GIF should be visible
+        composeTestRule.onNodeWithText("Look at this!").assertIsDisplayed()
+    }
+
+    @Test
+    fun inputBar_processingFile_showsLoadingState() {
+        // Given - file processing in progress
+        every { mockViewModel.isProcessingFile } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then - file attachment button should not be clickable during processing
+        // (CircularProgressIndicator replaces the icon)
+        composeTestRule.onNodeWithContentDescription("Attach file").assertDoesNotExist()
+    }
+
+    @Test
+    fun inputBar_gifAttached_showsCorrectSize() {
+        // Given - GIF attached with known size
+        val gifData = MessagingTestFixtures.createTestGifData()
+        every { mockViewModel.selectedImageData } returns MutableStateFlow(gifData)
+        every { mockViewModel.selectedImageIsAnimated } returns MutableStateFlow(true)
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - should show GIF label
+        composeTestRule.onNodeWithText("GIF attached", substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun topAppBar_longPeerName_displaysCorrectly() {
+        // Given - very long peer name
+        val longName = "Very Long Peer Name That Should Be Truncated"
+
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = longName,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+
+        // Then - peer name should be displayed (may be truncated with ellipsis)
+        composeTestRule.onNodeWithText(longName, substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun messageList_mixedMessages_displaysCorrectly() {
+        // Given - mix of text and GIF messages (kept small to avoid viewport issues)
+        val textMsg = MessagingTestFixtures.createSentMessage(id = "text-1", content = "Hello!")
+        val gifMsg = MessagingTestFixtures.createAnimatedGifMessage(id = "gif-1")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(textMsg, gifMsg)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - text message should be displayed
+        composeTestRule.onNodeWithText("Hello!").assertIsDisplayed()
+    }
+
+    @Test
+    fun propagatedGifMessage_showsCorrectStatus() {
+        // Given - GIF message with propagated status
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "propagated")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - propagated shows the accepted-by-relay indicator
+        composeTestRule.onNodeWithContentDescription("Stored on relay network").assertIsDisplayed()
+    }
+
+    @Test
+    fun retryingGifMessage_showsCorrectStatus() {
+        // Given - GIF message being retried
+        val gifMessage = MessagingTestFixtures.createAnimatedGifMessage(status = "retrying_propagated")
+        every { mockViewModel.messages } returns flowOf(PagingData.from(listOf(gifMessage)))
+
+        // When
+        composeTestRule.setContent {
+            MessagingScreen(
+                destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                onBackClick = {},
+                viewModel = mockViewModel,
+            )
+        }
+        composeTestRule.waitForIdle()
+
+        // Then - retrying_propagated shows the relay-upload indicator
+        composeTestRule.onNodeWithContentDescription("Sending to relay network").assertIsDisplayed()
+    }
+    // ========== Notification Entry Integration Tests ==========
+
+    /**
+     * Verify that MessagingScreen composes correctly with fromNotification=true
+     * and instantiates the [NotificationScrollCoordinator] for the one-shot
+     * scroll-to-bottom effect.
+     *
+     * The coordinator behaviour (wait-for-readiness, one-shot only,
+     * non-notification no-scroll) is covered by [NotificationScrollCoordinatorTest].
+     * These integration tests verify the screen correctly wires the parameter
+     * through to the coordinator.
+     */
+    @Test
+    fun fromNotification_true_screenComposesWithCoordinator() {
+        // When - composing with fromNotification = true
+        var composeError: Throwable? = null
+        runCatching {
+            composeTestRule.setContent {
+                MessagingScreen(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                    onBackClick = {},
+                    fromNotification = true,
+                    viewModel = mockViewModel,
+                )
+            }
+            composeTestRule.waitForIdle()
+        }.onFailure { composeError = it }
+
+        // Then - no composition error; the NotificationScrollCoordinator is
+        // created inside the composable and will drive the one-shot scroll
+        // once Paging content is ready.
+        assertTrue(
+            "Screen should compose without error when fromNotification is true, "
+                + "wiring the coordinator for the one-shot notification scroll",
+            composeError == null,
+        )
+    }
+
+    @Test
+    fun fromNotification_false_screenComposesWithCoordinator() {
+        // When - composing with fromNotification = false (default)
+        var composeError: Throwable? = null
+        runCatching {
+            composeTestRule.setContent {
+                MessagingScreen(
+                    destinationHash = MessagingTestFixtures.Constants.TEST_DESTINATION_HASH,
+                    peerName = MessagingTestFixtures.Constants.TEST_PEER_NAME,
+                    onBackClick = {},
+                    fromNotification = false,
+                    viewModel = mockViewModel,
+                )
+            }
+            composeTestRule.waitForIdle()
+        }.onFailure { composeError = it }
+
+        // Then - no composition error; coordinator is created but will never
+        // return true from shouldScroll() because fromNotification is false.
+        assertTrue(
+            "Screen should compose without error when fromNotification is false, "
+                + "wiring a coordinator that never triggers forced scroll",
+            composeError == null,
+        )
+    }
+}

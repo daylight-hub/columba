@@ -547,9 +547,9 @@ jobs:
             adb shell pm list packages | head -5;
             echo "Emulator is responsive, starting tests...";
             status=0;
-            ./gradlew :app:connectedNoSentryKotlinBackendDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.columba.app.smoke.SmokeTest,network.columba.app.integration.MessageDataFlowTest,network.columba.app.integration.ConversationCreationFlowTest,network.columba.app.ui.components.MicronTrueColorRenderingTest --stacktrace || status=1;
-            ./gradlew :app:connectedNoSentryPythonBackendDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.columba.app.integration.IdentityRecoveryIpcInstrumentedTest,network.columba.app.integration.IdentityRecoveryPersistenceInstrumentedTest --stacktrace || status=1;
-            ./gradlew :rns-backend-py:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.columba.app.rns.backend.py.PythonRnsCoreIdentityRecoveryInstrumentedTest --stacktrace || status=1;
+            ./gradlew :app:connectedNoSentryKotlinBackendDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.libertychat.app.smoke.SmokeTest,network.libertychat.app.integration.MessageDataFlowTest,network.libertychat.app.integration.ConversationCreationFlowTest,network.libertychat.app.ui.components.MicronTrueColorRenderingTest --stacktrace || status=1;
+            ./gradlew :app:connectedNoSentryPythonBackendDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.libertychat.app.integration.IdentityRecoveryIpcInstrumentedTest,network.libertychat.app.integration.IdentityRecoveryPersistenceInstrumentedTest --stacktrace || status=1;
+            ./gradlew :rns-backend-py:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=network.libertychat.app.rns.backend.py.PythonRnsCoreIdentityRecoveryInstrumentedTest --stacktrace || status=1;
             exit "$status"
 
       - name: Upload instrumented test results
